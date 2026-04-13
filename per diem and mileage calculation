@@ -1,0 +1,28 @@
+frappe.ui.form.on('Travel Request', {
+    custom_number_of_days: function(frm) {
+        frm.trigger('calculate_custom_total_per_diem');
+    },
+    custom_per_diem_amount: function(frm) {
+        frm.trigger('calculate_custom_total_per_diem');
+    },
+    calculate_custom_total_per_diem: function(frm) {
+        if (frm.doc.custom_number_of_days && frm.doc.custom_per_diem_amount) {
+            frm.set_value('custom_total_per_diem', frm.doc.custom_number_of_days * frm.doc.custom_per_diem_amount);
+        } else {
+            frm.set_value('custom_total_per_diem', 0);
+        }
+    },
+    custom_mileage_claim: function(frm) {
+        frm.trigger('calculate_custom_mileage_amount');
+    },
+    custom_mileage_rate: function(frm) {
+        frm.trigger('calculate_custom_mileage_amount');
+    },
+    calculate_custom_mileage_amount: function(frm) {
+        if (frm.doc.custom_mileage_claim && frm.doc.custom_mileage_rate) {
+            frm.set_value('custom_mileage_amount', frm.doc.custom_mileage_claim * frm.doc.custom_mileage_rate);
+        } else {
+            frm.set_value('custom_mileage_amount', 0);
+        }
+    }
+});
