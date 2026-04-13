@@ -3,7 +3,7 @@ name = "opero"
 authors = [
     { name = "Patrick Willy", email = "kakoi@hi2.in"}
 ]
-description = "WASH"
+description = "Custom development app for Opero"
 requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
