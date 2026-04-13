@@ -1,6 +1,6 @@
-### Opero
+### Opero Custom Development
 
-WASH
+Custom development app for Opero.
 
 ### Installation
 

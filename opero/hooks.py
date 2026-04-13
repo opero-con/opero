@@ -1,7 +1,7 @@
 app_name = "opero"
-app_title = "Opero"
+app_title = "Opero Custom Development"
 app_publisher = "Patrick Willy"
-app_description = "WASH"
+app_description = "Custom development app for Opero"
 app_email = "kakoi@hi2.in"
 app_license = "mit"
 
@@ -15,7 +15,7 @@ app_license = "mit"
 # 	{
 # 		"name": "opero",
 # 		"logo": "/assets/opero/logo.png",
-# 		"title": "Opero",
+# 		"title": "Opero Custom Development",
 # 		"route": "/opero",
 # 		"has_permission": "opero.api.permission.has_app_permission"
 # 	}
@@ -241,4 +241,3 @@ app_license = "mit"
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
