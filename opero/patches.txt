@@ -18,3 +18,5 @@ opero.patches.v0_0.set_todo_title_field_to_custom_title
 opero.patches.v0_0.convert_todo_assignees_to_table_multiselect
 opero.patches.v0_0.backfill_todo_assignee_rows
 opero.patches.v0_0.reapply_todo_enhancements_for_existing_sites
+opero.patches.v0_0.drop_legacy_todo_additional_assignees_field
+opero.patches.v0_0.cleanup_todo_layout_duplicates

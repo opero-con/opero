@@ -12,8 +12,14 @@ def execute():
 	if not frappe.db.exists("DocType", "ToDo Assignee"):
 		return
 
+	columns = set(frappe.db.get_table_columns("ToDo"))
+	has_legacy_additional_column = "custom_additional_assignees" in columns
+
 	enabled_users = set(frappe.get_all("User", filters={"enabled": 1}, pluck="name"))
-	todos = frappe.get_all("ToDo", fields=["name", "allocated_to", "custom_additional_assignees"])
+	fields = ["name", "allocated_to"]
+	if has_legacy_additional_column:
+		fields.append("custom_additional_assignees")
+	todos = frappe.get_all("ToDo", fields=fields)
 
 	for todo in todos:
 		users = _get_existing_row_users(todo.name)
@@ -21,18 +27,14 @@ def execute():
 		if primary:
 			users.append(primary)
 
-		users.extend(_parse_users(todo.custom_additional_assignees))
+		if has_legacy_additional_column:
+			users.extend(_parse_users(todo.custom_additional_assignees))
 		users = [user for user in _dedupe(users) if user in enabled_users]
 		_set_assignee_rows(todo.name, users)
-		frappe.db.set_value(
-			"ToDo",
-			todo.name,
-			{
-				"allocated_to": users[0] if users else None,
-				"custom_additional_assignees": "\n".join(users[1:]),
-			},
-			update_modified=False,
-		)
+		updates = {"allocated_to": users[0] if users else None}
+		if has_legacy_additional_column:
+			updates["custom_additional_assignees"] = "\n".join(users[1:])
+		frappe.db.set_value("ToDo", todo.name, updates, update_modified=False)
 
 
 def _set_assignee_rows(todo_name: str, users: list[str]):
