@@ -1,32 +1,31 @@
+const extractPlainText = (value) => {
+	const text = frappe.utils.unescape_html(strip_html(cstr(value || "")))
+	return text.replace(/\s+/g, " ").trim()
+}
+
 frappe.ui.form.on("ToDo", {
+	refresh(frm) {
+		frm.toggle_display("allocated_to", false)
+		frm.toggle_display("custom_additional_assignees", false)
+		frm.set_query("custom_assignees", () => ({
+			filters: {
+				enabled: 1,
+			},
+		}))
+	},
+
 	custom_title(frm) {
-		if (frm.doc.custom_title && !frm.doc.description) {
-			frm.set_value("description", frm.doc.custom_title)
+		const title = extractPlainText(frm.doc.custom_title)
+		if (title && title !== cstr(frm.doc.custom_title || "").trim()) {
+			frm.set_value("custom_title", title)
+			return
 		}
 	},
 
 	description(frm) {
-		if (frm.doc.description && !frm.doc.custom_title) {
-			frm.set_value("custom_title", frm.doc.description)
-		}
-	},
-
-	custom_additional_assignees(frm) {
-		if (!frm.doc.custom_additional_assignees) {
-			return
-		}
-
-		const normalized = [
-			...new Set(
-				frm.doc.custom_additional_assignees
-					.split(/[\n,;]+/)
-					.map((value) => value.trim())
-					.filter(Boolean)
-			),
-		].join("\n")
-
-		if (normalized !== frm.doc.custom_additional_assignees) {
-			frm.set_value("custom_additional_assignees", normalized)
+		const description = extractPlainText(frm.doc.description)
+		if (description && !extractPlainText(frm.doc.custom_title)) {
+			frm.set_value("custom_title", description)
 		}
 	},
 })
