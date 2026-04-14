@@ -106,16 +106,13 @@ def _normalize_assignees(doc: Document):
 
 	if not assignees:
 		legacy_primary = (getattr(doc, "allocated_to", None) or "").strip()
-		legacy_additional = _parse_assignees(getattr(doc, "custom_additional_assignees", None))
-		assignees = [user for user in [legacy_primary, *legacy_additional] if user]
+		assignees = [user for user in [legacy_primary] if user]
 
 	valid_assignees = _validate_assignees_exist(assignees)
 	primary = valid_assignees[0] if valid_assignees else ""
-	additional = valid_assignees[1:] if len(valid_assignees) > 1 else []
 
 	_set_doc_assignees(doc, valid_assignees)
 	doc.allocated_to = primary or None
-	doc.custom_additional_assignees = "\n".join(additional)
 
 
 def _parse_assignees(raw_values) -> list[str]:
@@ -227,7 +224,6 @@ def _create_child_todo(parent_doc: Document, user: str, group_id: str):
 	child_todo.custom_parent_todo = parent_doc.name
 	child_todo.custom_assignment_group = group_id
 	child_todo.custom_is_group_child = 1
-	child_todo.custom_additional_assignees = ""
 
 	child_todo.insert(ignore_permissions=True)
 

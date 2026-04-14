@@ -33,7 +33,6 @@ const setDueDateDescription = (frm) => {
 frappe.ui.form.on("ToDo", {
 	refresh(frm) {
 		frm.toggle_display("allocated_to", false)
-		frm.toggle_display("custom_additional_assignees", false)
 		frm.set_query("custom_assignees", () => ({
 			filters: {
 				enabled: 1,
