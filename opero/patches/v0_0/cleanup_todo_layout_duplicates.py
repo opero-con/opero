@@ -27,14 +27,29 @@ def _remove_conflicting_column_breaks():
 		fields=["name", "fieldname", "insert_after"],
 	)
 
-	fields_to_delete: set[str] = set()
+	rows_by_anchor = {}
 	for row in rows:
-		fieldname = (row.fieldname or "").strip()
-		insert_after = (row.insert_after or "").strip()
-		if not fieldname or fieldname in KEEP_COLUMN_BREAKS:
+		rows_by_anchor.setdefault((row.insert_after or "").strip(), []).append(row)
+
+	# Traverse only from the intended row chain anchors so we don't affect
+	# unrelated sections. This also removes nested duplicate column breaks.
+	anchors_to_visit = list(ROW_COLUMN_BREAK_ANCHORS)
+	seen_anchors = set()
+	fields_to_delete: set[str] = set()
+
+	while anchors_to_visit:
+		anchor = anchors_to_visit.pop()
+		if anchor in seen_anchors:
 			continue
-		if insert_after in ROW_COLUMN_BREAK_ANCHORS:
+		seen_anchors.add(anchor)
+
+		for row in rows_by_anchor.get(anchor, []):
+			fieldname = (row.fieldname or "").strip()
+			if not fieldname or fieldname in KEEP_COLUMN_BREAKS:
+				continue
+
 			fields_to_delete.add(row.name)
+			anchors_to_visit.append(fieldname)
 
 	for custom_field_name in fields_to_delete:
 		if frappe.db.exists("Custom Field", custom_field_name):
