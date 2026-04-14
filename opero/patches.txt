@@ -20,3 +20,7 @@ opero.patches.v0_0.backfill_todo_assignee_rows
 opero.patches.v0_0.reapply_todo_enhancements_for_existing_sites
 opero.patches.v0_0.drop_legacy_todo_additional_assignees_field
 opero.patches.v0_0.cleanup_todo_layout_duplicates
+opero.patches.v0_0.reposition_todo_top_section_fields
+opero.patches.v0_0.fix_todo_top_section_field_order
+opero.patches.v0_0.restore_todo_description_and_status_two_columns
+opero.patches.v0_0.pin_todo_layout_from_ui_customization
