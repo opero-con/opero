@@ -3,31 +3,79 @@ const extractPlainText = (value) => {
 	return text.replace(/\s+/g, " ").trim()
 }
 
-const getRelativeDueDateLabel = (value) => {
-	const dueDate = cstr(value || "").trim()
+const STATUS_TONE_ICON = {
+	danger: "🔴",
+	warning: "🟠",
+	primary: "🔵",
+	success: "🟢",
+	neutral: "⚪",
+}
+
+const withToneIcon = (label, tone) => {
+	const icon = STATUS_TONE_ICON[tone] || STATUS_TONE_ICON.neutral
+	return `${icon} ${label}`
+}
+
+const getStatusVsDueDateDescriptor = (statusLabel, statusDateValue, dueDateValue) => {
+	const dueDate = cstr(dueDateValue || "").trim()
 	if (!dueDate) {
-		return ""
+		return { label: __(statusLabel), tone: "neutral" }
+	}
+
+	const statusDate = cstr(statusDateValue || "").trim()
+	if (!statusDate) {
+		return { label: __(statusLabel), tone: "neutral" }
+	}
+
+	const statusDateOnly = statusDate.split(" ")[0]
+	const dayDiff = frappe.datetime.get_diff(statusDateOnly, dueDate)
+
+	if (dayDiff === 0) {
+		return { label: __("{0} on due date", [statusLabel]), tone: "primary" }
+	}
+	if (dayDiff < 0) {
+		return {
+			label: __("{0} {1}d before due date", [statusLabel, Math.abs(dayDiff)]),
+			tone: "success",
+		}
+	}
+	return { label: __("{0} {1}d after due date", [statusLabel, dayDiff]), tone: "danger" }
+}
+
+const getDueDateDescriptor = (doc) => {
+	const status = cstr(doc.status || "").trim()
+	if (status === "Closed") {
+		return getStatusVsDueDateDescriptor("Closed", doc.custom_closed_on, doc.date)
+	}
+	if (status === "Cancelled") {
+		return getStatusVsDueDateDescriptor("Cancelled", doc.custom_cancelled_on, doc.date)
+	}
+
+	const dueDate = cstr(doc.date || "").trim()
+	if (!dueDate) {
+		return null
 	}
 
 	const dayDiff = frappe.datetime.get_diff(dueDate, frappe.datetime.get_today())
 	if (dayDiff === 0) {
-		return __("Due today")
+		return { label: __("Due today"), tone: "warning" }
 	}
 	if (dayDiff === 1) {
-		return __("Due tomorrow")
+		return { label: __("Due tomorrow"), tone: "warning" }
 	}
 	if (dayDiff > 1) {
-		return __("Due in {0} days", [dayDiff])
+		return { label: __("Due in {0} days", [dayDiff]), tone: "success" }
 	}
 	if (dayDiff === -1) {
-		return __("Overdue by 1 day")
+		return { label: __("Overdue by 1 day"), tone: "danger" }
 	}
-	return __("Overdue by {0} days", [Math.abs(dayDiff)])
+	return { label: __("Overdue by {0} days", [Math.abs(dayDiff)]), tone: "danger" }
 }
 
 const setDueDateDescription = (frm) => {
-	const label = getRelativeDueDateLabel(frm.doc.date)
-	frm.set_df_property("date", "description", label || "")
+	const descriptor = getDueDateDescriptor(frm.doc)
+	const description = descriptor ? withToneIcon(descriptor.label, descriptor.tone) : ""
+	frm.set_df_property("date", "description", description)
 }
 
 frappe.ui.form.on("ToDo", {
@@ -57,6 +105,10 @@ frappe.ui.form.on("ToDo", {
 	},
 
 	date(frm) {
+		setDueDateDescription(frm)
+	},
+
+	status(frm) {
 		setDueDateDescription(frm)
 	},
 })

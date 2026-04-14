@@ -24,3 +24,5 @@ opero.patches.v0_0.reposition_todo_top_section_fields
 opero.patches.v0_0.fix_todo_top_section_field_order
 opero.patches.v0_0.restore_todo_description_and_status_two_columns
 opero.patches.v0_0.pin_todo_layout_from_ui_customization
+opero.patches.v0_0.add_todo_closed_on_field
+opero.patches.v0_0.add_todo_cancelled_on_field
