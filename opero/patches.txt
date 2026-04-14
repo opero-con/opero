@@ -17,3 +17,4 @@ opero.patches.v0_0.add_todo_in_progress_status
 opero.patches.v0_0.set_todo_title_field_to_custom_title
 opero.patches.v0_0.convert_todo_assignees_to_table_multiselect
 opero.patches.v0_0.backfill_todo_assignee_rows
+opero.patches.v0_0.reapply_todo_enhancements_for_existing_sites
