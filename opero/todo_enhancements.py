@@ -6,6 +6,7 @@ from collections.abc import Iterable
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint
+from frappe.utils.data import now_datetime
 from frappe.utils.data import strip_html
 from frappe.utils.html_utils import unescape_html
 
@@ -24,6 +25,7 @@ SYNC_FIELDS = (
 def validate_todo(doc: Document, _method: str | None = None):
 	_sync_title_and_description(doc)
 	_sync_owner_display(doc)
+	_sync_status_timestamps(doc)
 	_validate_title_or_description(doc)
 	_normalize_assignees(doc)
 
@@ -99,6 +101,32 @@ def _sync_owner_display(doc: Document):
 	owner = (getattr(doc, "owner", None) or "").strip()
 	if owner and getattr(doc, "custom_created_by", None) != owner:
 		doc.custom_created_by = owner
+
+
+def _sync_status_timestamps(doc: Document):
+	status = (getattr(doc, "status", None) or "").strip()
+	current_closed_on = getattr(doc, "custom_closed_on", None)
+	current_cancelled_on = getattr(doc, "custom_cancelled_on", None)
+
+	if status == "Closed":
+		if not current_closed_on:
+			doc.custom_closed_on = now_datetime()
+		if current_cancelled_on:
+			doc.custom_cancelled_on = None
+		return
+
+	if status == "Cancelled":
+		if not current_cancelled_on:
+			doc.custom_cancelled_on = now_datetime()
+		if current_closed_on:
+			doc.custom_closed_on = None
+		return
+
+	if current_closed_on:
+		doc.custom_closed_on = None
+
+	if current_cancelled_on:
+		doc.custom_cancelled_on = None
 
 
 def _normalize_assignees(doc: Document):
