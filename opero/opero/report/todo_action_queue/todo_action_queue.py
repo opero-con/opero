@@ -13,7 +13,8 @@ def execute(filters=None):
 	filters = todo_dashboard.parse_filters(filters)
 	columns = get_columns()
 	data = get_data(filters)
-	return columns, data
+	summary = get_summary(data)
+	return columns, data, None, None, summary
 
 
 def get_columns():
@@ -26,19 +27,27 @@ def get_columns():
 			"width": 140,
 		},
 		{"fieldname": "title", "label": _("Title"), "fieldtype": "Data", "width": 260},
+		{"fieldname": "reference_type", "label": _("Ref Type"), "fieldtype": "Data", "width": 120},
+		{
+			"fieldname": "reference_name",
+			"label": _("Ref Name"),
+			"fieldtype": "Dynamic Link",
+			"options": "reference_type",
+			"width": 160,
+		},
 		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 120},
 		{"fieldname": "priority", "label": _("Priority"), "fieldtype": "Data", "width": 110},
 		{"fieldname": "due_date", "label": _("Due Date"), "fieldtype": "Date", "width": 120},
-		{"fieldname": "due_context", "label": _("Due Context"), "fieldtype": "Data", "width": 220},
+		{"fieldname": "due_context", "label": _("Due Context"), "fieldtype": "Data", "width": 200},
 		{"fieldname": "assignees", "label": _("Assignees"), "fieldtype": "Data", "width": 220},
 		{
 			"fieldname": "created_by",
 			"label": _("Created By"),
 			"fieldtype": "Link",
 			"options": "User",
-			"width": 170,
+			"width": 160,
 		},
-		{"fieldname": "age_days", "label": _("Age (days)"), "fieldtype": "Int", "width": 100},
+		{"fieldname": "age_days", "label": _("Age (days)"), "fieldtype": "Int", "width": 90},
 	]
 
 
@@ -48,6 +57,12 @@ def get_data(filters):
 	current_user = frappe.session.user
 	assignee_filter = (filters.get("assignee") or "").strip()
 
+	# show_only_overdue requires active statuses - override whatever the status filter says
+	if filters.get("show_only_overdue"):
+		statuses = [s for s in statuses if s in todo_dashboard.ACTIVE_STATUSES] or list(
+			todo_dashboard.ACTIVE_STATUSES
+		)
+
 	conditions = []
 	params = []
 
@@ -56,10 +71,11 @@ def get_data(filters):
 		conditions.append(f"todo.status IN ({placeholders})")
 		params.extend(statuses)
 
-	priority = (filters.get("priority") or "").strip()
-	if priority:
-		conditions.append("todo.priority = %s")
-		params.append(priority)
+	priority_values = todo_dashboard.parse_multi_select(filters.get("priority"))
+	if priority_values:
+		placeholders = ", ".join(["%s"] * len(priority_values))
+		conditions.append(f"todo.priority IN ({placeholders})")
+		params.extend(priority_values)
 
 	if filters.get("from_date"):
 		conditions.append("todo.date >= %s")
@@ -70,7 +86,6 @@ def get_data(filters):
 		params.append(filters.get("to_date"))
 
 	if filters.get("show_only_overdue"):
-		conditions.append("todo.status IN ('Open', 'In Progress')")
 		conditions.append("todo.date IS NOT NULL")
 		conditions.append("todo.date < %s")
 		params.append(today)
@@ -116,6 +131,8 @@ def get_data(filters):
 			todo.status,
 			todo.priority,
 			todo.date,
+			todo.reference_type,
+			todo.reference_name,
 			todo.allocated_to,
 			todo.custom_created_by,
 			todo.owner,
@@ -131,10 +148,11 @@ def get_data(filters):
 				ELSE 2
 			END,
 			CASE todo.priority
-				WHEN 'High' THEN 0
-				WHEN 'Medium' THEN 1
-				WHEN 'Low' THEN 2
-				ELSE 3
+				WHEN 'Urgent' THEN 0
+				WHEN 'High' THEN 1
+				WHEN 'Medium' THEN 2
+				WHEN 'Low' THEN 3
+				ELSE 4
 			END,
 			todo.date ASC,
 			todo.modified DESC
@@ -152,19 +170,53 @@ def get_data(filters):
 	for row in rows:
 		created_on = getdate(row.creation) if row.creation else today
 		assignees = assignee_map.get(row.name) or ([row.allocated_to] if row.allocated_to else [])
+		due_date = row.date
 
 		data.append(
 			{
 				"todo": row.name,
 				"title": todo_dashboard.get_todo_title(row),
+				"reference_type": row.reference_type or "",
+				"reference_name": row.reference_name or "",
 				"status": row.status,
 				"priority": row.priority,
-				"due_date": row.date,
+				"due_date": due_date,
 				"due_context": todo_dashboard.get_due_date_context(row),
 				"assignees": ", ".join(assignees),
 				"created_by": row.custom_created_by or row.owner,
 				"age_days": max(0, date_diff(today, created_on)),
+				"indicator": _get_indicator(row.status, due_date, today),
 			}
 		)
 
 	return data
+
+
+def get_summary(data):
+	total = len(data)
+	overdue = sum(1 for row in data if row.get("indicator") == "red")
+	due_today = sum(1 for row in data if row.get("indicator") == "orange")
+	in_progress = sum(1 for row in data if row.get("status") == "In Progress")
+
+	return [
+		{"label": _("Showing"), "value": total, "datatype": "Int"},
+		{"label": _("Overdue"), "value": overdue, "datatype": "Int"},
+		{"label": _("Due Today"), "value": due_today, "datatype": "Int"},
+		{"label": _("In Progress"), "value": in_progress, "datatype": "Int"},
+	]
+
+
+def _get_indicator(status, due_date, today) -> str:
+	if status == "Closed":
+		return "green"
+	if status == "Cancelled":
+		return "grey"
+	if due_date:
+		due = getdate(due_date) if not isinstance(due_date, type(today)) else due_date
+		if due < today:
+			return "red"
+		if due == today:
+			return "orange"
+	if status == "In Progress":
+		return "blue"
+	return ""

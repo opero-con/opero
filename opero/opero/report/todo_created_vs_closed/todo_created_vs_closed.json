@@ -8,14 +8,14 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2026-04-14 23:20:10.000000",
+ "modified": "2026-04-15 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Opero",
- "name": "ToDo Created vs Closed 30d",
+ "name": "ToDo Created vs Closed",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "ToDo",
- "report_name": "ToDo Created vs Closed 30d",
+ "report_name": "ToDo Created vs Closed",
  "report_type": "Script Report",
  "roles": [
   {

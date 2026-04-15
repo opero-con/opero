@@ -32,3 +32,6 @@ opero.patches.v0_0.cleanup_todo_created_closed_chart_user_filters
 opero.patches.v0_0.slim_todo_hub_workspace
 opero.patches.v0_0.cleanup_flow_hub_workspace_experiment
 opero.patches.v0_0.fix_todo_hub_flow_hub_shortcut
+opero.patches.v0_0.rename_todo_created_vs_closed_report
+opero.patches.v0_0.fix_todo_created_vs_closed_workspace_link
+opero.patches.v0_0.trim_todo_hub_workspace_shortcuts
