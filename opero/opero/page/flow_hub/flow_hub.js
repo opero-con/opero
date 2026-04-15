@@ -25,7 +25,7 @@ opero.FlowHubPage = class FlowHubPage {
 		this.page.set_primary_action(
 			__("Refresh"),
 			() => {
-				this.refresh();
+				this.refresh({ force: true });
 			},
 			"refresh"
 		);
@@ -362,7 +362,7 @@ opero.FlowHubPage = class FlowHubPage {
 		`);
 	}
 
-	refresh() {
+	refresh({ force = false } = {}) {
 		if (this.loading) {
 			return;
 		}
@@ -372,6 +372,7 @@ opero.FlowHubPage = class FlowHubPage {
 
 		frappe.call({
 			method: "opero.todo_dashboard.get_flow_hub_snapshot",
+			args: { force_refresh: force ? 1 : 0 },
 			callback: (response) => {
 				this.loading = false;
 				this.snapshot = response.message || {};

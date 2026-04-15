@@ -338,49 +338,92 @@ def get_todo_stale_in_progress_count(filters=None):
 
 
 @frappe.whitelist()
-def get_flow_hub_snapshot(filters=None):
+def get_flow_hub_snapshot(filters=None, force_refresh=0):
 	parsed = parse_filters(filters)
 	window_days = max(1, cint(parsed.get("window_days") or 3))
 	stale_days = max(1, cint(parsed.get("stale_days") or 7))
 	list_limit = max(3, min(20, cint(parsed.get("list_limit") or 8)))
 
+	cache_key = f"opero:flow_hub:{frappe.session.user}:{window_days}:{stale_days}"
+	if not cint(force_refresh):
+		cached = frappe.cache.get_value(cache_key)
+		if cached:
+			return cached
+
+	today = getdate(nowdate())
+	due_soon_from = getdate(add_days(today, 1))
+	due_soon_to = getdate(add_days(today, window_days))
+	stale_cutoff = getdate(add_days(today, -stale_days))
+
+	# 1 query: all count metrics collapsed into a single CASE WHEN aggregation
+	counts = _get_aggregated_user_metrics(today, due_soon_from, due_soon_to, stale_cutoff)
+
+	# 1 query: completion metrics shared by both the on-time-rate and avg-delay cards
+	completion = get_completion_metrics(default_days=30)
+
 	cards = [
-		_build_flow_hub_card("overdue", _("Overdue"), get_my_overdue_todos_count(filters), "#ef4444"),
-		_build_flow_hub_card("due_today", _("Due Today"), get_my_todos_due_today_count(filters), "#f97316"),
-		_build_flow_hub_card(
-			"due_soon",
-			_("Due Next {0}d").format(window_days),
-			get_todo_due_next_days_count({"window_days": window_days}),
-			"#2563eb",
-		),
-		_build_flow_hub_card(
-			"in_progress",
-			_("In Progress"),
-			get_my_in_progress_todos_count(filters),
-			"#1d4ed8",
-		),
-		_build_flow_hub_card(
-			"stale_progress",
-			_("Stale {0}d+").format(stale_days),
-			get_todo_stale_in_progress_count({"stale_days": stale_days}),
-			"#7c3aed",
-		),
-		_build_flow_hub_card(
-			"on_time_rate",
-			_("On-time Rate (30d)"),
-			get_todo_on_time_close_rate(filters),
-			"#059669",
-		),
-		_build_flow_hub_card(
-			"avg_delay",
-			_("Avg Delay (30d)"),
-			get_todo_avg_closure_delay(filters),
-			"#0f766e",
-		),
+		_build_flow_hub_card("overdue", _("Overdue"), {
+			"value": counts["overdue"],
+			"fieldtype": "Int",
+			"route": ["query-report", "ToDo Action Queue"],
+			"route_options": {"status": list(ACTIVE_STATUSES), "show_only_overdue": 1},
+		}, "#ef4444"),
+		_build_flow_hub_card("due_today", _("Due Today"), {
+			"value": counts["due_today"],
+			"fieldtype": "Int",
+			"route": ["query-report", "ToDo Action Queue"],
+			"route_options": {
+				"status": list(ACTIVE_STATUSES),
+				"from_date": str(today),
+				"to_date": str(today),
+			},
+		}, "#f97316"),
+		_build_flow_hub_card("due_soon", _("Due Next {0}d").format(window_days), {
+			"value": counts["due_soon"],
+			"fieldtype": "Int",
+			"route": ["query-report", "ToDo Action Queue"],
+			"route_options": {
+				"status": ["Open", "In Progress"],
+				"from_date": str(due_soon_from),
+				"to_date": str(due_soon_to),
+			},
+		}, "#2563eb"),
+		_build_flow_hub_card("in_progress", _("In Progress"), {
+			"value": counts["in_progress"],
+			"fieldtype": "Int",
+			"route": ["query-report", "ToDo Action Queue"],
+			"route_options": {"status": ["In Progress"]},
+		}, "#1d4ed8"),
+		_build_flow_hub_card("stale_progress", _("Stale {0}d+").format(stale_days), {
+			"value": counts["stale"],
+			"fieldtype": "Int",
+			"route": ["query-report", "ToDo In Progress Aging"],
+			"route_options": {"status": ["In Progress"], "min_days": stale_days},
+		}, "#7c3aed"),
+		_build_flow_hub_card("on_time_rate", _("On-time Rate (30d)"), {
+			"value": completion["on_time_rate"],
+			"fieldtype": "Percent",
+			"route": ["query-report", "ToDo Action Queue"],
+			"route_options": {
+				"status": ["Closed", "Cancelled"],
+				"from_date": str(completion["from_date"]),
+				"to_date": str(completion["to_date"]),
+			},
+		}, "#059669"),
+		_build_flow_hub_card("avg_delay", _("Avg Delay (30d)"), {
+			"value": completion["avg_delay"],
+			"fieldtype": "Float",
+			"route": ["query-report", "ToDo Action Queue"],
+			"route_options": {
+				"status": ["Closed", "Cancelled"],
+				"from_date": str(completion["from_date"]),
+				"to_date": str(completion["to_date"]),
+			},
+		}, "#0f766e"),
 	]
 
-	return {
-		"active_total": _count_todos_for_user(statuses=ACTIVE_STATUSES),
+	result = {
+		"active_total": counts["active_total"],
 		"window_days": window_days,
 		"stale_days": stale_days,
 		"cards": cards,
@@ -389,6 +432,9 @@ def get_flow_hub_snapshot(filters=None):
 		"updated_at": str(get_datetime()),
 	}
 
+	frappe.cache.set_value(cache_key, result, expires_in_sec=90)
+	return result
+
 
 def get_default_action_queue_statuses(filters=None) -> list[str]:
 	parsed = parse_filters(filters)
@@ -396,6 +442,47 @@ def get_default_action_queue_statuses(filters=None) -> list[str]:
 	if statuses:
 		return statuses
 	return list(ACTIVE_STATUSES)
+
+
+def _get_aggregated_user_metrics(
+	today: date,
+	due_soon_from: date,
+	due_soon_to: date,
+	stale_cutoff: date,
+) -> dict:
+	"""Single CASE WHEN aggregation replacing 6 separate COUNT queries."""
+	user_scope_sql, user_scope_params = _get_user_scope_condition("todo")
+	modified_expr = _date_expr("todo.modified")
+
+	row = frappe.db.sql(
+		f"""
+			SELECT
+				COUNT(CASE WHEN todo.status IN ('Open','In Progress')
+				           AND todo.date IS NOT NULL AND todo.date < %s THEN 1 END) AS overdue,
+				COUNT(CASE WHEN todo.status IN ('Open','In Progress')
+				           AND todo.date = %s THEN 1 END) AS due_today,
+				COUNT(CASE WHEN todo.status IN ('Open','In Progress')
+				           AND todo.date BETWEEN %s AND %s THEN 1 END) AS due_soon,
+				COUNT(CASE WHEN todo.status = 'In Progress' THEN 1 END) AS in_progress,
+				COUNT(CASE WHEN todo.status = 'In Progress'
+				           AND {modified_expr} <= %s THEN 1 END) AS stale,
+				COUNT(CASE WHEN todo.status IN ('Open','In Progress') THEN 1 END) AS active_total
+			FROM `tabToDo` todo
+			WHERE {user_scope_sql}
+		""",
+		[today, today, due_soon_from, due_soon_to, stale_cutoff, *user_scope_params],
+		as_dict=True,
+	)
+
+	result = row[0] if row else {}
+	return {
+		"overdue": cint(result.get("overdue") or 0),
+		"due_today": cint(result.get("due_today") or 0),
+		"due_soon": cint(result.get("due_soon") or 0),
+		"in_progress": cint(result.get("in_progress") or 0),
+		"stale": cint(result.get("stale") or 0),
+		"active_total": cint(result.get("active_total") or 0),
+	}
 
 
 def _build_flow_hub_card(key: str, label: str, metric: dict, accent: str) -> dict:
