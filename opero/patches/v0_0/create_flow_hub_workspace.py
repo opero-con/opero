@@ -24,7 +24,7 @@ def execute():
 			"title": WORKSPACE_NAME,
 			"label": WORKSPACE_NAME,
 			"icon": "fa fa-random",
-			"indicator_color": "teal",
+			"indicator_color": "cyan",
 			"module": "Opero",
 			"public": 1,
 			"for_user": "",
