@@ -30,3 +30,4 @@ opero.patches.v0_0.create_todo_dashboard_assets
 opero.patches.v0_0.refresh_todo_dashboard_assets_v2
 opero.patches.v0_0.cleanup_todo_created_closed_chart_user_filters
 opero.patches.v0_0.slim_todo_hub_workspace
+opero.patches.v0_0.create_flow_hub_workspace
