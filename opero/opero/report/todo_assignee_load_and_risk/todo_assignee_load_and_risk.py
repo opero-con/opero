@@ -100,6 +100,8 @@ def get_data(filters):
 	today = getdate(nowdate())
 	seven_days_ago = getdate(add_days(today, -6))
 	thirty_days_ago = getdate(add_days(today, -29))
+	# Default window for completed todos: 90 days. Bypass with include_historical=1.
+	history_cutoff = getdate(add_days(today, -89))
 
 	conditions = []
 	params = []
@@ -119,6 +121,18 @@ def get_data(filters):
 			)"""
 		)
 		params.extend([assignee, assignee])
+
+	if not cint(filters.get("include_historical")):
+		conditions.append(
+			"""(
+				todo.status IN ('Open', 'In Progress')
+				OR (
+					todo.status IN ('Closed', 'Cancelled')
+					AND COALESCE(DATE(todo.custom_closed_on), DATE(todo.custom_cancelled_on)) >= %s
+				)
+			)"""
+		)
+		params.append(history_cutoff)
 
 	if not conditions:
 		conditions.append("1 = 1")
