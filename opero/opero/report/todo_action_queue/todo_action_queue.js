@@ -46,5 +46,11 @@ frappe.query_reports["ToDo Action Queue"] = {
 			fieldtype: "Check",
 			default: 0,
 		},
+		{
+			fieldname: "unassigned_only",
+			label: __("Unassigned Only"),
+			fieldtype: "Check",
+			default: 0,
+		},
 	],
 };

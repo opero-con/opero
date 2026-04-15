@@ -429,11 +429,8 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				"key": "unassigned",
 				"label": _("Unassigned"),
 				"value": _get_unassigned_active_count(),
-				"route": ["List", "ToDo", "List"],
-				"route_options": {
-					"status": ["in", "Open,In Progress"],
-					"allocated_to": ["is", "not set"],
-				},
+				"route": ["query-report", "ToDo Action Queue"],
+				"route_options": {"unassigned_only": 1},
 			},
 		],
 		"throughput_7d": _get_throughput_7d(),
@@ -532,7 +529,8 @@ def _get_focus_queue(limit: int, stale_cutoff: date) -> list[dict]:
 				todo.date,
 				todo.custom_closed_on,
 				todo.custom_cancelled_on,
-				todo.modified
+				todo.modified,
+				todo.allocated_to
 			FROM `tabToDo` todo
 			WHERE todo.status IN ('Open', 'In Progress')
 				AND {user_scope_sql}
@@ -554,10 +552,36 @@ def _get_focus_queue(limit: int, stale_cutoff: date) -> list[dict]:
 		as_dict=True,
 	)
 
-	return [_serialize_focus_row(row, today, stale_cutoff) for row in rows]
+	if not rows:
+		return []
+
+	names = [row.name for row in rows]
+	assignee_map = get_todo_assignees(names)
+
+	all_users = set()
+	for row in rows:
+		users = assignee_map.get(row.name) or ([row.allocated_to] if row.allocated_to else [])
+		all_users.update(users)
+
+	user_details = {}
+	if all_users:
+		for u in frappe.get_all(
+			"User",
+			filters={"name": ("in", list(all_users))},
+			fields=["name", "full_name", "user_image"],
+			limit_page_length=0,
+		):
+			user_details[u.name] = u
+
+	return [
+		_serialize_focus_row(row, today, stale_cutoff, assignee_map, user_details)
+		for row in rows
+	]
 
 
-def _serialize_focus_row(row, today: date, stale_cutoff: date) -> dict:
+def _serialize_focus_row(
+	row, today: date, stale_cutoff: date, assignee_map: dict = None, user_details: dict = None
+) -> dict:
 	name = _to_text(_get_value(row, "name"))
 	priority = _to_text(_get_value(row, "priority"))
 	status = _to_text(_get_value(row, "status"))
@@ -576,6 +600,24 @@ def _serialize_focus_row(row, today: date, stale_cutoff: date) -> dict:
 	else:
 		urgency_band = "active"
 
+	assignees = []
+	if assignee_map is not None:
+		allocated_to = _to_text(_get_value(row, "allocated_to"))
+		users = assignee_map.get(name) or ([allocated_to] if allocated_to else [])
+		details = user_details or {}
+		for user_id in users:
+			u = details.get(user_id)
+			full_name = (u.full_name if u else "") or user_id
+			initials = _get_initials(full_name)
+			assignees.append(
+				{
+					"user": user_id,
+					"full_name": full_name,
+					"initials": initials,
+					"image": (u.user_image if u else "") or "",
+				}
+			)
+
 	return {
 		"name": name,
 		"title": get_todo_title(row) or name,
@@ -585,7 +627,17 @@ def _serialize_focus_row(row, today: date, stale_cutoff: date) -> dict:
 		"due_date": str(due_date) if due_date else "",
 		"due_label": get_due_date_context(row),
 		"urgency_band": urgency_band,
+		"assignees": assignees,
 	}
+
+
+def _get_initials(full_name: str) -> str:
+	parts = (full_name or "").strip().split()
+	if not parts:
+		return "?"
+	if len(parts) == 1:
+		return parts[0][0].upper()
+	return (parts[0][0] + parts[-1][0]).upper()
 
 
 def _get_unassigned_active_count() -> int:
