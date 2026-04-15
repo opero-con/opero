@@ -90,7 +90,22 @@ def get_data(filters):
 		conditions.append("todo.date < %s")
 		params.append(today)
 
-	if assignee_filter:
+	if filters.get("unassigned_only"):
+		# Org-wide: active todos with no assignee on either field
+		conditions.append(
+			"""(
+				todo.allocated_to IS NULL OR todo.allocated_to = ''
+			)"""
+		)
+		conditions.append(
+			"""NOT EXISTS (
+				SELECT 1
+				FROM `tabToDo Assignee` assignee_row
+				WHERE assignee_row.parent = todo.name
+					AND assignee_row.parenttype = 'ToDo'
+			)"""
+		)
+	elif assignee_filter:
 		conditions.append(
 			"""(
 				todo.allocated_to = %s
