@@ -1,4 +1,4 @@
-frappe.query_reports["ToDo Created vs Closed 30d"] = {
+frappe.query_reports["ToDo Created vs Closed"] = {
 	filters: [
 		{
 			fieldname: "time_window",
@@ -19,6 +19,17 @@ frappe.query_reports["ToDo Created vs Closed 30d"] = {
 			fieldtype: "Select",
 			options: ["Auto", "Day", "Week", "Month"],
 			default: "Auto",
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			description: __("Overrides the Window selector"),
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
 		},
 	],
 };

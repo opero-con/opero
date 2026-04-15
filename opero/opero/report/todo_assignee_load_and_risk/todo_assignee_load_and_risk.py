@@ -30,13 +30,7 @@ def get_columns():
 			"label": _("Assignee"),
 			"fieldtype": "Link",
 			"options": "User",
-			"width": 170,
-		},
-		{
-			"fieldname": "assignee_name",
-			"label": _("Assignee Name"),
-			"fieldtype": "Data",
-			"width": 180,
+			"width": 200,
 		},
 		{
 			"fieldname": "active_count",
@@ -70,16 +64,16 @@ def get_columns():
 		},
 		{
 			"fieldname": "on_time_rate_30d",
-			"label": _("On-time Rate (30d)"),
-			"fieldtype": "Percent",
-			"width": 130,
+			"label": _("On-time %"),
+			"fieldtype": "Int",
+			"width": 110,
 		},
 		{
 			"fieldname": "avg_delay_30d",
-			"label": _("Avg Delay (days, 30d)"),
+			"label": _("Avg Delay (days)"),
 			"fieldtype": "Float",
-			"precision": 2,
-			"width": 150,
+			"precision": 1,
+			"width": 140,
 		},
 		{
 			"fieldname": "risk_score",
@@ -123,12 +117,14 @@ def get_data(filters):
 		params.extend([assignee, assignee])
 
 	if not cint(filters.get("include_historical")):
+		closed_on_expr = _date_expr("todo.custom_closed_on")
+		cancelled_on_expr = _date_expr("todo.custom_cancelled_on")
 		conditions.append(
-			"""(
+			f"""(
 				todo.status IN ('Open', 'In Progress')
 				OR (
 					todo.status IN ('Closed', 'Cancelled')
-					AND COALESCE(DATE(todo.custom_closed_on), DATE(todo.custom_cancelled_on)) >= %s
+					AND COALESCE({closed_on_expr}, {cancelled_on_expr}) >= %s
 				)
 			)"""
 		)
@@ -232,7 +228,7 @@ def get_data(filters):
 			continue
 
 		completed_30d = user_metrics["completed_30d"]
-		on_time_rate = flt((user_metrics["on_time_30d"] / completed_30d) * 100 if completed_30d else 0, 2)
+		on_time_rate = round((user_metrics["on_time_30d"] / completed_30d) * 100 if completed_30d else 0)
 		avg_delay = flt((user_metrics["delay_sum_30d"] / completed_30d) if completed_30d else 0, 2)
 		risk_score = _get_risk_score(user_metrics)
 
@@ -303,6 +299,12 @@ def get_summary(data):
 		{"label": _("High Priority Active"), "value": total_high_priority, "datatype": "Int"},
 		{"label": _("Critical Assignees"), "value": critical_assignees, "datatype": "Int"},
 	]
+
+
+def _date_expr(fieldname: str) -> str:
+	if frappe.db.db_type == "postgres":
+		return f"CAST({fieldname} AS DATE)"
+	return f"DATE({fieldname})"
 
 
 def _get_completion_date(status, closed_on, cancelled_on):

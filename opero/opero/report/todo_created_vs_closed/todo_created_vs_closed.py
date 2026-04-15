@@ -6,8 +6,8 @@ from datetime import timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import cint
 from frappe.utils import add_days
+from frappe.utils import cint
 from frappe.utils import date_diff
 from frappe.utils import getdate
 from frappe.utils import nowdate
@@ -21,8 +21,10 @@ def execute(filters=None):
 	window_label = _get_time_window_label(filters, window_days)
 	today = getdate(nowdate())
 
-	if cint(filters.get("use_custom_range")) and (filters.get("from_date") or filters.get("to_date")):
+	# Custom date range takes precedence over the window selector
+	if filters.get("from_date") or filters.get("to_date"):
 		from_date, to_date = todo_dashboard.get_reporting_window(filters, default_days=window_days)
+		window_label = _("Custom Range")
 	else:
 		to_date = today
 		from_date = getdate(add_days(to_date, -(window_days - 1)))
@@ -34,9 +36,9 @@ def execute(filters=None):
 	created_counts = _get_created_counts(from_date, to_date)
 	closed_counts = _get_completion_counts(from_date, to_date, "Closed", "custom_closed_on")
 	cancelled_counts = _get_completion_counts(from_date, to_date, "Cancelled", "custom_cancelled_on")
-	created_bucket_counts = _aggregate_by_bucket(created_counts, granularity)
-	closed_bucket_counts = _aggregate_by_bucket(closed_counts, granularity)
-	cancelled_bucket_counts = _aggregate_by_bucket(cancelled_counts, granularity)
+	created_bucket = _aggregate_by_bucket(created_counts, granularity)
+	closed_bucket = _aggregate_by_bucket(closed_counts, granularity)
+	cancelled_bucket = _aggregate_by_bucket(cancelled_counts, granularity)
 
 	data = []
 	labels = []
@@ -44,9 +46,9 @@ def execute(filters=None):
 	completed_values = []
 
 	for bucket_start in _get_bucket_starts(from_date, to_date, granularity):
-		created = created_bucket_counts.get(bucket_start, 0)
-		closed = closed_bucket_counts.get(bucket_start, 0)
-		cancelled = cancelled_bucket_counts.get(bucket_start, 0)
+		created = created_bucket.get(bucket_start, 0)
+		closed = closed_bucket.get(bucket_start, 0)
+		cancelled = cancelled_bucket.get(bucket_start, 0)
 		completed = closed + cancelled
 		period_start, period_end = _get_period_window(bucket_start, from_date, to_date, granularity)
 		period_label = _get_period_label(period_start, period_end, granularity)
@@ -56,7 +58,8 @@ def execute(filters=None):
 				"date": bucket_start,
 				"period": period_label,
 				"created_count": created,
-				"closed_count": completed,
+				"completed_count": completed,
+				"closed_count": closed,
 				"cancelled_count": cancelled,
 			}
 		)
@@ -69,48 +72,21 @@ def execute(filters=None):
 		"data": {
 			"labels": labels,
 			"datasets": [
-				{"name": _("{0} ({1})").format(_("Created"), window_label), "values": created_values},
-				{
-					"name": _("{0} ({1})").format(_("Closed/Cancelled"), window_label),
-					"values": completed_values,
-				},
+				{"name": _("Created"), "values": created_values},
+				{"name": _("Completed"), "values": completed_values},
 			],
 		},
 		"type": "line",
 		"colors": ["#2563EB", "#059669"],
 	}
 
+	total_created = sum(created_values)
+	total_completed = sum(completed_values)
 	report_summary = [
-		{
-			"label": _("Created"),
-			"value": sum(created_values),
-			"datatype": "Int",
-		},
-		{
-			"label": _("Closed/Cancelled"),
-			"value": sum(completed_values),
-			"datatype": "Int",
-		},
-		{
-			"label": _("Net Change"),
-			"value": sum(created_values) - sum(completed_values),
-			"datatype": "Int",
-		},
-		{
-			"label": _("View"),
-			"value": _(granularity.title()),
-			"datatype": "Data",
-		},
-		{
-			"label": _("Points"),
-			"value": len(data),
-			"datatype": "Int",
-		},
-		{
-			"label": _("Window"),
-			"value": window_label,
-			"datatype": "Data",
-		},
+		{"label": _("Created"), "value": total_created, "datatype": "Int"},
+		{"label": _("Completed"), "value": total_completed, "datatype": "Int"},
+		{"label": _("Net Change"), "value": total_created - total_completed, "datatype": "Int"},
+		{"label": _("Window"), "value": window_label, "datatype": "Data"},
 	]
 
 	return columns, data, None, chart, report_summary
@@ -126,24 +102,10 @@ def get_columns(granularity):
 	return [
 		{"fieldname": "date", "label": date_label, "fieldtype": "Date", "width": 120},
 		{"fieldname": "period", "label": _("Period"), "fieldtype": "Data", "width": 170},
-		{
-			"fieldname": "created_count",
-			"label": _("Created"),
-			"fieldtype": "Int",
-			"width": 120,
-		},
-		{
-			"fieldname": "closed_count",
-			"label": _("Closed/Cancelled"),
-			"fieldtype": "Int",
-			"width": 160,
-		},
-		{
-			"fieldname": "cancelled_count",
-			"label": _("Cancelled"),
-			"fieldtype": "Int",
-			"width": 120,
-		},
+		{"fieldname": "created_count", "label": _("Created"), "fieldtype": "Int", "width": 110},
+		{"fieldname": "completed_count", "label": _("Completed"), "fieldtype": "Int", "width": 110},
+		{"fieldname": "closed_count", "label": _("Closed"), "fieldtype": "Int", "width": 100},
+		{"fieldname": "cancelled_count", "label": _("Cancelled"), "fieldtype": "Int", "width": 100},
 	]
 
 
@@ -176,7 +138,6 @@ def _get_completion_counts(from_date, to_date, status, fieldname):
 		[status, from_date, to_date],
 		as_dict=True,
 	)
-
 	counts = defaultdict(int)
 	for row in rows:
 		counts[getdate(row.day_key)] += row.total
@@ -200,7 +161,6 @@ def _get_time_window_days(filters) -> int:
 	selected = (filters.get("time_window") or "Last 30 Days").strip().lower()
 	if selected in window_map:
 		return window_map[selected]
-
 	fallback_days = cint(filters.get("window_days") or 30)
 	return min(max(fallback_days, 1), 730)
 
@@ -223,7 +183,6 @@ def _get_granularity(filters, day_span: int) -> str:
 	granularity = (filters.get("granularity") or "Auto").strip().lower()
 	if granularity in ("day", "week", "month"):
 		return granularity
-
 	if day_span <= 90:
 		return "day"
 	if day_span <= 730:
@@ -235,15 +194,11 @@ def _validate_granularity_limits(granularity: str, day_span: int) -> None:
 	if granularity == "day" and day_span > 180:
 		frappe.throw(
 			_(
-				"Daily view supports up to 180 days to keep reports fast. Use Auto, Week, or Month for larger ranges."
+				"Daily view supports up to 180 days. Use Auto, Week, or Month for larger ranges."
 			)
 		)
 	if granularity == "week" and day_span > 3650:
-		frappe.throw(
-			_(
-				"Weekly view supports up to 10 years. Use Auto or Month for larger ranges."
-			)
-		)
+		frappe.throw(_("Weekly view supports up to 10 years. Use Month for larger ranges."))
 
 
 def _aggregate_by_bucket(day_counts: dict, granularity: str) -> dict:
@@ -288,7 +243,6 @@ def _get_period_window(bucket_start, from_date, to_date, granularity: str):
 		window_start = max(bucket_start, from_date)
 		window_end = min(getdate(add_days(bucket_start, 6)), to_date)
 		return window_start, window_end
-
 	last_day = monthrange(bucket_start.year, bucket_start.month)[1]
 	window_start = max(bucket_start, from_date)
 	window_end = min(bucket_start.replace(day=last_day), to_date)
@@ -300,7 +254,7 @@ def _get_period_label(period_start, period_end, granularity: str) -> str:
 		return period_start.strftime("%d %b %Y")
 	if granularity == "month":
 		return period_start.strftime("%b %Y")
-	return f"{period_start.strftime('%d %b %Y')} - {period_end.strftime('%d %b %Y')}"
+	return f"{period_start.strftime('%d %b %Y')} to {period_end.strftime('%d %b %Y')}"
 
 
 def _get_chart_label(period_start, granularity: str) -> str:

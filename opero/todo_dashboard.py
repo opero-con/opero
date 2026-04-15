@@ -11,6 +11,7 @@ from frappe.utils import add_days
 from frappe.utils import cint
 from frappe.utils import date_diff
 from frappe.utils import flt
+from frappe.utils import cstr
 from frappe.utils import get_datetime
 from frappe.utils import getdate
 from frappe.utils import nowdate
@@ -281,7 +282,7 @@ def get_todo_due_next_days_count(filters=None):
 	today = getdate(nowdate())
 	from_date = getdate(add_days(today, 1))
 	to_date = getdate(add_days(today, window_days))
-	user_scope_sql, user_scope_params = _get_user_scope_condition("todo")
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 
 	count = frappe.db.sql(
 		f"""
@@ -312,7 +313,7 @@ def get_todo_stale_in_progress_count(filters=None):
 	parsed = parse_filters(filters)
 	stale_days = max(1, cint(parsed.get("stale_days") or 7))
 	cutoff_date = getdate(add_days(nowdate(), -stale_days))
-	user_scope_sql, user_scope_params = _get_user_scope_condition("todo")
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 	modified_expr = _date_expr("todo.modified")
 
 	count = frappe.db.sql(
@@ -342,9 +343,9 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 	parsed = parse_filters(filters)
 	window_days = max(1, cint(parsed.get("window_days") or 3))
 	stale_days = max(1, cint(parsed.get("stale_days") or 7))
-	list_limit = max(3, min(20, cint(parsed.get("list_limit") or 8)))
+	list_limit = max(3, min(20, cint(parsed.get("list_limit") or 10)))
 
-	cache_key = f"opero:flow_hub:{frappe.session.user}:{window_days}:{stale_days}"
+	cache_key = f"opero:flow_hub_v2:{frappe.session.user}:{window_days}:{stale_days}"
 	if not cint(force_refresh):
 		cached = frappe.cache.get_value(cache_key)
 		if cached:
@@ -355,80 +356,90 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 	due_soon_to = getdate(add_days(today, window_days))
 	stale_cutoff = getdate(add_days(today, -stale_days))
 
-	# 1 query: all count metrics collapsed into a single CASE WHEN aggregation
 	counts = _get_aggregated_user_metrics(today, due_soon_from, due_soon_to, stale_cutoff)
 
-	# 1 query: completion metrics shared by both the on-time-rate and avg-delay cards
-	completion = get_completion_metrics(default_days=30)
-
-	cards = [
-		_build_flow_hub_card("overdue", _("Overdue"), {
-			"value": counts["overdue"],
-			"fieldtype": "Int",
-			"route": ["query-report", "ToDo Action Queue"],
-			"route_options": {"status": list(ACTIVE_STATUSES), "show_only_overdue": 1},
-		}, "#ef4444"),
-		_build_flow_hub_card("due_today", _("Due Today"), {
-			"value": counts["due_today"],
-			"fieldtype": "Int",
-			"route": ["query-report", "ToDo Action Queue"],
-			"route_options": {
-				"status": list(ACTIVE_STATUSES),
-				"from_date": str(today),
-				"to_date": str(today),
-			},
-		}, "#f97316"),
-		_build_flow_hub_card("due_soon", _("Due Next {0}d").format(window_days), {
-			"value": counts["due_soon"],
-			"fieldtype": "Int",
-			"route": ["query-report", "ToDo Action Queue"],
-			"route_options": {
-				"status": ["Open", "In Progress"],
-				"from_date": str(due_soon_from),
-				"to_date": str(due_soon_to),
-			},
-		}, "#2563eb"),
-		_build_flow_hub_card("in_progress", _("In Progress"), {
-			"value": counts["in_progress"],
-			"fieldtype": "Int",
-			"route": ["query-report", "ToDo Action Queue"],
-			"route_options": {"status": ["In Progress"]},
-		}, "#1d4ed8"),
-		_build_flow_hub_card("stale_progress", _("Stale {0}d+").format(stale_days), {
-			"value": counts["stale"],
-			"fieldtype": "Int",
-			"route": ["query-report", "ToDo In Progress Aging"],
-			"route_options": {"status": ["In Progress"], "min_days": stale_days},
-		}, "#7c3aed"),
-		_build_flow_hub_card("on_time_rate", _("On-time Rate (30d)"), {
-			"value": completion["on_time_rate"],
-			"fieldtype": "Percent",
-			"route": ["query-report", "ToDo Action Queue"],
-			"route_options": {
-				"status": ["Closed", "Cancelled"],
-				"from_date": str(completion["from_date"]),
-				"to_date": str(completion["to_date"]),
-			},
-		}, "#059669"),
-		_build_flow_hub_card("avg_delay", _("Avg Delay (30d)"), {
-			"value": completion["avg_delay"],
-			"fieldtype": "Float",
-			"route": ["query-report", "ToDo Action Queue"],
-			"route_options": {
-				"status": ["Closed", "Cancelled"],
-				"from_date": str(completion["from_date"]),
-				"to_date": str(completion["to_date"]),
-			},
-		}, "#0f766e"),
-	]
-
 	result = {
+		"attention": _build_attention_message(counts),
+		"counts": [
+			{
+				"key": "overdue",
+				"label": _("Overdue"),
+				"value": counts["overdue"],
+				"accent": "#ef4444",
+				"route": ["query-report", "ToDo Action Queue"],
+				"route_options": {"status": list(ACTIVE_STATUSES), "show_only_overdue": 1},
+			},
+			{
+				"key": "due_today",
+				"label": _("Due Today"),
+				"value": counts["due_today"],
+				"accent": "#f97316",
+				"route": ["query-report", "ToDo Action Queue"],
+				"route_options": {
+					"status": list(ACTIVE_STATUSES),
+					"from_date": str(today),
+					"to_date": str(today),
+				},
+			},
+			{
+				"key": "due_soon",
+				"label": _("Due Next {0}d").format(window_days),
+				"value": counts["due_soon"],
+				"accent": "#2563eb",
+				"route": ["query-report", "ToDo Action Queue"],
+				"route_options": {
+					"status": ["Open", "In Progress"],
+					"from_date": str(due_soon_from),
+					"to_date": str(due_soon_to),
+				},
+			},
+			{
+				"key": "in_progress",
+				"label": _("In Progress"),
+				"value": counts["in_progress"],
+				"accent": "#1d4ed8",
+				"route": ["query-report", "ToDo Action Queue"],
+				"route_options": {"status": ["In Progress"]},
+			},
+		],
+		"focus_queue": _get_focus_queue(list_limit, stale_cutoff),
+		"risk": [
+			{
+				"key": "stale",
+				"label": _("Stale {0}d+").format(stale_days),
+				"value": counts["stale"],
+				"route": ["query-report", "ToDo In Progress Aging"],
+				"route_options": {"status": ["In Progress"], "min_days": stale_days},
+			},
+			{
+				"key": "no_due_date",
+				"label": _("No Due Date"),
+				"value": counts["no_due_date"],
+				"route": ["query-report", "ToDo Action Queue"],
+				"route_options": {"status": list(ACTIVE_STATUSES)},
+			},
+			{
+				"key": "high_priority",
+				"label": _("High Priority Active"),
+				"value": counts["high_priority"],
+				"route": ["query-report", "ToDo Action Queue"],
+				"route_options": {"status": list(ACTIVE_STATUSES), "priority": "High"},
+			},
+			{
+				"key": "unassigned",
+				"label": _("Unassigned (Team)"),
+				"value": _get_unassigned_active_count(),
+				"route": ["List", "ToDo", "List"],
+				"route_options": {
+					"status": ["Open", "In Progress"],
+					"allocated_to": ["is", "not set"],
+				},
+			},
+		],
+		"throughput_7d": _get_throughput_7d(),
 		"active_total": counts["active_total"],
-		"window_days": window_days,
 		"stale_days": stale_days,
-		"cards": cards,
-		"upcoming": _get_flow_hub_rows(list(ACTIVE_STATUSES), list_limit, completed_first=False),
-		"recently_finished": _get_flow_hub_rows(list(COMPLETED_STATUSES), list_limit, completed_first=True),
+		"window_days": window_days,
 		"updated_at": str(get_datetime()),
 	}
 
@@ -450,8 +461,8 @@ def _get_aggregated_user_metrics(
 	due_soon_to: date,
 	stale_cutoff: date,
 ) -> dict:
-	"""Single CASE WHEN aggregation replacing 6 separate COUNT queries."""
-	user_scope_sql, user_scope_params = _get_user_scope_condition("todo")
+	"""Single CASE WHEN aggregation for all count metrics."""
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 	modified_expr = _date_expr("todo.modified")
 
 	row = frappe.db.sql(
@@ -466,7 +477,11 @@ def _get_aggregated_user_metrics(
 				COUNT(CASE WHEN todo.status = 'In Progress' THEN 1 END) AS in_progress,
 				COUNT(CASE WHEN todo.status = 'In Progress'
 				           AND {modified_expr} <= %s THEN 1 END) AS stale,
-				COUNT(CASE WHEN todo.status IN ('Open','In Progress') THEN 1 END) AS active_total
+				COUNT(CASE WHEN todo.status IN ('Open','In Progress') THEN 1 END) AS active_total,
+				COUNT(CASE WHEN todo.status IN ('Open','In Progress')
+				           AND todo.date IS NULL THEN 1 END) AS no_due_date,
+				COUNT(CASE WHEN todo.status IN ('Open','In Progress')
+				           AND todo.priority IN ('Urgent','High') THEN 1 END) AS hp_active
 			FROM `tabToDo` todo
 			WHERE {user_scope_sql}
 		""",
@@ -482,38 +497,29 @@ def _get_aggregated_user_metrics(
 		"in_progress": cint(result.get("in_progress") or 0),
 		"stale": cint(result.get("stale") or 0),
 		"active_total": cint(result.get("active_total") or 0),
+		"no_due_date": cint(result.get("no_due_date") or 0),
+		"high_priority": cint(result.get("hp_active") or 0),
 	}
 
 
-def _build_flow_hub_card(key: str, label: str, metric: dict, accent: str) -> dict:
-	fieldtype = _to_text(metric.get("fieldtype")) or "Int"
-	if fieldtype in ("Float", "Percent", "Currency"):
-		value = flt(metric.get("value") or 0, 2)
-	else:
-		value = cint(metric.get("value") or 0)
+def _build_attention_message(counts: dict) -> str:
+	overdue = cint(counts.get("overdue") or 0)
+	due_today = cint(counts.get("due_today") or 0)
 
-	return {
-		"key": key,
-		"label": label,
-		"value": value,
-		"fieldtype": fieldtype,
-		"route": metric.get("route") or [],
-		"route_options": metric.get("route_options") or {},
-		"accent": accent,
-	}
+	if overdue == 0 and due_today == 0:
+		return _("All clear. Nothing urgent right now.")
+
+	parts = []
+	if overdue:
+		parts.append(_("{0} overdue").format(overdue))
+	if due_today:
+		parts.append(_("{0} due today").format(due_today))
+	return " · ".join(parts)
 
 
-def _get_flow_hub_rows(statuses: list[str], limit: int, completed_first: bool = False) -> list[dict]:
-	if not statuses:
-		return []
-
-	status_placeholders = ", ".join(["%s"] * len(statuses))
-	user_scope_sql, user_scope_params = _get_user_scope_condition("todo")
-	order_by = (
-		"COALESCE(todo.custom_closed_on, todo.custom_cancelled_on, todo.modified) DESC"
-		if completed_first
-		else "CASE WHEN todo.date IS NULL THEN 1 ELSE 0 END, todo.date ASC, todo.modified DESC"
-	)
+def _get_focus_queue(limit: int, stale_cutoff: date) -> list[dict]:
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
+	today = getdate(nowdate())
 
 	rows = frappe.db.sql(
 		f"""
@@ -528,34 +534,109 @@ def _get_flow_hub_rows(statuses: list[str], limit: int, completed_first: bool = 
 				todo.custom_cancelled_on,
 				todo.modified
 			FROM `tabToDo` todo
-			WHERE todo.status IN ({status_placeholders})
+			WHERE todo.status IN ('Open', 'In Progress')
 				AND {user_scope_sql}
-			ORDER BY {order_by}
+			ORDER BY
+				CASE
+					WHEN todo.date IS NOT NULL AND todo.date < %s
+					     AND todo.priority IN ('Urgent','High') THEN 0
+					WHEN todo.date IS NOT NULL AND todo.date < %s THEN 1
+					WHEN todo.date = %s AND todo.priority IN ('Urgent','High') THEN 2
+					WHEN todo.date = %s THEN 3
+					ELSE 4
+				END,
+				CASE WHEN todo.date IS NULL THEN 1 ELSE 0 END,
+				todo.date ASC,
+				todo.modified ASC
 			LIMIT %s
 		""",
-		[*statuses, *user_scope_params, limit],
+		[*user_scope_params, today, today, today, today, limit],
 		as_dict=True,
 	)
 
-	return [_serialize_flow_hub_row(row) for row in rows]
+	return [_serialize_focus_row(row, today, stale_cutoff) for row in rows]
 
 
-def _serialize_flow_hub_row(row) -> dict:
+def _serialize_focus_row(row, today: date, stale_cutoff: date) -> dict:
 	name = _to_text(_get_value(row, "name"))
-	title = get_todo_title(row) or name
 	priority = _to_text(_get_value(row, "priority"))
+	status = _to_text(_get_value(row, "status"))
 	due_date = _to_date(_get_value(row, "date"))
-	completion_date = _get_completion_date(row)
+	modified_date = _to_date(_get_value(row, "modified"))
+	due_soon_cutoff = getdate(add_days(today, 3))
+
+	if due_date and due_date < today:
+		urgency_band = "overdue"
+	elif due_date and due_date == today:
+		urgency_band = "due_today"
+	elif status == "In Progress" and modified_date and modified_date <= stale_cutoff:
+		urgency_band = "stale"
+	elif due_date and due_date <= due_soon_cutoff:
+		urgency_band = "due_soon"
+	else:
+		urgency_band = "active"
 
 	return {
 		"name": name,
-		"title": title,
-		"status": _to_text(_get_value(row, "status")),
+		"title": get_todo_title(row) or name,
+		"status": status,
 		"priority": priority,
 		"is_high_priority": priority in HIGH_PRIORITY_VALUES,
 		"due_date": str(due_date) if due_date else "",
 		"due_label": get_due_date_context(row),
-		"completion_date": str(completion_date) if completion_date else "",
+		"urgency_band": urgency_band,
+	}
+
+
+def _get_unassigned_active_count() -> int:
+	"""Org-wide count of active ToDos with no assignee at all."""
+	count = frappe.db.sql(
+		"""
+			SELECT COUNT(DISTINCT todo.name)
+			FROM `tabToDo` todo
+			WHERE todo.status IN ('Open', 'In Progress')
+				AND (todo.allocated_to IS NULL OR todo.allocated_to = '')
+				AND NOT EXISTS (
+					SELECT 1
+					FROM `tabToDo Assignee` assignee_row
+					WHERE assignee_row.parent = todo.name
+						AND assignee_row.parenttype = 'ToDo'
+				)
+		"""
+	)[0][0]
+	return cint(count or 0)
+
+
+def _get_throughput_7d() -> dict:
+	today = getdate(nowdate())
+	seven_days_ago = getdate(add_days(today, -6))
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
+	creation_expr = _date_expr("todo.creation")
+	closed_on_expr = _date_expr("todo.custom_closed_on")
+	cancelled_on_expr = _date_expr("todo.custom_cancelled_on")
+
+	row = frappe.db.sql(
+		f"""
+			SELECT
+				COUNT(CASE WHEN {creation_expr} BETWEEN %s AND %s THEN 1 END) AS created,
+				COUNT(CASE WHEN todo.status = 'Closed'
+				           AND {closed_on_expr} BETWEEN %s AND %s THEN 1 END) AS closed,
+				COUNT(CASE WHEN todo.status = 'Cancelled'
+				           AND {cancelled_on_expr} BETWEEN %s AND %s THEN 1 END) AS cancelled
+			FROM `tabToDo` todo
+			WHERE {user_scope_sql}
+		""",
+		[seven_days_ago, today, seven_days_ago, today, seven_days_ago, today, *user_scope_params],
+		as_dict=True,
+	)
+
+	result = row[0] if row else {}
+	created = cint(result.get("created") or 0)
+	closed = cint(result.get("closed") or 0) + cint(result.get("cancelled") or 0)
+	return {
+		"created": created,
+		"closed": closed,
+		"net": closed - created,
 	}
 
 
@@ -618,7 +699,7 @@ def _count_todos_for_user(
 		conditions.extend(extra_conditions)
 		params.extend(extra_params or [])
 
-	user_scope_sql, user_scope_params = _get_user_scope_condition("todo")
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 	conditions.append(user_scope_sql)
 	params.extend(user_scope_params)
 
@@ -636,7 +717,7 @@ def _count_todos_for_user(
 	return cint(count or 0)
 
 
-def _get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
+def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 	current_user = frappe.session.user
 	return (
 		f"""(
@@ -654,7 +735,3 @@ def _get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 	)
 
 
-def cstr(value) -> str:
-	if value is None:
-		return ""
-	return str(value)

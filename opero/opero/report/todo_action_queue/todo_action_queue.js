@@ -14,15 +14,21 @@ frappe.query_reports["ToDo Action Queue"] = {
 				const options = ["Open", "In Progress", "Closed", "Cancelled"];
 				const query = (txt || "").toLowerCase();
 				return options
-					.filter((status) => status.toLowerCase().includes(query))
-					.map((status) => ({ value: status, description: "" }));
+					.filter((s) => s.toLowerCase().includes(query))
+					.map((s) => ({ value: s, description: "" }));
 			},
 		},
 		{
 			fieldname: "priority",
 			label: __("Priority"),
-			fieldtype: "Select",
-			options: ["", "Low", "Medium", "High", "Urgent"],
+			fieldtype: "MultiSelectList",
+			get_data: function (txt) {
+				const options = ["Urgent", "High", "Medium", "Low"];
+				const query = (txt || "").toLowerCase();
+				return options
+					.filter((p) => p.toLowerCase().includes(query))
+					.map((p) => ({ value: p, description: "" }));
+			},
 		},
 		{
 			fieldname: "from_date",
