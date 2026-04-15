@@ -1,10 +1,10 @@
 frappe.provide("opero");
 
-frappe.pages["opero-flow-hub"].on_page_load = function (wrapper) {
+frappe.pages["flow-hub"].on_page_load = function (wrapper) {
 	wrapper.flow_hub = new opero.FlowHubPage(wrapper);
 };
 
-frappe.pages["opero-flow-hub"].on_page_show = function (wrapper) {
+frappe.pages["flow-hub"].on_page_show = function (wrapper) {
 	if (wrapper.flow_hub) {
 		wrapper.flow_hub.refresh();
 	}
