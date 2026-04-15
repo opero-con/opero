@@ -8,7 +8,7 @@ import frappe
 WORKSPACE_NAME = "ToDo Hub"
 LEGACY_WORKSPACE_NAME = "ToDo Command Center"
 REPORT_ACTION_QUEUE = "ToDo Action Queue"
-REPORT_CREATED_CLOSED = "ToDo Created vs Closed 30d"
+REPORT_CREATED_CLOSED = "ToDo Created vs Closed"
 REPORT_ASSIGNEE_LOAD = "ToDo Assignee Load and Risk"
 REPORT_IN_PROGRESS_AGING = "ToDo In Progress Aging"
 

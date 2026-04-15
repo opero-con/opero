@@ -89,7 +89,7 @@ def get_data(filters):
 		)
 		params.extend([assignee_filter, assignee_filter])
 	elif not show_all:
-		user_scope_sql, user_scope_params = todo_dashboard._get_user_scope_condition("todo")
+		user_scope_sql, user_scope_params = todo_dashboard.get_user_scope_condition("todo")
 		conditions.append(user_scope_sql)
 		params.extend(user_scope_params)
 
