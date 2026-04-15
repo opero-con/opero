@@ -18,5 +18,11 @@ frappe.query_reports["ToDo Assignee Load and Risk"] = {
 			fieldtype: "Int",
 			default: 10,
 		},
+		{
+			fieldname: "include_historical",
+			label: __("Include All History"),
+			fieldtype: "Check",
+			default: 0,
+		},
 	],
 };

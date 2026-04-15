@@ -352,6 +352,24 @@ def _ensure_workspace():
 
 	workspace_doc.content = json.dumps(_workspace_content(), separators=(",", ":"))
 	workspace_doc.save(ignore_permissions=True)
+	workspace_doc = _ensure_workspace_route_name(workspace_doc)
+	workspace_doc.reload()
+
+
+def _ensure_workspace_route_name(workspace_doc):
+	if workspace_doc.name == WORKSPACE_NAME:
+		return workspace_doc
+
+	if frappe.db.exists("Workspace", WORKSPACE_NAME):
+		return frappe.get_doc("Workspace", WORKSPACE_NAME)
+
+	frappe.rename_doc(
+		"Workspace",
+		workspace_doc.name,
+		WORKSPACE_NAME,
+		force=True,
+	)
+	return frappe.get_doc("Workspace", WORKSPACE_NAME)
 
 
 def _workspace_content():
@@ -484,9 +502,14 @@ def _get_or_new_doc(doctype: str, name: str, key_field: str):
 
 
 def _get_or_new_workspace():
+	if frappe.db.exists("Workspace", WORKSPACE_NAME):
+		return frappe.get_doc("Workspace", WORKSPACE_NAME)
+
 	existing_name = frappe.db.get_value("Workspace", {"label": WORKSPACE_NAME}, "name")
 	if not existing_name:
 		existing_name = frappe.db.get_value("Workspace", {"title": WORKSPACE_NAME}, "name")
+	if not existing_name and frappe.db.exists("Workspace", LEGACY_WORKSPACE_NAME):
+		existing_name = LEGACY_WORKSPACE_NAME
 	if not existing_name:
 		existing_name = frappe.db.get_value("Workspace", {"label": LEGACY_WORKSPACE_NAME}, "name")
 	if not existing_name:
