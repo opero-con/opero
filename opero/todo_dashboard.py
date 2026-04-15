@@ -337,12 +337,139 @@ def get_todo_stale_in_progress_count(filters=None):
 	}
 
 
+@frappe.whitelist()
+def get_flow_hub_snapshot(filters=None):
+	parsed = parse_filters(filters)
+	window_days = max(1, cint(parsed.get("window_days") or 3))
+	stale_days = max(1, cint(parsed.get("stale_days") or 7))
+	list_limit = max(3, min(20, cint(parsed.get("list_limit") or 8)))
+
+	cards = [
+		_build_flow_hub_card("overdue", _("Overdue"), get_my_overdue_todos_count(filters), "#ef4444"),
+		_build_flow_hub_card("due_today", _("Due Today"), get_my_todos_due_today_count(filters), "#f97316"),
+		_build_flow_hub_card(
+			"due_soon",
+			_("Due Next {0}d").format(window_days),
+			get_todo_due_next_days_count({"window_days": window_days}),
+			"#2563eb",
+		),
+		_build_flow_hub_card(
+			"in_progress",
+			_("In Progress"),
+			get_my_in_progress_todos_count(filters),
+			"#1d4ed8",
+		),
+		_build_flow_hub_card(
+			"stale_progress",
+			_("Stale {0}d+").format(stale_days),
+			get_todo_stale_in_progress_count({"stale_days": stale_days}),
+			"#7c3aed",
+		),
+		_build_flow_hub_card(
+			"on_time_rate",
+			_("On-time Rate (30d)"),
+			get_todo_on_time_close_rate(filters),
+			"#059669",
+		),
+		_build_flow_hub_card(
+			"avg_delay",
+			_("Avg Delay (30d)"),
+			get_todo_avg_closure_delay(filters),
+			"#0f766e",
+		),
+	]
+
+	return {
+		"active_total": _count_todos_for_user(statuses=ACTIVE_STATUSES),
+		"window_days": window_days,
+		"stale_days": stale_days,
+		"cards": cards,
+		"upcoming": _get_flow_hub_rows(list(ACTIVE_STATUSES), list_limit, completed_first=False),
+		"recently_finished": _get_flow_hub_rows(list(COMPLETED_STATUSES), list_limit, completed_first=True),
+		"updated_at": str(get_datetime()),
+	}
+
+
 def get_default_action_queue_statuses(filters=None) -> list[str]:
 	parsed = parse_filters(filters)
 	statuses = parse_multi_select(parsed.get("status"))
 	if statuses:
 		return statuses
 	return list(ACTIVE_STATUSES)
+
+
+def _build_flow_hub_card(key: str, label: str, metric: dict, accent: str) -> dict:
+	fieldtype = _to_text(metric.get("fieldtype")) or "Int"
+	if fieldtype in ("Float", "Percent", "Currency"):
+		value = flt(metric.get("value") or 0, 2)
+	else:
+		value = cint(metric.get("value") or 0)
+
+	return {
+		"key": key,
+		"label": label,
+		"value": value,
+		"fieldtype": fieldtype,
+		"route": metric.get("route") or [],
+		"route_options": metric.get("route_options") or {},
+		"accent": accent,
+	}
+
+
+def _get_flow_hub_rows(statuses: list[str], limit: int, completed_first: bool = False) -> list[dict]:
+	if not statuses:
+		return []
+
+	status_placeholders = ", ".join(["%s"] * len(statuses))
+	user_scope_sql, user_scope_params = _get_user_scope_condition("todo")
+	order_by = (
+		"COALESCE(todo.custom_closed_on, todo.custom_cancelled_on, todo.modified) DESC"
+		if completed_first
+		else "CASE WHEN todo.date IS NULL THEN 1 ELSE 0 END, todo.date ASC, todo.modified DESC"
+	)
+
+	rows = frappe.db.sql(
+		f"""
+			SELECT
+				todo.name,
+				todo.custom_title,
+				todo.description,
+				todo.status,
+				todo.priority,
+				todo.date,
+				todo.custom_closed_on,
+				todo.custom_cancelled_on,
+				todo.modified
+			FROM `tabToDo` todo
+			WHERE todo.status IN ({status_placeholders})
+				AND {user_scope_sql}
+			ORDER BY {order_by}
+			LIMIT %s
+		""",
+		[*statuses, *user_scope_params, limit],
+		as_dict=True,
+	)
+
+	return [_serialize_flow_hub_row(row) for row in rows]
+
+
+def _serialize_flow_hub_row(row) -> dict:
+	name = _to_text(_get_value(row, "name"))
+	title = get_todo_title(row) or name
+	priority = _to_text(_get_value(row, "priority"))
+	due_date = _to_date(_get_value(row, "date"))
+	completion_date = _get_completion_date(row)
+
+	return {
+		"name": name,
+		"title": title,
+		"status": _to_text(_get_value(row, "status")),
+		"priority": priority,
+		"is_high_priority": priority in HIGH_PRIORITY_VALUES,
+		"due_date": str(due_date) if due_date else "",
+		"due_label": get_due_date_context(row),
+		"completion_date": str(completion_date) if completion_date else "",
+	}
 
 
 def serialize_json(value) -> str:

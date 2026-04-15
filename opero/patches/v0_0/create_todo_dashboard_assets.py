@@ -5,7 +5,8 @@ import json
 import frappe
 
 
-WORKSPACE_NAME = "ToDo Command Center"
+WORKSPACE_NAME = "ToDo Hub"
+LEGACY_WORKSPACE_NAME = "ToDo Command Center"
 REPORT_ACTION_QUEUE = "ToDo Action Queue"
 REPORT_CREATED_CLOSED = "ToDo Created vs Closed 30d"
 REPORT_ASSIGNEE_LOAD = "ToDo Assignee Load and Risk"
@@ -484,6 +485,12 @@ def _get_or_new_doc(doctype: str, name: str, key_field: str):
 
 def _get_or_new_workspace():
 	existing_name = frappe.db.get_value("Workspace", {"label": WORKSPACE_NAME}, "name")
+	if not existing_name:
+		existing_name = frappe.db.get_value("Workspace", {"title": WORKSPACE_NAME}, "name")
+	if not existing_name:
+		existing_name = frappe.db.get_value("Workspace", {"label": LEGACY_WORKSPACE_NAME}, "name")
+	if not existing_name:
+		existing_name = frappe.db.get_value("Workspace", {"title": LEGACY_WORKSPACE_NAME}, "name")
 	if existing_name:
 		return frappe.get_doc("Workspace", existing_name)
 	return frappe.get_doc({"doctype": "Workspace", "label": WORKSPACE_NAME})

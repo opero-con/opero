@@ -26,7 +26,7 @@ Deliver a dashboard that answers:
 - Mobile-specific custom page (workspace remains responsive default)
 
 ## 4. UX and Information Architecture
-Implement one workspace: **`ToDo Command Center`** with two sections.
+Implement one workspace: **`ToDo Hub`** with two sections.
 
 ### 4.1 Section A: Action Center (Top Priority)
 Components:
@@ -149,7 +149,7 @@ Responsibilities:
 Note: keep this logic server-side so dashboard/report consistency does not depend on client script execution.
 
 ### 6.4 Workspace Layout
-Workspace name: `ToDo Command Center`
+Workspace name: `ToDo Hub`
 
 Top order:
 1. Number card row (4 cards)
@@ -195,7 +195,7 @@ If needed after profiling, add indexes on frequently filtered fields:
 6. Validate permissions with non-admin user
 
 ## 10. Acceptance Criteria
-- Dashboard is accessible from Desk as `ToDo Command Center`
+- Dashboard is accessible from Desk as `ToDo Hub`
 - Number cards show correct counts for current user context
 - Action Queue sorting and filters behave as defined
 - Trend charts display 30-day data with no script errors
