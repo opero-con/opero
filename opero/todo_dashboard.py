@@ -427,11 +427,11 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 			},
 			{
 				"key": "unassigned",
-				"label": _("Unassigned (Team)"),
+				"label": _("Unassigned"),
 				"value": _get_unassigned_active_count(),
 				"route": ["List", "ToDo", "List"],
 				"route_options": {
-					"status": ["Open", "In Progress"],
+					"status": ["in", "Open,In Progress"],
 					"allocated_to": ["is", "not set"],
 				},
 			},
