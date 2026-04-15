@@ -7,9 +7,9 @@
  "modified": "2026-04-15 12:10:00.000000",
  "modified_by": "Administrator",
  "module": "Opero",
- "name": "flow-hub",
+ "name": "opero-flow-hub",
  "owner": "Administrator",
- "page_name": "flow-hub",
+ "page_name": "opero-flow-hub",
  "roles": [
   {
    "role": "Desk User"
