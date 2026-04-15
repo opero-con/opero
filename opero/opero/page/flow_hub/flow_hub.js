@@ -230,6 +230,46 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-empty.is-clear { color: #047857; font-weight: 600; }
 
+			/* ── Assignee avatars ───────────────────────────────── */
+			.fh-avatars {
+				display: flex;
+				align-items: center;
+				margin-top: 0.3rem;
+			}
+			.fh-avatar {
+				width: 22px;
+				height: 22px;
+				border-radius: 50%;
+				border: 2px solid #ffffff;
+				margin-left: -6px;
+				font-size: 0.6rem;
+				font-weight: 700;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				overflow: hidden;
+				flex-shrink: 0;
+				color: #ffffff;
+				text-transform: uppercase;
+			}
+			.fh-avatars .fh-avatar:first-child { margin-left: 0; }
+			.fh-avatar img { width: 100%; height: 100%; object-fit: cover; }
+			.fh-avatar-more {
+				width: 22px;
+				height: 22px;
+				border-radius: 50%;
+				border: 2px solid #ffffff;
+				margin-left: -6px;
+				font-size: 0.58rem;
+				font-weight: 700;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: #e2e8f0;
+				color: #475569;
+				flex-shrink: 0;
+			}
+
 			/* ── Risk signals ───────────────────────────────────── */
 			.fh-risk { padding: 0 0.4rem 0.5rem; }
 			.fh-risk-row {
@@ -454,10 +494,12 @@ opero.FlowHubPage = class FlowHubPage {
 						const dueLabel = row.due_label
 							? `<span>${this.esc(row.due_label)}</span>`
 							: "";
+						const avatars = this._render_avatars(row.assignees);
 						return `
 						<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
 							<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
 							<div class="fh-item__meta">${tag}${priority}${dueLabel}</div>
+							${avatars}
 						</button>
 					`;
 					})
@@ -582,6 +624,27 @@ opero.FlowHubPage = class FlowHubPage {
 	open_action_queue() {
 		frappe.route_options = { status: ["Open", "In Progress"] };
 		frappe.set_route("query-report", "ToDo Action Queue");
+	}
+
+	_render_avatars(assignees) {
+		if (!assignees || !assignees.length) return "";
+		const PALETTE = ["#2563eb","#059669","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#dc2626"];
+		const _color = (user) => {
+			let h = 0;
+			for (let i = 0; i < user.length; i++) h = (h * 31 + user.charCodeAt(i)) >>> 0;
+			return PALETTE[h % PALETTE.length];
+		};
+		const MAX = 3;
+		const shown = assignees.slice(0, MAX);
+		const extra = assignees.length - MAX;
+		const chips = shown.map(a => {
+			if (a.image) {
+				return `<span class="fh-avatar" title="${this.esc(a.full_name)}"><img src="${this.esc(a.image)}" alt="${this.esc(a.initials)}"></span>`;
+			}
+			return `<span class="fh-avatar" style="background:${_color(a.user)}" title="${this.esc(a.full_name)}">${this.esc(a.initials)}</span>`;
+		}).join("");
+		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
+		return `<div class="fh-avatars">${chips}${more}</div>`;
 	}
 
 	_band_label(band) {
