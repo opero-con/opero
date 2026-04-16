@@ -382,6 +382,75 @@ opero.FlowHubPage = class FlowHubPage {
 				flex-shrink: 0;
 			}
 
+			/* ── Add allocatee button ──────────────────────────── */
+			.fh-add-alloc {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 26px;
+				height: 26px;
+				border-radius: 50%;
+				border: 1.5px dashed #cbd5e1;
+				background: none;
+				color: #94a3b8;
+				cursor: pointer;
+				transition: border-color 130ms, color 130ms, background 130ms;
+				flex-shrink: 0;
+				padding: 0;
+			}
+			.fh-add-alloc:hover {
+				border-color: #64748b;
+				color: #475569;
+				background: #f8fafc;
+			}
+			.fh-add-alloc svg { pointer-events: none; }
+
+			/* Add allocatee popover */
+			.fh-alloc-pop {
+				position: fixed;
+				z-index: 2000;
+				background: #ffffff;
+				border: 1px solid #e2e8f0;
+				border-radius: 8px;
+				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+				width: 200px;
+				padding: 0.35rem;
+				display: none;
+			}
+			.fh-alloc-pop.is-open { display: block; }
+			.fh-alloc-pop__input {
+				width: 100%;
+				border: 1px solid #e2e8f0;
+				border-radius: 5px;
+				padding: 0.3rem 0.5rem;
+				font-size: 0.78rem;
+				outline: none;
+				box-sizing: border-box;
+			}
+			.fh-alloc-pop__input:focus { border-color: #94a3b8; }
+			.fh-alloc-pop__results { margin-top: 0.25rem; }
+			.fh-alloc-pop__opt {
+				display: flex;
+				align-items: center;
+				gap: 0.4rem;
+				padding: 0.32rem 0.45rem;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 0.78rem;
+				color: #0f172a;
+				transition: background 100ms;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.fh-alloc-pop__opt:hover { background: #f8fafc; }
+			.fh-alloc-pop__empty {
+				padding: 0.4rem 0.45rem;
+				font-size: 0.75rem;
+				color: #94a3b8;
+				text-align: center;
+			}
+
 			/* ── Risk signals ───────────────────────────────────── */
 			.fh-risk { padding: 0 0.4rem 0.5rem; }
 			.fh-risk-row {
@@ -606,7 +675,7 @@ opero.FlowHubPage = class FlowHubPage {
 						const dueLabel = row.due_label
 							? `<span${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
 							: "";
-						const avatars = this._render_avatars(row.assignees);
+						const avatars = this._render_avatars(row.assignees, row.name);
 						const pc = this._prio_config(row.priority);
 						const prioTip = this.esc(row.priority || __("Priority"));
 						return `
@@ -731,6 +800,11 @@ opero.FlowHubPage = class FlowHubPage {
 			this._open_prio_dropdown(e.currentTarget);
 		});
 
+		this.$root.find("[data-add-alloc]").on("click", (e) => {
+			e.stopPropagation();
+			this._open_allocatee_popover(e.currentTarget);
+		});
+
 		this.$root.find("[data-risk-index]").each((_, el) => {
 			const signal = risk[parseInt($(el).attr("data-risk-index"), 10)];
 			if (signal) $(el).on("click", () => this._navigate(signal));
@@ -750,8 +824,15 @@ opero.FlowHubPage = class FlowHubPage {
 		frappe.set_route("List", "ToDo", "List");
 	}
 
-	_render_avatars(assignees) {
-		if (!assignees || !assignees.length) return "";
+	_render_avatars(assignees, todoName) {
+		if (!assignees || !assignees.length) {
+			return `<button type="button" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" data-add-alloc="${this.esc(todoName || "")}" title="">
+				<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+					<line x1="12" y1="3" x2="12" y2="21" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.5"/>
+				</svg>
+			</button>`;
+		}
 		const PALETTE = ["#2563eb","#059669","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#dc2626"];
 		const _color = (user) => {
 			let h = 0;
@@ -769,6 +850,77 @@ opero.FlowHubPage = class FlowHubPage {
 		}).join("");
 		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
 		return `<div class="fh-avatars">${chips}${more}</div>`;
+	}
+
+	_open_allocatee_popover(btn) {
+		let $pop = $("#fh-alloc-pop");
+		if (!$pop.length) {
+			$pop = $(`<div id="fh-alloc-pop" class="fh-alloc-pop">
+				<input type="text" class="fh-alloc-pop__input" placeholder="${__("Search user…")}">
+				<div class="fh-alloc-pop__results"></div>
+			</div>`).appendTo(document.body);
+
+			$pop.on("input", ".fh-alloc-pop__input", (e) => {
+				this._search_allocatee_users($(e.target).val(), $pop);
+			});
+
+			$pop.on("click", ".fh-alloc-pop__opt", (e) => {
+				e.stopPropagation();
+				const user = $(e.currentTarget).attr("data-user");
+				const todoName = $pop.data("active-btn") ? $($pop.data("active-btn")).attr("data-add-alloc") : "";
+				if (!user || !todoName) return;
+				$pop.removeClass("is-open");
+				frappe.call({
+					method: "opero.todo_dashboard.add_todo_allocatee",
+					args: { todo_name: todoName, user },
+					callback: () => this.refresh({ force: true }),
+				});
+			});
+		}
+
+		if ($pop.hasClass("is-open") && $pop.data("active-btn") === btn) {
+			$pop.removeClass("is-open");
+			return;
+		}
+
+		const rect = btn.getBoundingClientRect();
+		$pop.css({ top: rect.bottom + 4, left: rect.left - 160 });
+		$pop.data("active-btn", btn).addClass("is-open");
+		$pop.find(".fh-alloc-pop__input").val("").focus();
+		this._search_allocatee_users("", $pop);
+
+		setTimeout(() => {
+			$(document).one("click.fh-alloc", () => $pop.removeClass("is-open"));
+		}, 0);
+	}
+
+	_search_allocatee_users(query, $pop) {
+		frappe.call({
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "User",
+				filters: [
+					["enabled", "=", 1],
+					["user_type", "=", "System User"],
+					...(query ? [["full_name", "like", `%${query}%`]] : []),
+				],
+				fields: ["name", "full_name"],
+				limit_page_length: 8,
+			},
+			callback: (r) => {
+				const users = r.message || [];
+				const $results = $pop.find(".fh-alloc-pop__results").empty();
+				if (!users.length) {
+					$results.html(`<div class="fh-alloc-pop__empty">${__("No users found")}</div>`);
+					return;
+				}
+				users.forEach(u => {
+					$results.append(
+						$(`<div class="fh-alloc-pop__opt" data-user="${this.esc(u.name)}">${this.esc(u.full_name || u.name)}</div>`)
+					);
+				});
+			},
+		});
 	}
 
 	_prio_config(priority) {
