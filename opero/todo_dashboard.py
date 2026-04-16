@@ -504,7 +504,7 @@ def _build_attention_message(counts: dict) -> str:
 	due_today = cint(counts.get("due_today") or 0)
 
 	if overdue == 0 and due_today == 0:
-		return _("All clear. Nothing urgent right now.")
+		return _("All clear.")
 
 	parts = []
 	if overdue:
