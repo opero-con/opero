@@ -87,7 +87,7 @@ frappe.ui.form.on("ToDo", {
 			},
 		}))
 		setDueDateDescription(frm)
-		frm.add_custom_button(__("Flow Hub"), () => frappe.set_route("flow-hub"))
+		frm.add_custom_button(__("Flow Hub"), () => { window.location.href = "/app/flow-hub"; })
 	},
 
 	custom_title(frm) {
