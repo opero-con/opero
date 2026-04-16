@@ -64,8 +64,8 @@ opero.FlowHubPage = class FlowHubPage {
 				font-weight: 600;
 				color: var(--text-color);
 			}
-			.fh-status__msg.is-urgent { color: #b91c1c; }
-			.fh-status__msg.is-clear  { color: #047857; }
+			.fh-status__msg.is-clear  { color: #64748b; }
+			.fh-status__msg.is-ahead  { color: #047857; font-weight: 700; }
 			.fh-status__time {
 				flex-shrink: 0;
 				font-size: 0.72rem;
@@ -742,10 +742,8 @@ opero.FlowHubPage = class FlowHubPage {
 	render() {
 		const s = this.snapshot;
 		const attention = s.attention || "";
-		const isAllClear = attention.startsWith("All clear");
-
 		this.$root.html(`
-			${this._render_status_bar(attention, isAllClear, s.updated_at, s.counts || [])}
+			${this._render_status_bar(attention, s.updated_at, s.counts || [])}
 			<div class="fh-body">
 				${this._render_focus_queue(s.focus_queue || [])}
 				<div class="fh-right">
@@ -760,8 +758,8 @@ opero.FlowHubPage = class FlowHubPage {
 
 	// ── Section renderers ────────────────────────────────────────────
 
-	_render_status_bar(attention, isAllClear, updatedAt, counts) {
-		const msgClass = isAllClear ? "is-clear" : "is-urgent";
+	_render_status_bar(attention, updatedAt, counts) {
+		const msgClass = attention.startsWith("Welcome") ? "is-clear" : "is-ahead";
 		const chips = (counts || [])
 			.map(
 				(c, i) => `

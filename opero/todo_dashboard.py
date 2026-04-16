@@ -377,9 +377,10 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 	stale_cutoff = getdate(add_days(today, -stale_days))
 
 	counts = _get_aggregated_user_metrics(today, due_soon_from, due_soon_to, stale_cutoff)
+	closed_today = _get_closed_today(today)
 
 	result = {
-		"attention": _build_attention_message(counts),
+		"attention": _build_attention_message(closed_today),
 		"counts": [
 			{
 				"key": "overdue",
@@ -532,19 +533,31 @@ def _get_aggregated_user_metrics(
 	}
 
 
-def _build_attention_message(counts: dict) -> str:
-	overdue = cint(counts.get("overdue") or 0)
-	due_today = cint(counts.get("due_today") or 0)
+def _get_closed_today(today: date) -> int:
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
+	closed_on_expr = _date_expr("todo.custom_closed_on")
+	rows = frappe.db.sql(
+		f"""
+			SELECT COUNT(*) AS cnt
+			FROM `tabToDo` todo
+			WHERE todo.status IN ('Closed', 'Cancelled')
+			  AND {closed_on_expr} = %s
+			  AND {user_scope_sql}
+		""",
+		[today, *user_scope_params],
+		as_dict=True,
+	)
+	return cint((rows[0] if rows else {}).get("cnt") or 0)
 
-	if overdue == 0 and due_today == 0:
-		return _("All clear.")
 
-	parts = []
-	if overdue:
-		parts.append(_("{0} overdue").format(overdue))
-	if due_today:
-		parts.append(_("{0} due today").format(due_today))
-	return " · ".join(parts)
+def _build_attention_message(closed_today: int) -> str:
+	if closed_today == 0:
+		first_name = (
+			frappe.db.get_value("User", frappe.session.user, "first_name") or ""
+		).strip() or frappe.session.user.split("@")[0]
+		return _("Welcome, {0}").format(first_name)
+
+	return _("{0} closed · keep it up").format(closed_today)
 
 
 def _get_focus_queue(limit: int, stale_cutoff: date) -> list[dict]:
