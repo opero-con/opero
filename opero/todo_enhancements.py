@@ -6,12 +6,17 @@ from collections.abc import Iterable
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint
+from frappe.utils.data import getdate
 from frappe.utils.data import now_datetime
 from frappe.utils.data import strip_html
 from frappe.utils.html_utils import unescape_html
 
 
 USER_TOKEN_SPLIT = re.compile(r"[\n,;]+")
+
+# Todos created before this date may only have allocated_to set (pre-multi-allocatee era).
+# The legacy fallback that seeds custom_allocatees from allocated_to applies only to them.
+_LEGACY_ALLOCATEE_CUTOFF = getdate("2026-04-14")
 SYNC_FIELDS = (
 	"description",
 	"custom_title",
@@ -131,11 +136,27 @@ def _sync_status_timestamps(doc: Document):
 
 def _normalize_assignees(doc: Document):
 	assignees = _get_doc_assignees(doc)
+
+	if not assignees:
+		creation = _safe_getdate(getattr(doc, "creation", None))
+		if creation and creation < _LEGACY_ALLOCATEE_CUTOFF:
+			legacy_primary = (getattr(doc, "allocated_to", None) or "").strip()
+			assignees = [user for user in [legacy_primary] if user]
+
 	valid_assignees = _validate_assignees_exist(assignees)
 	primary = valid_assignees[0] if valid_assignees else ""
 
 	_set_doc_assignees(doc, valid_assignees)
 	doc.allocated_to = primary or None
+
+
+def _safe_getdate(value):
+	if not value:
+		return None
+	try:
+		return getdate(value)
+	except Exception:
+		return None
 
 
 def _parse_assignees(raw_values) -> list[str]:
