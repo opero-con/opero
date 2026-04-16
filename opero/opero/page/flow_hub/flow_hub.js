@@ -755,8 +755,13 @@ opero.FlowHubPage = class FlowHubPage {
 		} else if (tab === "risk") {
 			body = this._render_risk(s.risk || []);
 		} else if (tab === "overdue") {
-			const filtered = (s.focus_queue || []).filter(r => r.urgency_band === "overdue");
-			body = this._render_focus_queue(filtered, __("Overdue"));
+			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.urgency_band === "overdue"), __("Overdue"));
+		} else if (tab === "due_today") {
+			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.urgency_band === "due_today"), __("Due Today"));
+		} else if (tab === "due_soon") {
+			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.urgency_band === "due_soon"), __("Due Soon"));
+		} else if (tab === "in_progress") {
+			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.status === "In Progress"), __("In Progress"));
 		} else {
 			body = `<div class="fh-body">
 				${this._render_focus_queue(s.focus_queue || [])}
