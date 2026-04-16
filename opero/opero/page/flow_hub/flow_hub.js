@@ -1143,10 +1143,8 @@ opero.FlowHubPage = class FlowHubPage {
 		const currentDate = $(btn).attr("data-due-date") || "";
 
 		const SHORTCUTS = [
-			{ label: __("Today"),     days: 0 },
-			{ label: __("Tomorrow"),  days: 1 },
-			{ label: __("In 3 days"), days: 3 },
-			{ label: __("Next week"), days: 7 },
+			{ label: __("Today"),    days: 0 },
+			{ label: __("Tomorrow"), days: 1 },
 		];
 
 		let $pop = $("#fh-due-pop");
