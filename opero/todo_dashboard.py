@@ -199,6 +199,17 @@ def get_completion_metrics(filters=None, default_days: int = 30) -> dict[str, fl
 
 
 @frappe.whitelist()
+def add_todo_allocatee(todo_name: str, user: str):
+	"""Add a user to a ToDo's allocatees list and save."""
+	doc = frappe.get_doc("ToDo", todo_name)
+	existing = [row.user for row in (doc.custom_allocatees or [])]
+	if user not in existing:
+		doc.append("custom_allocatees", {"user": user})
+		doc.save(ignore_permissions=True)
+	return {"success": True}
+
+
+@frappe.whitelist()
 def get_todo_on_time_close_rate(filters=None):
 	metrics = get_completion_metrics(filters=filters, default_days=30)
 	return {
