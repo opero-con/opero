@@ -785,7 +785,7 @@ opero.FlowHubPage = class FlowHubPage {
 	_open_prio_dropdown(btn) {
 		const PRIORITIES = [
 			{ value: "High",   label: __("High"),   icon: "↑", color: "#d97706" },
-			{ value: "Medium", label: __("None"),   icon: "↑", color: "#94a3b8" },
+			{ value: "Medium", label: __("Medium"), icon: "↑", color: "#94a3b8" },
 			{ value: "Low",    label: __("Low"),    icon: "↓", color: "#3b82f6" },
 		];
 
