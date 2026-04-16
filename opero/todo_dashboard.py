@@ -405,7 +405,7 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 			},
 			{
 				"key": "due_soon",
-				"label": _("Due Next {0}d").format(window_days),
+				"label": _("Due Soon"),
 				"value": counts["due_soon"],
 				"accent": "#2563eb",
 				"route": ["List", "ToDo", "List"],
