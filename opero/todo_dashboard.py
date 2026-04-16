@@ -210,6 +210,15 @@ def add_todo_allocatee(todo_name: str, user: str):
 
 
 @frappe.whitelist()
+def remove_todo_allocatee(todo_name: str, user: str):
+	"""Remove a user from a ToDo's allocatees list and save."""
+	doc = frappe.get_doc("ToDo", todo_name)
+	doc.custom_allocatees = [row for row in (doc.custom_allocatees or []) if row.user != user]
+	doc.save(ignore_permissions=True)
+	return {"success": True}
+
+
+@frappe.whitelist()
 def get_todo_on_time_close_rate(filters=None):
 	metrics = get_completion_metrics(filters=filters, default_days=30)
 	return {

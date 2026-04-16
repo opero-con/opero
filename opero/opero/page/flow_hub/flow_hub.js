@@ -450,6 +450,17 @@ opero.FlowHubPage = class FlowHubPage {
 				color: #94a3b8;
 				text-align: center;
 			}
+			.fh-alloc-pop__current-row { display: flex; align-items: center; }
+			.fh-alloc-pop__remove {
+				flex-shrink: 0;
+				padding: 0 0.2rem;
+				color: #94a3b8;
+				font-size: 0.85rem;
+				line-height: 1;
+				cursor: pointer;
+			}
+			.fh-alloc-pop__remove:hover { color: #ef4444; }
+			.fh-avatars.fh-add-alloc { cursor: pointer; }
 
 			/* ── Risk signals ───────────────────────────────────── */
 			.fh-risk { padding: 0 0.4rem 0.5rem; }
@@ -825,8 +836,9 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	_render_avatars(assignees, todoName) {
+		const nameAttr = `data-add-alloc="${this.esc(todoName || "")}"`;
 		if (!assignees || !assignees.length) {
-			return `<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" data-add-alloc="${this.esc(todoName || "")}">
+			return `<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" ${nameAttr}>
 				<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
 					<line x1="12" y1="3" x2="12" y2="21" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.5"/>
@@ -849,30 +861,51 @@ opero.FlowHubPage = class FlowHubPage {
 			return `<span data-tip="${this.esc(a.full_name)}"><span class="fh-avatar" style="background:${_color(a.user)}">${this.esc(a.initials)}</span></span>`;
 		}).join("");
 		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
-		return `<div class="fh-avatars">${chips}${more}</div>`;
+		return `<span role="button" tabindex="0" class="fh-avatars fh-add-alloc" ${nameAttr}>${chips}${more}</span>`;
 	}
 
 	_open_allocatee_popover(btn) {
+		const todoName = $(btn).attr("data-add-alloc");
+		const queueRow = (this.snapshot.focus_queue || []).find(r => r.name === todoName);
+		const current = (queueRow && queueRow.assignees) || [];
+
 		let $pop = $("#fh-alloc-pop");
 		if (!$pop.length) {
 			$pop = $(`<div id="fh-alloc-pop" class="fh-alloc-pop">
-				<input type="text" class="fh-alloc-pop__input" placeholder="${__("Search user…")}">
+				<div class="fh-alloc-pop__current"></div>
+				<input type="text" class="fh-alloc-pop__input" placeholder="${__("Add user…")}">
 				<div class="fh-alloc-pop__results"></div>
 			</div>`).appendTo(document.body);
 
 			$pop.on("input", ".fh-alloc-pop__input", (e) => {
-				this._search_allocatee_users($(e.target).val(), $pop);
+				const name = $($pop.data("active-btn")).attr("data-add-alloc");
+				const row = (this.snapshot.focus_queue || []).find(r => r.name === name);
+				const existing = new Set(((row && row.assignees) || []).map(a => a.user));
+				this._search_allocatee_users($(e.target).val(), $pop, existing);
 			});
 
-			$pop.on("click", ".fh-alloc-pop__opt", (e) => {
+			$pop.on("click", ".fh-alloc-pop__opt[data-user]", (e) => {
 				e.stopPropagation();
 				const user = $(e.currentTarget).attr("data-user");
-				const todoName = $pop.data("active-btn") ? $($pop.data("active-btn")).attr("data-add-alloc") : "";
-				if (!user || !todoName) return;
+				const name = $($pop.data("active-btn")).attr("data-add-alloc");
+				if (!user || !name) return;
 				$pop.removeClass("is-open");
 				frappe.call({
 					method: "opero.todo_dashboard.add_todo_allocatee",
-					args: { todo_name: todoName, user },
+					args: { todo_name: name, user },
+					callback: () => this.refresh({ force: true }),
+				});
+			});
+
+			$pop.on("click", ".fh-alloc-pop__remove", (e) => {
+				e.stopPropagation();
+				const user = $(e.currentTarget).attr("data-user");
+				const name = $($pop.data("active-btn")).attr("data-add-alloc");
+				if (!user || !name) return;
+				$pop.removeClass("is-open");
+				frappe.call({
+					method: "opero.todo_dashboard.remove_todo_allocatee",
+					args: { todo_name: name, user },
 					callback: () => this.refresh({ force: true }),
 				});
 			});
@@ -883,18 +916,31 @@ opero.FlowHubPage = class FlowHubPage {
 			return;
 		}
 
+		// Render current allocatees with remove buttons
+		const $curr = $pop.find(".fh-alloc-pop__current").empty();
+		if (current.length) {
+			current.forEach(a => {
+				$curr.append(`<div class="fh-alloc-pop__opt fh-alloc-pop__current-row">
+					<span style="flex:1;overflow:hidden;text-overflow:ellipsis">${this.esc(a.full_name || a.user)}</span>
+					<span class="fh-alloc-pop__remove" data-user="${this.esc(a.user)}" title="${__("Remove")}">×</span>
+				</div>`);
+			});
+			$curr.append(`<hr style="margin:0.25rem 0;border:none;border-top:1px solid #f1f5f9">`);
+		}
+
 		const rect = btn.getBoundingClientRect();
-		$pop.css({ top: rect.bottom + 4, left: rect.left - 160 });
+		$pop.css({ top: rect.bottom + 4, left: Math.max(4, rect.right - 200) });
 		$pop.data("active-btn", btn).addClass("is-open");
 		$pop.find(".fh-alloc-pop__input").val("").focus();
-		this._search_allocatee_users("", $pop);
+		const existing = new Set(current.map(a => a.user));
+		this._search_allocatee_users("", $pop, existing);
 
 		setTimeout(() => {
 			$(document).one("click.fh-alloc", () => $pop.removeClass("is-open"));
 		}, 0);
 	}
 
-	_search_allocatee_users(query, $pop) {
+	_search_allocatee_users(query, $pop, excludeSet = new Set()) {
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
@@ -908,16 +954,14 @@ opero.FlowHubPage = class FlowHubPage {
 				limit_page_length: 8,
 			},
 			callback: (r) => {
-				const users = r.message || [];
+				const users = (r.message || []).filter(u => !excludeSet.has(u.name));
 				const $results = $pop.find(".fh-alloc-pop__results").empty();
 				if (!users.length) {
 					$results.html(`<div class="fh-alloc-pop__empty">${__("No users found")}</div>`);
 					return;
 				}
 				users.forEach(u => {
-					$results.append(
-						$(`<div class="fh-alloc-pop__opt" data-user="${this.esc(u.name)}">${this.esc(u.full_name || u.name)}</div>`)
-					);
+					$results.append(`<div class="fh-alloc-pop__opt" data-user="${this.esc(u.name)}">${this.esc(u.full_name || u.name)}</div>`);
 				});
 			},
 		});
