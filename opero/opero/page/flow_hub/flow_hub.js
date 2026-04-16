@@ -349,7 +349,9 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-avatars {
 				display: flex;
 				align-items: center;
+				justify-content: flex-end;
 				flex-shrink: 0;
+				width: 68px;
 			}
 			.fh-avatars [data-tip] {
 				display: inline-flex;
@@ -588,6 +590,11 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-alloc-pop__remove:hover { color: #ef4444; }
 			.fh-avatars.fh-add-alloc { cursor: pointer; }
+			span.fh-add-alloc:not(.fh-avatars) {
+				display: inline-flex;
+				width: 68px;
+				justify-content: flex-end;
+			}
 
 			/* ── Risk signals ───────────────────────────────────── */
 			.fh-risk { padding: 0 0.4rem 0.5rem; }
