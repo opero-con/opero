@@ -406,53 +406,97 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid #e2e8f0;
 				border-radius: 8px;
 				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-				width: 308px;
+				width: 232px;
 				padding: 0;
 				overflow: hidden;
 				display: none;
 			}
 			.fh-due-pop.is-open { display: block; }
-			.fh-due-pop__cal .flatpickr-calendar {
-				box-shadow: none !important;
-				border: none !important;
-				border-radius: 0 !important;
-				width: 100% !important;
+
+			/* Inline calendar */
+			.fh-cal { padding: 0.5rem 0.5rem 0.35rem; }
+			.fh-cal__nav {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 0.4rem;
 			}
+			.fh-cal__nav-btn {
+				background: none;
+				border: none;
+				cursor: pointer;
+				font-size: 1rem;
+				line-height: 1;
+				padding: 0.15rem 0.35rem;
+				border-radius: 4px;
+				color: #475569;
+				transition: background 100ms;
+			}
+			.fh-cal__nav-btn:hover { background: #f1f5f9; }
+			.fh-cal__month { font-size: 0.8rem; font-weight: 600; color: #0f172a; }
+			.fh-cal__grid {
+				display: grid;
+				grid-template-columns: repeat(7, 1fr);
+				gap: 1px;
+			}
+			.fh-cal__dow {
+				text-align: center;
+				font-size: 0.62rem;
+				font-weight: 600;
+				color: #94a3b8;
+				padding: 0.15rem 0 0.25rem;
+			}
+			.fh-cal__day {
+				text-align: center;
+				font-size: 0.75rem;
+				padding: 0.22rem 0;
+				border-radius: 4px;
+				cursor: pointer;
+				color: #0f172a;
+				transition: background 100ms;
+			}
+			.fh-cal__day:hover { background: #f1f5f9; }
+			.fh-cal__day.is-other { color: #cbd5e1; cursor: default; }
+			.fh-cal__day.is-other:hover { background: none; }
+			.fh-cal__day.is-today { font-weight: 700; color: #2563eb; }
+			.fh-cal__day.is-selected { background: #2563eb !important; color: #fff !important; font-weight: 600; }
+
+			/* Shortcuts strip */
 			.fh-due-pop__shortcuts {
 				border-top: 1px solid #f1f5f9;
 				padding: 0.25rem;
 				display: grid;
 				grid-template-columns: 1fr 1fr;
-				gap: 0.15rem;
+				gap: 0.1rem;
 			}
 			.fh-due-pop__short {
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
-				padding: 0.32rem 0.5rem;
+				padding: 0.3rem 0.45rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.76rem;
+				font-size: 0.75rem;
 				font-weight: 500;
 				color: #0f172a;
 				transition: background 100ms;
 				white-space: nowrap;
 			}
 			.fh-due-pop__short:hover { background: #f8fafc; }
-			.fh-due-pop__short-day { color: #94a3b8; font-size: 0.7rem; }
+			.fh-due-pop__short-day { color: #94a3b8; font-size: 0.68rem; margin-left: 0.25rem; }
 			.fh-due-pop__clear {
 				grid-column: 1 / -1;
 				display: flex;
 				align-items: center;
 				justify-content: center;
-				padding: 0.32rem 0.5rem;
+				padding: 0.3rem 0.45rem;
+				margin-top: 0.05rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.76rem;
+				font-size: 0.75rem;
 				font-weight: 500;
 				color: #94a3b8;
 				transition: background 100ms;
-				margin-top: 0.05rem;
 			}
 			.fh-due-pop__clear:hover { background: #fff1f2; color: #ef4444; }
 
@@ -1117,29 +1161,28 @@ opero.FlowHubPage = class FlowHubPage {
 		if (!$pop.length) {
 			$pop = $(`<div id="fh-due-pop" class="fh-due-pop">
 				<div class="fh-due-pop__cal"></div>
-				<div class="fh-due-pop__shortcuts">
-					${SHORTCUTS.map(s => `<div class="fh-due-pop__short" data-due-days="${s.days}">
-						<span>${this.esc(s.label)}</span>
-						<span class="fh-due-pop__short-day"></span>
-					</div>`).join("")}
-					<div class="fh-due-pop__clear" data-due-shortcut="clear" style="display:none">${__("Clear")}</div>
-				</div>
+				<div class="fh-due-pop__shortcuts"></div>
 			</div>`).appendTo(document.body);
 
-			// Initialise flatpickr inline
-			const calEl = $pop.find(".fh-due-pop__cal")[0];
-			if (window.flatpickr) {
-				this._due_fp = flatpickr(calEl, {
-					inline: true,
-					dateFormat: "Y-m-d",
-					onChange: (dates, dateStr) => {
-						const name = $pop.data("active-todo");
-						if (!name || !dateStr) return;
-						$pop.removeClass("is-open");
-						this._save_due_date(name, dateStr);
-					},
-				});
-			}
+			$pop.on("click", "[data-cal-nav]", (e) => {
+				e.stopPropagation();
+				const delta = parseInt($(e.currentTarget).attr("data-cal-nav"), 10);
+				let { cy, cm } = $pop.data("cal-state") || {};
+				cm += delta;
+				if (cm > 11) { cm = 0; cy++; }
+				if (cm < 0)  { cm = 11; cy--; }
+				$pop.data("cal-state", { cy, cm });
+				const sel = $pop.data("active-date") || "";
+				$pop.find(".fh-due-pop__cal").html(this._cal_html(cy, cm, sel));
+			});
+
+			$pop.on("click", "[data-cal-date]", (e) => {
+				e.stopPropagation();
+				const dateStr = $(e.currentTarget).attr("data-cal-date");
+				const name = $pop.data("active-todo");
+				$pop.removeClass("is-open");
+				if (name && dateStr) this._save_due_date(name, dateStr);
+			});
 
 			$pop.on("click", "[data-due-days]", (e) => {
 				e.stopPropagation();
@@ -1147,8 +1190,7 @@ opero.FlowHubPage = class FlowHubPage {
 				const days = parseInt($(e.currentTarget).attr("data-due-days"), 10);
 				$pop.removeClass("is-open");
 				if (!name) return;
-				const d = frappe.datetime.add_days(frappe.datetime.get_today(), days);
-				this._save_due_date(name, d);
+				this._save_due_date(name, frappe.datetime.add_days(frappe.datetime.get_today(), days));
 			});
 
 			$pop.on("click", "[data-due-shortcut='clear']", (e) => {
@@ -1164,30 +1206,76 @@ opero.FlowHubPage = class FlowHubPage {
 			return;
 		}
 
-		// Update shortcut day labels and calendar selection
+		// Determine calendar view month
 		const today = frappe.datetime.get_today();
-		$pop.find("[data-due-days]").each((_, el) => {
-			const days = parseInt($(el).attr("data-due-days"), 10);
-			const d = frappe.datetime.add_days(today, days);
-			const dayName = new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
-			$(el).find(".fh-due-pop__short-day").text(dayName);
-		});
+		const viewDate = currentDate || today;
+		const [vy, vm] = viewDate.split("-").map(Number);
+		const cy = vy, cm = vm - 1;
 
-		if (this._due_fp) {
-			if (currentDate) this._due_fp.setDate(currentDate, false);
-			else this._due_fp.clear();
+		$pop.data({ "active-todo": todoName, "active-date": currentDate, "cal-state": { cy, cm } });
+		$pop.find(".fh-due-pop__cal").html(this._cal_html(cy, cm, currentDate));
+
+		// Build shortcuts
+		const $sc = $pop.find(".fh-due-pop__shortcuts").empty();
+		SHORTCUTS.forEach(s => {
+			const d = frappe.datetime.add_days(today, s.days);
+			const dayName = new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
+			$sc.append(`<div class="fh-due-pop__short" data-due-days="${s.days}">
+				${this.esc(s.label)}<span class="fh-due-pop__short-day">${this.esc(dayName)}</span>
+			</div>`);
+		});
+		if (currentDate) {
+			$sc.append(`<div class="fh-due-pop__clear" data-due-shortcut="clear">${__("Clear")}</div>`);
 		}
 
-		$pop.find("[data-due-shortcut='clear']").toggle(!!currentDate);
-
 		const rect = btn.getBoundingClientRect();
-		const left = Math.min(Math.max(4, rect.left), window.innerWidth - 316);
+		const left = Math.min(Math.max(4, rect.left), window.innerWidth - 240);
 		$pop.css({ top: rect.bottom + 4, left });
-		$pop.data("active-todo", todoName).addClass("is-open");
+		$pop.addClass("is-open");
 
 		setTimeout(() => {
 			$(document).one("click.fh-due", () => $pop.removeClass("is-open"));
 		}, 0);
+	}
+
+	_cal_html(year, month, selectedDate) {
+		const DOWS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+		const today = frappe.datetime.get_today();
+		const firstDay = new Date(year, month, 1).getDay();
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
+		const daysInPrev  = new Date(year, month, 0).getDate();
+		const monthLabel  = new Date(year, month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+		let cells = "";
+		// trailing days from prev month
+		for (let i = firstDay - 1; i >= 0; i--) {
+			cells += `<span class="fh-cal__day is-other">${daysInPrev - i}</span>`;
+		}
+		// current month days
+		for (let d = 1; d <= daysInMonth; d++) {
+			const ds = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+			let cls = "fh-cal__day";
+			if (ds === today) cls += " is-today";
+			if (ds === selectedDate) cls += " is-selected";
+			cells += `<span class="${cls}" data-cal-date="${ds}">${d}</span>`;
+		}
+		// leading days from next month
+		const total = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+		for (let d = 1; d <= total - firstDay - daysInMonth; d++) {
+			cells += `<span class="fh-cal__day is-other">${d}</span>`;
+		}
+
+		return `<div class="fh-cal">
+			<div class="fh-cal__nav">
+				<button class="fh-cal__nav-btn" data-cal-nav="-1">‹</button>
+				<span class="fh-cal__month">${this.esc(monthLabel)}</span>
+				<button class="fh-cal__nav-btn" data-cal-nav="1">›</button>
+			</div>
+			<div class="fh-cal__grid">
+				${DOWS.map(d => `<span class="fh-cal__dow">${d}</span>`).join("")}
+				${cells}
+			</div>
+		</div>`;
 	}
 
 	_save_due_date(todoName, date) {
