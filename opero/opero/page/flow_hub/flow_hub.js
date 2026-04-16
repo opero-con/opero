@@ -118,6 +118,7 @@ opero.FlowHubPage = class FlowHubPage {
 				box-shadow: 0 2px 6px rgba(0,0,0,0.07);
 			}
 			.fh-chip.is-active .fh-chip__label { color: var(--fh-accent, var(--text-color)); }
+			.fh-chip--label-only .fh-chip__label { font-weight: 600; }
 			.fh-chip__value {
 				font-size: 0.76rem;
 				font-weight: 700;
@@ -747,14 +748,16 @@ opero.FlowHubPage = class FlowHubPage {
 
 	render() {
 		const s = this.snapshot;
-		const attention = s.attention || "";
+		const riskActive = this._active_tab === "risk";
 		this.$root.html(`
-			${this._render_status_bar(attention, s.updated_at, s.counts || [])}
+			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [])}
 			<div class="fh-body">
 				${this._render_focus_queue(s.focus_queue || [])}
 				<div class="fh-right">
-					${this._render_risk(s.risk || [])}
-					${this._render_throughput(s.throughput_7d || {})}
+					${riskActive
+						? this._render_risk(s.risk || [])
+						: `${this._render_risk(s.risk || [])}${this._render_throughput(s.throughput_7d || {})}`
+					}
 				</div>
 			</div>
 		`);
@@ -777,11 +780,16 @@ opero.FlowHubPage = class FlowHubPage {
 				</button>`;
 			})
 			.join("");
+		const isRiskActive = this._active_tab === "risk";
 		return `
 			<div class="fh-status">
 				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
 				<div class="fh-chips">
 					${chips}
+					<button type="button" class="fh-chip fh-chip--label-only ${isRiskActive ? "is-active" : ""}"
+						data-chip-key="risk" style="--fh-accent:#7c3aed">
+						<span class="fh-chip__label">${this.esc(__("Risk Signals"))}</span>
+					</button>
 					<button type="button" class="fh-status__btn" data-action="queue">
 						${this.esc(__("Action Queue"))}
 					</button>
