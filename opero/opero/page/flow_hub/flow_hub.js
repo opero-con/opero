@@ -15,6 +15,7 @@ opero.FlowHubPage = class FlowHubPage {
 		this.wrapper = wrapper;
 		this.loading = false;
 		this.snapshot = {};
+		this._active_tab = null;
 
 		this.page = frappe.ui.make_app_page({
 			parent: wrapper,
@@ -111,6 +112,12 @@ opero.FlowHubPage = class FlowHubPage {
 				white-space: nowrap;
 			}
 			.fh-chip:hover { background: var(--bg-color); }
+			.fh-chip.is-active {
+				background: var(--bg-color);
+				border-top-width: 4px;
+				box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+			}
+			.fh-chip.is-active .fh-chip__label { color: var(--fh-accent, var(--text-color)); }
 			.fh-chip__value {
 				font-size: 0.76rem;
 				font-weight: 700;
@@ -760,15 +767,15 @@ opero.FlowHubPage = class FlowHubPage {
 	_render_status_bar(attention, updatedAt, counts) {
 		const msgClass = attention.startsWith("Welcome") ? "is-clear" : "is-ahead";
 		const chips = (counts || [])
-			.map(
-				(c, i) => `
-				<button type="button" class="fh-chip" data-count-index="${i}"
-				        style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
+			.map(c => {
+				const isActive = this._active_tab === c.key;
+				return `<button type="button" class="fh-chip ${isActive ? "is-active" : ""}"
+					data-chip-key="${this.esc(c.key)}"
+					style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
 					<span class="fh-chip__value ${c.value === 0 ? "is-zero" : ""}">${c.value}</span>
 					<span class="fh-chip__label">${this.esc(c.label || "")}</span>
-				</button>
-			`
-			)
+				</button>`;
+			})
 			.join("");
 		return `
 			<div class="fh-status">
@@ -907,9 +914,10 @@ opero.FlowHubPage = class FlowHubPage {
 
 		this.$root.find("[data-action='queue']").on("click", () => this.open_action_queue());
 
-		this.$root.find("[data-count-index]").each((_, el) => {
-			const card = counts[parseInt($(el).attr("data-count-index"), 10)];
-			if (card) $(el).on("click", () => this._navigate(card));
+		this.$root.find("[data-chip-key]").on("click", (e) => {
+			const key = $(e.currentTarget).attr("data-chip-key");
+			this._active_tab = (this._active_tab === key) ? null : key;
+			this.render();
 		});
 
 		this.$root.find("[data-queue-index]").each((_, el) => {
