@@ -804,12 +804,14 @@ opero.FlowHubPage = class FlowHubPage {
 				e.stopPropagation();
 				const newPrio = $(e.currentTarget).attr("data-prio-value");
 				const $btn = $drop.data("active-btn");
-				if ($btn) {
-					const todoName = $($btn).attr("data-todo-name");
-					frappe.db.set_value("ToDo", todoName, "priority", newPrio)
-						.then(() => this.refresh({ force: true }));
-				}
 				$drop.removeClass("is-open");
+				if (!$btn) return;
+				const todoName = $($btn).attr("data-todo-name");
+				frappe.call({
+					method: "frappe.client.set_value",
+					args: { doctype: "ToDo", name: todoName, fieldname: "priority", value: newPrio },
+					callback: () => this.refresh({ force: true }),
+				});
 			});
 		}
 
