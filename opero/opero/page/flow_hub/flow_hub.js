@@ -826,12 +826,12 @@ opero.FlowHubPage = class FlowHubPage {
 
 	_render_avatars(assignees, todoName) {
 		if (!assignees || !assignees.length) {
-			return `<button type="button" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" data-add-alloc="${this.esc(todoName || "")}" title="">
+			return `<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" data-add-alloc="${this.esc(todoName || "")}">
 				<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
 					<line x1="12" y1="3" x2="12" y2="21" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.5"/>
 				</svg>
-			</button>`;
+			</span>`;
 		}
 		const PALETTE = ["#2563eb","#059669","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#dc2626"];
 		const _color = (user) => {
