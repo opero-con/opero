@@ -795,7 +795,8 @@ def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 					AND assignee_row.parenttype = 'ToDo'
 					AND assignee_row.user = %s
 			)
-		)""",
+		)
+		AND ({alias}.custom_is_group_child IS NULL OR {alias}.custom_is_group_child = 0)""",
 		[current_user, current_user, current_user],
 	)
 
