@@ -105,7 +105,6 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.22rem 0.5rem;
 				border-radius: 6px;
 				border: 1px solid var(--border-color);
-				border-top: 3px solid var(--fh-accent, var(--border-color));
 				background: var(--fg-color);
 				cursor: pointer;
 				transition: background 130ms;
@@ -114,7 +113,6 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-chip:hover { background: var(--bg-color); }
 			.fh-chip.is-active {
 				background: var(--bg-color);
-				border-top-width: 4px;
 				box-shadow: 0 2px 6px rgba(0,0,0,0.07);
 			}
 			.fh-chip.is-active .fh-chip__label { color: var(--fh-accent, var(--text-color)); }
@@ -122,9 +120,10 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-chip__value {
 				font-size: 0.76rem;
 				font-weight: 700;
-				color: var(--fh-accent, var(--text-color));
+				color: var(--text-muted);
 				line-height: 1;
 			}
+			.fh-chip__value:not(.is-zero) { color: var(--fh-accent, var(--text-color)); }
 			.fh-chip__value.is-zero { color: var(--text-muted); }
 			.fh-chip__label {
 				font-size: 0.76rem;
