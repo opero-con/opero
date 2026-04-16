@@ -754,6 +754,9 @@ opero.FlowHubPage = class FlowHubPage {
 			body = this._render_throughput(s.throughput_7d || {});
 		} else if (tab === "risk") {
 			body = this._render_risk(s.risk || []);
+		} else if (tab === "overdue") {
+			const filtered = (s.focus_queue || []).filter(r => r.urgency_band === "overdue");
+			body = this._render_focus_queue(filtered, __("Overdue"));
 		} else {
 			body = `<div class="fh-body">
 				${this._render_focus_queue(s.focus_queue || [])}
@@ -808,7 +811,7 @@ opero.FlowHubPage = class FlowHubPage {
 		`;
 	}
 
-	_render_focus_queue(queue) {
+	_render_focus_queue(queue, title) {
 		const body = queue.length
 			? queue
 					.map((row, i) => {
@@ -845,7 +848,7 @@ opero.FlowHubPage = class FlowHubPage {
 		return `
 			<div class="fh-panel">
 				<div class="fh-panel__head">
-					<h2 class="fh-panel__title">${this.esc(__("Focus Queue"))}</h2>
+					<h2 class="fh-panel__title">${this.esc(title || __("Focus Queue"))}</h2>
 					<p class="fh-panel__sub">${this.esc(__("Sorted by urgency, click to open"))}</p>
 				</div>
 				<div class="fh-queue">${body}</div>
