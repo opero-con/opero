@@ -382,6 +382,58 @@ opero.FlowHubPage = class FlowHubPage {
 				flex-shrink: 0;
 			}
 
+			/* ── Due date button ────────────────────────────────── */
+			.fh-due-btn {
+				cursor: pointer;
+				border-radius: 3px;
+				padding: 0.05rem 0.15rem;
+				margin: -0.05rem -0.15rem;
+				transition: background 120ms;
+				white-space: nowrap;
+			}
+			.fh-due-btn:hover { background: #f1f5f9; }
+			.fh-due-btn--empty {
+				color: #cbd5e1;
+				font-size: 0.68rem;
+			}
+			.fh-due-btn--empty:hover { color: #94a3b8; background: #f1f5f9; }
+
+			/* Due date popover */
+			.fh-due-pop {
+				position: fixed;
+				z-index: 2000;
+				background: #ffffff;
+				border: 1px solid #e2e8f0;
+				border-radius: 8px;
+				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+				width: 180px;
+				padding: 0.35rem;
+				display: none;
+			}
+			.fh-due-pop.is-open { display: block; }
+			.fh-due-pop__input {
+				width: 100%;
+				border: 1px solid #e2e8f0;
+				border-radius: 5px;
+				padding: 0.3rem 0.5rem;
+				font-size: 0.78rem;
+				outline: none;
+				box-sizing: border-box;
+				margin-bottom: 0.25rem;
+			}
+			.fh-due-pop__input:focus { border-color: #94a3b8; }
+			.fh-due-pop__short, .fh-due-pop__clear {
+				padding: 0.32rem 0.5rem;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 0.78rem;
+				color: #0f172a;
+				transition: background 100ms;
+			}
+			.fh-due-pop__short:hover { background: #f8fafc; }
+			.fh-due-pop__clear { color: #94a3b8; margin-top: 0.1rem; }
+			.fh-due-pop__clear:hover { background: #f8fafc; color: #ef4444; }
+
 			/* ── Add allocatee button ──────────────────────────── */
 			.fh-add-alloc {
 				display: inline-flex;
@@ -684,8 +736,8 @@ opero.FlowHubPage = class FlowHubPage {
 							  })
 							: "";
 						const dueLabel = row.due_label
-							? `<span${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
-							: "";
+							? `<span role="button" class="fh-due-btn" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
+							: `<span role="button" class="fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(row.name)}" data-due-date="" title="${this.esc(__('Set due date'))}">📅</span>`;
 						const avatars = this._render_avatars(row.assignees, row.name);
 						const pc = this._prio_config(row.priority);
 						const prioTip = this.esc(row.priority || __("Priority"));
@@ -814,6 +866,11 @@ opero.FlowHubPage = class FlowHubPage {
 		this.$root.find("[data-add-alloc]").on("click", (e) => {
 			e.stopPropagation();
 			this._open_allocatee_popover(e.currentTarget);
+		});
+
+		this.$root.find("[data-due-todo]").on("click", (e) => {
+			e.stopPropagation();
+			this._open_due_date_popover(e.currentTarget);
 		});
 
 		this.$root.find("[data-risk-index]").each((_, el) => {
@@ -1021,6 +1078,67 @@ opero.FlowHubPage = class FlowHubPage {
 		setTimeout(() => {
 			$(document).one("click.fh-prio", () => $drop.removeClass("is-open"));
 		}, 0);
+	}
+
+	_open_due_date_popover(btn) {
+		const todoName = $(btn).attr("data-due-todo");
+		const currentDate = $(btn).attr("data-due-date") || "";
+
+		let $pop = $("#fh-due-pop");
+		if (!$pop.length) {
+			$pop = $(`<div id="fh-due-pop" class="fh-due-pop">
+				<input type="date" class="fh-due-pop__input">
+				<div class="fh-due-pop__short" data-due-shortcut="today">${__("Today")}</div>
+				<div class="fh-due-pop__short" data-due-shortcut="tomorrow">${__("Tomorrow")}</div>
+				<div class="fh-due-pop__short" data-due-shortcut="next_week">${__("Next week")}</div>
+				<div class="fh-due-pop__clear" data-due-shortcut="clear">${__("Clear")}</div>
+			</div>`).appendTo(document.body);
+
+			$pop.on("change", ".fh-due-pop__input", (e) => {
+				const name = $pop.data("active-todo");
+				const val = $(e.target).val();
+				if (!name || !val) return;
+				$pop.removeClass("is-open");
+				this._save_due_date(name, val);
+			});
+
+			$pop.on("click", "[data-due-shortcut]", (e) => {
+				e.stopPropagation();
+				const name = $pop.data("active-todo");
+				const shortcut = $(e.currentTarget).attr("data-due-shortcut");
+				$pop.removeClass("is-open");
+				if (!name) return;
+				if (shortcut === "clear") {
+					this._save_due_date(name, "");
+					return;
+				}
+				const today = frappe.datetime.get_today();
+				const d = frappe.datetime.add_days(today, shortcut === "tomorrow" ? 1 : shortcut === "next_week" ? 7 : 0);
+				this._save_due_date(name, d);
+			});
+		}
+
+		if ($pop.hasClass("is-open") && $pop.data("active-todo") === todoName) {
+			$pop.removeClass("is-open");
+			return;
+		}
+
+		$pop.find(".fh-due-pop__input").val(currentDate);
+		const rect = btn.getBoundingClientRect();
+		$pop.css({ top: rect.bottom + 4, left: Math.max(4, rect.left) });
+		$pop.data("active-todo", todoName).addClass("is-open");
+
+		setTimeout(() => {
+			$(document).one("click.fh-due", () => $pop.removeClass("is-open"));
+		}, 0);
+	}
+
+	_save_due_date(todoName, date) {
+		frappe.call({
+			method: "frappe.client.set_value",
+			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || "" },
+			callback: () => this.refresh({ force: true }),
+		});
 	}
 
 	_band_label(band) {
