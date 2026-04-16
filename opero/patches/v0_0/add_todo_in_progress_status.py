@@ -1,7 +1,7 @@
 import frappe
 
 
-STATUS_OPTIONS = "Open\nIn progress\nClosed\nCancelled"
+STATUS_OPTIONS = "Open\nIn Progress\nClosed\nCancelled"
 
 
 def execute():

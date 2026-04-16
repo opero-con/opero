@@ -11,11 +11,11 @@
  "modified": "2026-04-14 23:20:00.000000",
  "modified_by": "Administrator",
  "module": "Opero",
- "name": "ToDo Action Queue",
+ "name": "ToDo Explorer",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "ToDo",
- "report_name": "ToDo Action Queue",
+ "report_name": "ToDo Explorer",
  "report_type": "Script Report",
  "roles": [
   {

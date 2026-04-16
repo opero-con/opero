@@ -1,0 +1,50 @@
+/* ── Opero global styles ──────────────────────────────────────────────────── */
+
+/* Tooltip
+   Usage: add data-tip="label text" to any element.
+   The tooltip appears below the element with an upward-pointing arrow.
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-tip] {
+	position: relative;
+}
+
+/* Arrow */
+[data-tip]::before {
+	content: "";
+	position: absolute;
+	top: calc(100% + 1px);
+	left: 50%;
+	transform: translateX(-50%);
+	border: 5px solid transparent;
+	border-bottom-color: #1e293b;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	z-index: 1001;
+}
+
+/* Label */
+[data-tip]::after {
+	content: attr(data-tip);
+	position: absolute;
+	top: calc(100% + 11px);
+	left: 50%;
+	transform: translateX(-50%);
+	white-space: nowrap;
+	background: #1e293b;
+	color: #f8fafc;
+	font-size: 0.72rem;
+	font-weight: 500;
+	padding: 0.25rem 0.55rem;
+	border-radius: 5px;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	z-index: 1000;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+[data-tip]:hover::before,
+[data-tip]:hover::after {
+	opacity: 1;
+}
