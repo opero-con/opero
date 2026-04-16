@@ -406,32 +406,39 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid #e2e8f0;
 				border-radius: 8px;
 				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-				width: 180px;
-				padding: 0.35rem;
+				min-width: 130px;
+				padding: 0.25rem;
 				display: none;
 			}
 			.fh-due-pop.is-open { display: block; }
-			.fh-due-pop__input {
-				width: 100%;
-				border: 1px solid #e2e8f0;
-				border-radius: 5px;
-				padding: 0.3rem 0.5rem;
-				font-size: 0.78rem;
-				outline: none;
-				box-sizing: border-box;
-				margin-bottom: 0.25rem;
-			}
-			.fh-due-pop__input:focus { border-color: #94a3b8; }
-			.fh-due-pop__short, .fh-due-pop__clear {
-				padding: 0.32rem 0.5rem;
+			.fh-due-pop__short {
+				display: flex;
+				align-items: center;
+				gap: 0.4rem;
+				padding: 0.35rem 0.55rem;
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 0.78rem;
+				font-weight: 500;
 				color: #0f172a;
 				transition: background 100ms;
+				white-space: nowrap;
 			}
 			.fh-due-pop__short:hover { background: #f8fafc; }
-			.fh-due-pop__clear { color: #94a3b8; margin-top: 0.1rem; }
+			.fh-due-pop__divider { border: none; border-top: 1px solid #f1f5f9; margin: 0.2rem 0; }
+			.fh-due-pop__clear {
+				display: flex;
+				align-items: center;
+				gap: 0.4rem;
+				padding: 0.35rem 0.55rem;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 0.78rem;
+				font-weight: 500;
+				color: #94a3b8;
+				transition: background 100ms;
+				white-space: nowrap;
+			}
 			.fh-due-pop__clear:hover { background: #f8fafc; color: #ef4444; }
 
 			/* ── Add allocatee button ──────────────────────────── */
@@ -1083,38 +1090,34 @@ opero.FlowHubPage = class FlowHubPage {
 	_open_due_date_popover(btn) {
 		const todoName = $(btn).attr("data-due-todo");
 		const currentDate = $(btn).attr("data-due-date") || "";
+		const today = frappe.datetime.get_today();
+
+		const SHORTCUTS = [
+			{ label: __("Today"),     days: 0 },
+			{ label: __("Tomorrow"),  days: 1 },
+			{ label: __("In 3 days"), days: 3 },
+			{ label: __("Next week"), days: 7 },
+		];
 
 		let $pop = $("#fh-due-pop");
 		if (!$pop.length) {
-			$pop = $(`<div id="fh-due-pop" class="fh-due-pop">
-				<input type="date" class="fh-due-pop__input">
-				<div class="fh-due-pop__short" data-due-shortcut="today">${__("Today")}</div>
-				<div class="fh-due-pop__short" data-due-shortcut="tomorrow">${__("Tomorrow")}</div>
-				<div class="fh-due-pop__short" data-due-shortcut="next_week">${__("Next week")}</div>
-				<div class="fh-due-pop__clear" data-due-shortcut="clear">${__("Clear")}</div>
-			</div>`).appendTo(document.body);
+			$pop = $(`<div id="fh-due-pop" class="fh-due-pop"></div>`).appendTo(document.body);
 
-			$pop.on("change", ".fh-due-pop__input", (e) => {
-				const name = $pop.data("active-todo");
-				const val = $(e.target).val();
-				if (!name || !val) return;
-				$pop.removeClass("is-open");
-				this._save_due_date(name, val);
-			});
-
-			$pop.on("click", "[data-due-shortcut]", (e) => {
+			$pop.on("click", "[data-due-days]", (e) => {
 				e.stopPropagation();
 				const name = $pop.data("active-todo");
-				const shortcut = $(e.currentTarget).attr("data-due-shortcut");
+				const days = parseInt($(e.currentTarget).attr("data-due-days"), 10);
 				$pop.removeClass("is-open");
 				if (!name) return;
-				if (shortcut === "clear") {
-					this._save_due_date(name, "");
-					return;
-				}
-				const today = frappe.datetime.get_today();
-				const d = frappe.datetime.add_days(today, shortcut === "tomorrow" ? 1 : shortcut === "next_week" ? 7 : 0);
+				const d = frappe.datetime.add_days(frappe.datetime.get_today(), days);
 				this._save_due_date(name, d);
+			});
+
+			$pop.on("click", "[data-due-shortcut='clear']", (e) => {
+				e.stopPropagation();
+				const name = $pop.data("active-todo");
+				$pop.removeClass("is-open");
+				if (name) this._save_due_date(name, "");
 			});
 		}
 
@@ -1123,7 +1126,22 @@ opero.FlowHubPage = class FlowHubPage {
 			return;
 		}
 
-		$pop.find(".fh-due-pop__input").val(currentDate);
+		// Build content fresh each open so dates are current
+		const shortcuts = SHORTCUTS.map(s => {
+			const d = frappe.datetime.add_days(today, s.days);
+			const dayName = new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
+			return `<div class="fh-due-pop__short" data-due-days="${s.days}">
+				<span style="flex:1">${this.esc(s.label)}</span>
+				<span style="color:#94a3b8;font-size:0.72rem">${this.esc(dayName)}</span>
+			</div>`;
+		}).join("");
+
+		const clearRow = currentDate
+			? `<hr class="fh-due-pop__divider"><div class="fh-due-pop__clear" data-due-shortcut="clear">${__("Clear")}</div>`
+			: "";
+
+		$pop.html(shortcuts + clearRow);
+
 		const rect = btn.getBoundingClientRect();
 		$pop.css({ top: rect.bottom + 4, left: Math.max(4, rect.left) });
 		$pop.data("active-todo", todoName).addClass("is-open");
