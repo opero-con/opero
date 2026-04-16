@@ -775,7 +775,6 @@ opero.FlowHubPage = class FlowHubPage {
 
 	_prio_config(priority) {
 		const map = {
-			"Urgent": { icon: "↑", color: "#dc2626" },
 			"High":   { icon: "↑", color: "#d97706" },
 			"Medium": { icon: "↑", color: "#94a3b8" },
 			"Low":    { icon: "↓", color: "#3b82f6" },
@@ -785,7 +784,6 @@ opero.FlowHubPage = class FlowHubPage {
 
 	_open_prio_dropdown(btn) {
 		const PRIORITIES = [
-			{ value: "Urgent", label: __("Urgent"), icon: "↑", color: "#dc2626" },
 			{ value: "High",   label: __("High"),   icon: "↑", color: "#d97706" },
 			{ value: "Medium", label: __("None"),   icon: "↑", color: "#94a3b8" },
 			{ value: "Low",    label: __("Low"),    icon: "↓", color: "#3b82f6" },
