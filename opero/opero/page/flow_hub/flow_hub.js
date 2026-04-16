@@ -233,6 +233,67 @@ opero.FlowHubPage = class FlowHubPage {
 				letter-spacing: 0.04em;
 			}
 
+			/* ── Priority icon (sits left of the band border) ───────── */
+			.fh-item-wrap {
+				display: flex;
+				align-items: stretch;
+				gap: 0.3rem;
+				margin-bottom: 0.35rem;
+			}
+			.fh-item-wrap:last-child { margin-bottom: 0; }
+			.fh-item-wrap .fh-item  { flex: 1; margin-bottom: 0; }
+			.fh-prio-btn {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 18px;
+				flex-shrink: 0;
+				border: none;
+				background: none;
+				font-size: 0.82rem;
+				font-weight: 800;
+				cursor: pointer;
+				padding: 0;
+				line-height: 1;
+				border-radius: 4px;
+				transition: background 120ms;
+			}
+			.fh-prio-btn:hover { background: #f1f5f9; }
+
+			/* Priority dropdown */
+			.fh-prio-drop {
+				position: fixed;
+				z-index: 2000;
+				background: #ffffff;
+				border: 1px solid #e2e8f0;
+				border-radius: 8px;
+				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+				min-width: 130px;
+				padding: 0.25rem;
+				display: none;
+			}
+			.fh-prio-drop.is-open { display: block; }
+			.fh-prio-drop__opt {
+				display: flex;
+				align-items: center;
+				gap: 0.4rem;
+				padding: 0.35rem 0.55rem;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 0.78rem;
+				font-weight: 500;
+				color: #0f172a;
+				transition: background 100ms;
+			}
+			.fh-prio-drop__opt:hover { background: #f8fafc; }
+			.fh-prio-drop__icon {
+				font-size: 0.75rem;
+				font-weight: 800;
+				width: 14px;
+				text-align: center;
+				flex-shrink: 0;
+			}
+
 			/* ── Tooltip (data-tip="…") ─────────────────────────── */
 			[data-tip] { position: relative; }
 			[data-tip]::before {
@@ -549,14 +610,18 @@ opero.FlowHubPage = class FlowHubPage {
 							? `<span${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
 							: "";
 						const avatars = this._render_avatars(row.assignees);
+						const pc = this._prio_config(row.priority);
 						return `
-						<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
-							<div class="fh-item__body">
-								<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
-								<div class="fh-item__meta">${tag}${priority}${dueLabel}</div>
-							</div>
-							${avatars}
-						</button>
+						<div class="fh-item-wrap">
+							<button type="button" class="fh-prio-btn" data-tip="${this.esc(__("Priority"))}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}" title="">${pc.icon}</button>
+							<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
+								<div class="fh-item__body">
+									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
+									<div class="fh-item__meta">${tag}${priority}${dueLabel}</div>
+								</div>
+								${avatars}
+							</button>
+						</div>
 					`;
 					})
 					.join("")
@@ -663,6 +728,11 @@ opero.FlowHubPage = class FlowHubPage {
 			if (row?.name) $(el).on("click", () => frappe.set_route("Form", "ToDo", row.name));
 		});
 
+		this.$root.find("[data-prio-index]").on("click", (e) => {
+			e.stopPropagation();
+			this._open_prio_dropdown(e.currentTarget);
+		});
+
 		this.$root.find("[data-risk-index]").each((_, el) => {
 			const signal = risk[parseInt($(el).attr("data-risk-index"), 10)];
 			if (signal) $(el).on("click", () => this._navigate(signal));
@@ -701,6 +771,62 @@ opero.FlowHubPage = class FlowHubPage {
 		}).join("");
 		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
 		return `<div class="fh-avatars">${chips}${more}</div>`;
+	}
+
+	_prio_config(priority) {
+		const map = {
+			"Urgent": { icon: "↑", color: "#dc2626" },
+			"High":   { icon: "↑", color: "#d97706" },
+			"Medium": { icon: "↑", color: "#94a3b8" },
+			"Low":    { icon: "↓", color: "#3b82f6" },
+		};
+		return map[priority] || { icon: "↑", color: "#cbd5e1" };
+	}
+
+	_open_prio_dropdown(btn) {
+		const PRIORITIES = [
+			{ value: "Urgent", label: __("Urgent"), icon: "↑", color: "#dc2626" },
+			{ value: "High",   label: __("High"),   icon: "↑", color: "#d97706" },
+			{ value: "Medium", label: __("None"),   icon: "↑", color: "#94a3b8" },
+			{ value: "Low",    label: __("Low"),    icon: "↓", color: "#3b82f6" },
+		];
+
+		let $drop = $("#fh-prio-drop");
+		if (!$drop.length) {
+			$drop = $(`<div id="fh-prio-drop" class="fh-prio-drop">
+				${PRIORITIES.map(p => `
+					<div class="fh-prio-drop__opt" data-prio-value="${p.value}">
+						<span class="fh-prio-drop__icon" style="color:${p.color}">${p.icon}</span>
+						<span>${p.label}</span>
+					</div>
+				`).join("")}
+			</div>`).appendTo(document.body);
+
+			$drop.on("click", ".fh-prio-drop__opt", (e) => {
+				e.stopPropagation();
+				const newPrio = $(e.currentTarget).attr("data-prio-value");
+				const $btn = $drop.data("active-btn");
+				if ($btn) {
+					const todoName = $($btn).attr("data-todo-name");
+					frappe.db.set_value("ToDo", todoName, "priority", newPrio)
+						.then(() => this.refresh({ force: true }));
+				}
+				$drop.removeClass("is-open");
+			});
+		}
+
+		if ($drop.hasClass("is-open") && $drop.data("active-btn") === btn) {
+			$drop.removeClass("is-open");
+			return;
+		}
+
+		const rect = btn.getBoundingClientRect();
+		$drop.css({ top: rect.bottom + 4, left: rect.left });
+		$drop.data("active-btn", btn).addClass("is-open");
+
+		setTimeout(() => {
+			$(document).one("click.fh-prio", () => $drop.removeClass("is-open"));
+		}, 0);
 	}
 
 	_band_label(band) {
