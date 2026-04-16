@@ -346,12 +346,17 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-empty.is-clear { color: #047857; font-weight: 600; }
 
 			/* ── Assignee avatars ───────────────────────────────── */
-			.fh-avatars {
+			.fh-avatar-col {
 				display: flex;
 				align-items: center;
 				justify-content: flex-end;
-				flex-shrink: 0;
 				width: 68px;
+				flex-shrink: 0;
+			}
+			.fh-avatars {
+				display: flex;
+				align-items: center;
+				flex-shrink: 0;
 			}
 			.fh-avatars [data-tip] {
 				display: inline-flex;
@@ -590,11 +595,6 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-alloc-pop__remove:hover { color: #ef4444; }
 			.fh-avatars.fh-add-alloc { cursor: pointer; }
-			span.fh-add-alloc:not(.fh-avatars) {
-				display: inline-flex;
-				width: 68px;
-				justify-content: flex-end;
-			}
 
 			/* ── Risk signals ───────────────────────────────────── */
 			.fh-risk { padding: 0 0.4rem 0.5rem; }
@@ -992,10 +992,12 @@ opero.FlowHubPage = class FlowHubPage {
 	_render_avatars(assignees, todoName) {
 		const nameAttr = `data-add-alloc="${this.esc(todoName || "")}"`;
 		if (!assignees || !assignees.length) {
-			return `<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" ${nameAttr}>
-				<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/>
-				</svg>
+			return `<span class="fh-avatar-col">
+				<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" ${nameAttr}>
+					<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/>
+					</svg>
+				</span>
 			</span>`;
 		}
 		const PALETTE = ["#2563eb","#059669","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#dc2626"];
@@ -1014,7 +1016,9 @@ opero.FlowHubPage = class FlowHubPage {
 			return `<span data-tip="${this.esc(a.full_name)}"><span class="fh-avatar" style="background:${_color(a.user)}">${this.esc(a.initials)}</span></span>`;
 		}).join("");
 		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
-		return `<span role="button" tabindex="0" class="fh-avatars fh-add-alloc" ${nameAttr}>${chips}${more}</span>`;
+		return `<span class="fh-avatar-col">
+			<span role="button" tabindex="0" class="fh-avatars fh-add-alloc" ${nameAttr}>${chips}${more}</span>
+		</span>`;
 	}
 
 	_open_allocatee_popover(btn) {
