@@ -403,8 +403,8 @@ opero.FlowHubPage = class FlowHubPage {
 				font-size: 0.68rem;
 			}
 			.fh-due-btn--empty:hover { color: #94a3b8; background: #f1f5f9; }
-			.fh-due-btn--overdue   { color: #ef4444; font-weight: 600; }
-			.fh-due-btn--due_today { color: #f97316; font-weight: 600; }
+			.fh-due-btn--overdue   { color: #ef4444; }
+			.fh-due-btn--due_today { color: #f97316; }
 			.fh-due-btn--due_soon  { color: #2563eb; }
 			.fh-due-btn--stale     { color: #7c3aed; }
 
