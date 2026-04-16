@@ -792,10 +792,6 @@ opero.FlowHubPage = class FlowHubPage {
 			? queue
 					.map((row, i) => {
 						const band = row.urgency_band || "active";
-						const tag =
-							band !== "active"
-								? `<span class="fh-tag band-${band}">${this.esc(this._band_label(band))}</span>`
-								: "";
 						const dueTooltip = row.due_date
 							? new Date(row.due_date + "T00:00:00").toLocaleDateString(undefined, {
 								weekday: "short", month: "short", day: "numeric",
@@ -813,7 +809,7 @@ opero.FlowHubPage = class FlowHubPage {
 							<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
 								<div class="fh-item__body">
 									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
-									<div class="fh-item__meta">${tag}${dueLabel}</div>
+									<div class="fh-item__meta">${dueLabel}</div>
 								</div>
 								${avatars}
 							</button>
