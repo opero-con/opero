@@ -131,11 +131,6 @@ def _sync_status_timestamps(doc: Document):
 
 def _normalize_assignees(doc: Document):
 	assignees = _get_doc_assignees(doc)
-
-	if not assignees:
-		legacy_primary = (getattr(doc, "allocated_to", None) or "").strip()
-		assignees = [user for user in [legacy_primary] if user]
-
 	valid_assignees = _validate_assignees_exist(assignees)
 	primary = valid_assignees[0] if valid_assignees else ""
 
