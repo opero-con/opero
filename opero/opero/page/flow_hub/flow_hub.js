@@ -752,13 +752,15 @@ opero.FlowHubPage = class FlowHubPage {
 		let body;
 		if (tab === "throughput") {
 			body = this._render_throughput(s.throughput_7d || {});
+		} else if (tab === "risk") {
+			body = this._render_risk(s.risk || []);
 		} else {
-			const rightPanel = tab === "risk"
-				? this._render_risk(s.risk || [])
-				: `${this._render_risk(s.risk || [])}${this._render_throughput(s.throughput_7d || {})}`;
 			body = `<div class="fh-body">
 				${this._render_focus_queue(s.focus_queue || [])}
-				<div class="fh-right">${rightPanel}</div>
+				<div class="fh-right">
+					${this._render_risk(s.risk || [])}
+					${this._render_throughput(s.throughput_7d || {})}
+				</div>
 			</div>`;
 		}
 		this.$root.html(`
