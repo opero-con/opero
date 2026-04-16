@@ -403,6 +403,10 @@ opero.FlowHubPage = class FlowHubPage {
 				font-size: 0.68rem;
 			}
 			.fh-due-btn--empty:hover { color: #94a3b8; background: #f1f5f9; }
+			.fh-due-btn--overdue   { color: #ef4444; font-weight: 600; }
+			.fh-due-btn--due_today { color: #f97316; font-weight: 600; }
+			.fh-due-btn--due_soon  { color: #2563eb; }
+			.fh-due-btn--stale     { color: #7c3aed; }
 
 			/* Due date popover */
 			.fh-due-pop {
@@ -819,8 +823,9 @@ opero.FlowHubPage = class FlowHubPage {
 								weekday: "short", month: "short", day: "numeric",
 							  })
 							: "";
+						const dueBandClass = band !== "active" ? `fh-due-btn--${band}` : "";
 						const dueLabel = row.due_label
-							? `<span role="button" class="fh-due-btn" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
+							? `<span role="button" class="fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
 							: `<span role="button" class="fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(row.name)}" data-due-date="" title="${this.esc(__('Set due date'))}">📅</span>`;
 						const avatars = this._render_avatars(row.assignees, row.name);
 						const pc = this._prio_config(row.priority);
