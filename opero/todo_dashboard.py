@@ -132,7 +132,7 @@ def get_todo_assignees(todo_names: list[str]) -> dict[str, list[str]]:
 	rows = frappe.db.sql(
 		f"""
 			SELECT parent, user
-			FROM `tabToDo Assignee`
+			FROM `tabToDo Allocatee`
 			WHERE parenttype = 'ToDo'
 				AND parent IN ({placeholders})
 			ORDER BY idx ASC
@@ -204,7 +204,7 @@ def get_todo_on_time_close_rate(filters=None):
 	return {
 		"value": metrics["on_time_rate"],
 		"fieldtype": "Percent",
-		"route": ["query-report", "ToDo Action Queue"],
+		"route": ["query-report", "ToDo Explorer"],
 		"route_options": {
 			"status": ["Closed", "Cancelled"],
 			"from_date": str(metrics["from_date"]),
@@ -219,7 +219,7 @@ def get_todo_avg_closure_delay(filters=None):
 	return {
 		"value": metrics["avg_delay"],
 		"fieldtype": "Float",
-		"route": ["query-report", "ToDo Action Queue"],
+		"route": ["query-report", "ToDo Explorer"],
 		"route_options": {
 			"status": ["Closed", "Cancelled"],
 			"from_date": str(metrics["from_date"]),
@@ -239,7 +239,7 @@ def get_my_overdue_todos_count(filters=None):
 	return {
 		"value": value,
 		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Action Queue"],
+		"route": ["query-report", "ToDo Explorer"],
 		"route_options": {"status": list(ACTIVE_STATUSES), "show_only_overdue": 1},
 	}
 
@@ -255,7 +255,7 @@ def get_my_todos_due_today_count(filters=None):
 	return {
 		"value": value,
 		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Action Queue"],
+		"route": ["query-report", "ToDo Explorer"],
 		"route_options": {
 			"status": list(ACTIVE_STATUSES),
 			"from_date": str(today),
@@ -270,7 +270,7 @@ def get_my_in_progress_todos_count(filters=None):
 	return {
 		"value": value,
 		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Action Queue"],
+		"route": ["query-report", "ToDo Explorer"],
 		"route_options": {"status": ["In Progress"]},
 	}
 
@@ -299,7 +299,7 @@ def get_todo_due_next_days_count(filters=None):
 	return {
 		"value": cint(count or 0),
 		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Action Queue"],
+		"route": ["query-report", "ToDo Explorer"],
 		"route_options": {
 			"status": ["Open", "In Progress"],
 			"from_date": str(from_date),
@@ -366,19 +366,21 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				"label": _("Overdue"),
 				"value": counts["overdue"],
 				"accent": "#ef4444",
-				"route": ["query-report", "ToDo Action Queue"],
-				"route_options": {"status": list(ACTIVE_STATUSES), "show_only_overdue": 1},
+				"route": ["List", "ToDo", "List"],
+				"route_options": {
+					"status": ["in", "Open,In Progress"],
+					"date": ["<", str(today)],
+				},
 			},
 			{
 				"key": "due_today",
 				"label": _("Due Today"),
 				"value": counts["due_today"],
 				"accent": "#f97316",
-				"route": ["query-report", "ToDo Action Queue"],
+				"route": ["List", "ToDo", "List"],
 				"route_options": {
-					"status": list(ACTIVE_STATUSES),
-					"from_date": str(today),
-					"to_date": str(today),
+					"status": ["in", "Open,In Progress"],
+					"date": ["=", str(today)],
 				},
 			},
 			{
@@ -386,11 +388,10 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				"label": _("Due Next {0}d").format(window_days),
 				"value": counts["due_soon"],
 				"accent": "#2563eb",
-				"route": ["query-report", "ToDo Action Queue"],
+				"route": ["List", "ToDo", "List"],
 				"route_options": {
-					"status": ["Open", "In Progress"],
-					"from_date": str(due_soon_from),
-					"to_date": str(due_soon_to),
+					"status": ["in", "Open,In Progress"],
+					"date": ["between", [str(due_soon_from), str(due_soon_to)]],
 				},
 			},
 			{
@@ -398,8 +399,8 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				"label": _("In Progress"),
 				"value": counts["in_progress"],
 				"accent": "#1d4ed8",
-				"route": ["query-report", "ToDo Action Queue"],
-				"route_options": {"status": ["In Progress"]},
+				"route": ["List", "ToDo", "List"],
+				"route_options": {"status": "In Progress"},
 			},
 		],
 		"focus_queue": _get_focus_queue(list_limit, stale_cutoff),
@@ -408,29 +409,41 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				"key": "stale",
 				"label": _("Stale {0}d+").format(stale_days),
 				"value": counts["stale"],
-				"route": ["query-report", "ToDo In Progress Aging"],
-				"route_options": {"status": ["In Progress"], "min_days": stale_days},
+				"route": ["List", "ToDo", "List"],
+				"route_options": {
+					"status": "In Progress",
+					"modified": ["<=", str(stale_cutoff)],
+				},
 			},
 			{
 				"key": "no_due_date",
 				"label": _("No Due Date"),
 				"value": counts["no_due_date"],
-				"route": ["query-report", "ToDo Action Queue"],
-				"route_options": {"status": list(ACTIVE_STATUSES)},
+				"route": ["List", "ToDo", "List"],
+				"route_options": {
+					"status": ["in", "Open,In Progress"],
+					"date": ["is", "not set"],
+				},
 			},
 			{
 				"key": "high_priority",
 				"label": _("High Priority Active"),
 				"value": counts["high_priority"],
-				"route": ["query-report", "ToDo Action Queue"],
-				"route_options": {"status": list(ACTIVE_STATUSES), "priority": "High"},
+				"route": ["List", "ToDo", "List"],
+				"route_options": {
+					"status": ["in", "Open,In Progress"],
+					"priority": "High",
+				},
 			},
 			{
 				"key": "unassigned",
-				"label": _("Unassigned"),
+				"label": _("Unallocated"),
 				"value": _get_unassigned_active_count(),
-				"route": ["query-report", "ToDo Action Queue"],
-				"route_options": {"unassigned_only": 1},
+				"route": ["List", "ToDo", "List"],
+				"route_options": {
+					"status": ["in", "Open,In Progress"],
+					"allocated_to": ["is", "not set"],
+				},
 			},
 		],
 		"throughput_7d": _get_throughput_7d(),
@@ -650,7 +663,7 @@ def _get_unassigned_active_count() -> int:
 				AND (todo.allocated_to IS NULL OR todo.allocated_to = '')
 				AND NOT EXISTS (
 					SELECT 1
-					FROM `tabToDo Assignee` assignee_row
+					FROM `tabToDo Allocatee` assignee_row
 					WHERE assignee_row.parent = todo.name
 						AND assignee_row.parenttype = 'ToDo'
 				)
@@ -777,7 +790,7 @@ def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 			OR {alias}.allocated_to = %s
 			OR EXISTS (
 				SELECT 1
-				FROM `tabToDo Assignee` assignee_row
+				FROM `tabToDo Allocatee` assignee_row
 				WHERE assignee_row.parent = {alias}.name
 					AND assignee_row.parenttype = 'ToDo'
 					AND assignee_row.user = %s

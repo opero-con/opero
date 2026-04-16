@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class ToDoAssignee(Document):
+class ToDoAllocatee(Document):
 	pass

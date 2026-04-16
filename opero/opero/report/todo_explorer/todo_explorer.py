@@ -100,7 +100,7 @@ def get_data(filters):
 		conditions.append(
 			"""NOT EXISTS (
 				SELECT 1
-				FROM `tabToDo Assignee` assignee_row
+				FROM `tabToDo Allocatee` assignee_row
 				WHERE assignee_row.parent = todo.name
 					AND assignee_row.parenttype = 'ToDo'
 			)"""
@@ -111,7 +111,7 @@ def get_data(filters):
 				todo.allocated_to = %s
 				OR EXISTS (
 					SELECT 1
-					FROM `tabToDo Assignee` assignee_row
+					FROM `tabToDo Allocatee` assignee_row
 					WHERE assignee_row.parent = todo.name
 						AND assignee_row.parenttype = 'ToDo'
 						AND assignee_row.user = %s
@@ -126,7 +126,7 @@ def get_data(filters):
 				OR todo.allocated_to = %s
 				OR EXISTS (
 					SELECT 1
-					FROM `tabToDo Assignee` assignee_row
+					FROM `tabToDo Allocatee` assignee_row
 					WHERE assignee_row.parent = todo.name
 						AND assignee_row.parenttype = 'ToDo'
 						AND assignee_row.user = %s

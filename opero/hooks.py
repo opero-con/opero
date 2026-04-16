@@ -25,7 +25,7 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/opero/css/opero.css"
+app_include_css = "/assets/opero/css/opero.css"
 # app_include_js = "/assets/opero/js/opero.js"
 
 # include js, css files in header of web template
