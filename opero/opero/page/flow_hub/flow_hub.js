@@ -760,13 +760,7 @@ opero.FlowHubPage = class FlowHubPage {
 		} else if (tab === "in_progress") {
 			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.status === "In Progress"), __("In Progress"));
 		} else {
-			body = `<div class="fh-body">
-				${this._render_focus_queue(s.focus_queue || [])}
-				<div class="fh-right">
-					${this._render_risk(s.risk || [])}
-					${this._render_throughput(s.throughput_7d || {})}
-				</div>
-			</div>`;
+			body = this._render_focus_queue(s.focus_queue || []);
 		}
 		this.$root.html(`
 			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [])}
