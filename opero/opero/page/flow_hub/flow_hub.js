@@ -24,7 +24,7 @@ opero.FlowHubPage = class FlowHubPage {
 
 		this.page.set_primary_action(__("Refresh"), () => this.refresh({ force: true }), "refresh");
 		this.page.set_secondary_action(__("New ToDo"), () => frappe.new_doc("ToDo"), "add");
-		this.page.add_menu_item(__("Open Action Queue"), () => this.open_action_queue());
+		this.page.add_menu_item(__("Open ToDo Explorer"), () => this.open_action_queue());
 		frappe.breadcrumbs.add("Opero");
 
 		this._inject_styles();
@@ -71,6 +71,7 @@ opero.FlowHubPage = class FlowHubPage {
 				font-size: 0.72rem;
 				color: var(--text-muted);
 			}
+			.fh-status__time .frappe-timestamp { pointer-events: none; }
 			.fh-status__btn {
 				border: 1px solid var(--border-color);
 				background: var(--fg-color);
@@ -136,7 +137,6 @@ opero.FlowHubPage = class FlowHubPage {
 				background: var(--fg-color);
 				border: 1px solid var(--border-color);
 				border-radius: 10px;
-				overflow: hidden;
 			}
 			.fh-panel__head {
 				display: flex;
@@ -233,6 +233,43 @@ opero.FlowHubPage = class FlowHubPage {
 				letter-spacing: 0.04em;
 			}
 
+			/* ── Tooltip (data-tip="…") ─────────────────────────── */
+			[data-tip] { position: relative; }
+			[data-tip]::before {
+				content: "";
+				position: absolute;
+				top: calc(100% + 1px);
+				left: 50%;
+				transform: translateX(-50%);
+				border: 5px solid transparent;
+				border-bottom-color: #1e293b;
+				pointer-events: none;
+				opacity: 0;
+				transition: opacity 0.15s ease;
+				z-index: 1001;
+			}
+			[data-tip]::after {
+				content: attr(data-tip);
+				position: absolute;
+				top: calc(100% + 11px);
+				left: 50%;
+				transform: translateX(-50%);
+				white-space: nowrap;
+				background: #1e293b;
+				color: #f8fafc;
+				font-size: 0.72rem;
+				font-weight: 500;
+				padding: 0.25rem 0.55rem;
+				border-radius: 5px;
+				pointer-events: none;
+				opacity: 0;
+				transition: opacity 0.15s ease;
+				z-index: 1000;
+				box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+			}
+			[data-tip]:hover::before,
+			[data-tip]:hover::after { opacity: 1; }
+
 			.fh-empty {
 				padding: 1.2rem 0.75rem;
 				font-size: 0.8rem;
@@ -247,12 +284,16 @@ opero.FlowHubPage = class FlowHubPage {
 				align-items: center;
 				flex-shrink: 0;
 			}
+			.fh-avatars [data-tip] {
+				display: inline-flex;
+				margin-left: -6px;
+			}
+			.fh-avatars [data-tip]:first-child { margin-left: 0; }
 			.fh-avatar {
 				width: 22px;
 				height: 22px;
 				border-radius: 50%;
 				border: 2px solid #ffffff;
-				margin-left: -6px;
 				font-size: 0.6rem;
 				font-weight: 700;
 				display: flex;
@@ -263,7 +304,6 @@ opero.FlowHubPage = class FlowHubPage {
 				color: #ffffff;
 				text-transform: uppercase;
 			}
-			.fh-avatars .fh-avatar:first-child { margin-left: 0; }
 			.fh-avatar img { width: 100%; height: 100%; object-fit: cover; }
 			.fh-avatar-more {
 				width: 22px;
@@ -500,8 +540,13 @@ opero.FlowHubPage = class FlowHubPage {
 						const priority = row.is_high_priority
 							? `<span class="fh-priority">${this.esc(row.priority || "")}</span>`
 							: "";
+						const dueTooltip = row.due_date
+							? new Date(row.due_date + "T00:00:00").toLocaleDateString(undefined, {
+								weekday: "short", month: "short", day: "numeric",
+							  })
+							: "";
 						const dueLabel = row.due_label
-							? `<span>${this.esc(row.due_label)}</span>`
+							? `<span${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
 							: "";
 						const avatars = this._render_avatars(row.assignees);
 						return `
@@ -633,8 +678,8 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	open_action_queue() {
-		frappe.route_options = { status: ["Open", "In Progress"] };
-		frappe.set_route("query-report", "ToDo Action Queue");
+		frappe.route_options = { status: ["in", "Open,In Progress"] };
+		frappe.set_route("List", "ToDo", "List");
 	}
 
 	_render_avatars(assignees) {
@@ -650,9 +695,9 @@ opero.FlowHubPage = class FlowHubPage {
 		const extra = assignees.length - MAX;
 		const chips = shown.map(a => {
 			if (a.image) {
-				return `<span class="fh-avatar" title="${this.esc(a.full_name)}"><img src="${this.esc(a.image)}" alt="${this.esc(a.initials)}"></span>`;
+				return `<span data-tip="${this.esc(a.full_name)}"><span class="fh-avatar"><img src="${this.esc(a.image)}" alt="${this.esc(a.initials)}"></span></span>`;
 			}
-			return `<span class="fh-avatar" style="background:${_color(a.user)}" title="${this.esc(a.full_name)}">${this.esc(a.initials)}</span>`;
+			return `<span data-tip="${this.esc(a.full_name)}"><span class="fh-avatar" style="background:${_color(a.user)}">${this.esc(a.initials)}</span></span>`;
 		}).join("");
 		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
 		return `<div class="fh-avatars">${chips}${more}</div>`;
@@ -665,7 +710,12 @@ opero.FlowHubPage = class FlowHubPage {
 	_fmt_time(value) {
 		if (!value) return "";
 		try {
-			return __("Updated") + " " + frappe.datetime.comment_when(value);
+			const relative = frappe.datetime.comment_when(value);
+			const full = new Date(value).toLocaleString(undefined, {
+				weekday: "short", month: "short", day: "numeric",
+				hour: "2-digit", minute: "2-digit", hour12: false,
+			});
+			return `<span data-tip="${this.esc(full)}">${__("Updated")} ${relative}</span>`;
 		} catch {
 			return "";
 		}

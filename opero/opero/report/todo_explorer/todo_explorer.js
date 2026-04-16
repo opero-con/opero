@@ -1,4 +1,4 @@
-frappe.query_reports["ToDo Action Queue"] = {
+frappe.query_reports["ToDo Explorer"] = {
 	filters: [
 		{
 			fieldname: "assignee",
