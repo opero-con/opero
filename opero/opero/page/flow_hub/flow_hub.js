@@ -71,19 +71,24 @@ opero.FlowHubPage = class FlowHubPage {
 				color: #94a3b8;
 			}
 			.fh-status__btn {
-				border: 1px solid #e2e8f0;
-				background: #f8fafc;
-				color: #1e40af;
+				border: 1px solid var(--border-color);
+				background: var(--fg-color);
+				color: var(--text-color);
 				padding: 0.28rem 0.6rem;
 				border-radius: 7px;
 				font-size: 0.76rem;
-				font-weight: 600;
+				font-weight: 500;
 				cursor: pointer;
 				transition: background 130ms;
 				white-space: nowrap;
 				flex-shrink: 0;
 			}
-			.fh-status__btn:hover { background: #eff6ff; }
+			.fh-status__btn:hover { background: var(--bg-color); }
+			.fh-status__btn.is-new {
+				color: var(--primary);
+				border-color: var(--primary);
+			}
+			.fh-status__btn.is-new:hover { background: var(--primary-light); }
 
 			/* ── Count cards ────────────────────────────────────── */
 			.fh-counts {
@@ -156,7 +161,9 @@ opero.FlowHubPage = class FlowHubPage {
 			/* ── Focus queue ────────────────────────────────────── */
 			.fh-queue { padding: 0 0.5rem 0.6rem; }
 			.fh-item {
-				display: block;
+				display: flex;
+				align-items: center;
+				gap: 0.6rem;
 				width: 100%;
 				text-align: left;
 				padding: 0.5rem 0.6rem;
@@ -170,6 +177,10 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-item:hover { background: #f1f5f9; }
 			.fh-item:last-child { margin-bottom: 0; }
+			.fh-item__body {
+				flex: 1;
+				min-width: 0;
+			}
 			.fh-item__title {
 				font-size: 0.83rem;
 				font-weight: 600;
@@ -234,7 +245,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-avatars {
 				display: flex;
 				align-items: center;
-				margin-top: 0.3rem;
+				flex-shrink: 0;
 			}
 			.fh-avatar {
 				width: 22px;
@@ -460,6 +471,9 @@ opero.FlowHubPage = class FlowHubPage {
 				<button type="button" class="fh-status__btn" data-action="queue">
 					${this.esc(__("Action Queue"))}
 				</button>
+				<button type="button" class="fh-status__btn is-new" data-action="new">
+					+ ${this.esc(__("New ToDo"))}
+				</button>
 			</div>
 		`;
 	}
@@ -497,8 +511,10 @@ opero.FlowHubPage = class FlowHubPage {
 						const avatars = this._render_avatars(row.assignees);
 						return `
 						<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
-							<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
-							<div class="fh-item__meta">${tag}${priority}${dueLabel}</div>
+							<div class="fh-item__body">
+								<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
+								<div class="fh-item__meta">${tag}${priority}${dueLabel}</div>
+							</div>
 							${avatars}
 						</button>
 					`;
@@ -596,6 +612,7 @@ opero.FlowHubPage = class FlowHubPage {
 		const risk = s.risk || [];
 
 		this.$root.find("[data-action='queue']").on("click", () => this.open_action_queue());
+		this.$root.find("[data-action='new']").on("click", () => frappe.new_doc("ToDo"));
 
 		this.$root.find("[data-count-index]").each((_, el) => {
 			const card = counts[parseInt($(el).attr("data-count-index"), 10)];
