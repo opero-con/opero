@@ -764,6 +764,8 @@ opero.FlowHubPage = class FlowHubPage {
 			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.urgency_band === "due_soon"), __("Due Soon"));
 		} else if (tab === "in_progress") {
 			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.status === "In Progress"), __("In Progress"));
+		} else if (tab === "action_queue") {
+			body = this._render_focus_queue(s.focus_queue || [], __("Action Queue"));
 		} else {
 			body = this._render_focus_queue(s.focus_queue || []);
 		}
@@ -803,7 +805,7 @@ opero.FlowHubPage = class FlowHubPage {
 						data-chip-key="throughput" style="--fh-accent:#059669">
 						<span class="fh-chip__label">${this.esc(__("Last 7 Days"))}</span>
 					</button>
-					<button type="button" class="fh-chip fh-chip--label-only"
+					<button type="button" class="fh-chip fh-chip--label-only ${this._active_tab === "action_queue" ? "is-active" : ""}"
 						data-chip-key="action_queue" style="--fh-accent:#0ea5e9">
 						<span class="fh-chip__label">${this.esc(__("Action Queue"))}</span>
 					</button>
@@ -937,10 +939,6 @@ opero.FlowHubPage = class FlowHubPage {
 
 		this.$root.find("[data-chip-key]").on("click", (e) => {
 			const key = $(e.currentTarget).attr("data-chip-key");
-			if (key === "action_queue") {
-				this.open_action_queue();
-				return;
-			}
 			this._active_tab = (this._active_tab === key) ? null : key;
 			this.render();
 		});
