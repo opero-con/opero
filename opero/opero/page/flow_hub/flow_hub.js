@@ -199,11 +199,12 @@ opero.FlowHubPage = class FlowHubPage {
 				text-overflow: ellipsis;
 				margin-bottom: 0.22rem;
 			}
-			.fh-item__right {
-				display: flex;
-				align-items: center;
-				gap: 0.4rem;
+			.fh-item__due {
+				width: 130px;
 				flex-shrink: 0;
+				text-align: left;
+				font-size: 0.71rem;
+				color: var(--text-muted);
 			}
 
 			/* Urgency band accent (left border colour) */
@@ -831,10 +832,8 @@ opero.FlowHubPage = class FlowHubPage {
 								<div class="fh-item__body">
 									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
 								</div>
-								<div class="fh-item__right">
-									${dueLabel}
-									${avatars}
-								</div>
+								<div class="fh-item__due">${dueLabel}</div>
+								${avatars}
 							</button>
 						</div>
 					`;
