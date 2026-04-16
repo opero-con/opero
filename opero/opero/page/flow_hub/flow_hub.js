@@ -598,9 +598,6 @@ opero.FlowHubPage = class FlowHubPage {
 							band !== "active"
 								? `<span class="fh-tag band-${band}">${this.esc(this._band_label(band))}</span>`
 								: "";
-						const priority = row.is_high_priority
-							? `<span class="fh-priority">${this.esc(row.priority || "")}</span>`
-							: "";
 						const dueTooltip = row.due_date
 							? new Date(row.due_date + "T00:00:00").toLocaleDateString(undefined, {
 								weekday: "short", month: "short", day: "numeric",
@@ -611,13 +608,14 @@ opero.FlowHubPage = class FlowHubPage {
 							: "";
 						const avatars = this._render_avatars(row.assignees);
 						const pc = this._prio_config(row.priority);
+						const prioTip = this.esc(row.priority || __("Priority"));
 						return `
 						<div class="fh-item-wrap">
-							<button type="button" class="fh-prio-btn" data-tip="${this.esc(__("Priority"))}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}" title="">${pc.icon}</button>
+							<button type="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}" title="">${pc.icon}</button>
 							<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
 								<div class="fh-item__body">
 									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
-									<div class="fh-item__meta">${tag}${priority}${dueLabel}</div>
+									<div class="fh-item__meta">${tag}${dueLabel}</div>
 								</div>
 								${avatars}
 							</button>
