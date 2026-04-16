@@ -15,6 +15,7 @@ opero.FlowHubPage = class FlowHubPage {
 		this.wrapper = wrapper;
 		this.loading = false;
 		this.snapshot = {};
+		this._active_tab = null; // null = Focus Queue (default)
 
 		this.page = frappe.ui.make_app_page({
 			parent: wrapper,
@@ -87,50 +88,55 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-status__btn:hover { background: var(--bg-color); }
 
-			/* ── Count chips (inline in status bar) ─────────────── */
-			.fh-chips {
+			/* ── Tab bar ────────────────────────────────────────── */
+			.fh-tabs {
+				display: flex;
+				align-items: flex-end;
+				gap: 0;
+				margin-bottom: 0.65rem;
+				border-bottom: 2px solid #e2e8f0;
+				overflow-x: auto;
+				scrollbar-width: none;
+			}
+			.fh-tabs::-webkit-scrollbar { display: none; }
+			.fh-tab {
 				display: flex;
 				align-items: center;
-				justify-content: center;
-				gap: 0.3rem;
-				flex: 1 1 auto;
-				flex-wrap: wrap;
-				min-width: 0;
-			}
-			.fh-chip {
-				display: flex;
-				align-items: baseline;
-				gap: 0.25rem;
-				padding: 0.22rem 0.5rem;
-				border-radius: 6px;
-				border: 1px solid var(--border-color);
-				border-top: 3px solid var(--fh-accent, var(--border-color));
-				background: var(--fg-color);
+				gap: 0.35rem;
+				padding: 0.48rem 0.75rem;
+				border: none;
+				background: none;
 				cursor: pointer;
-				transition: background 130ms;
-				white-space: nowrap;
-			}
-			.fh-chip:hover { background: var(--bg-color); }
-			.fh-chip__value {
-				font-size: 0.76rem;
-				font-weight: 700;
-				color: var(--fh-accent, var(--text-color));
-				line-height: 1;
-			}
-			.fh-chip__value.is-zero { color: var(--text-muted); }
-			.fh-chip__label {
-				font-size: 0.76rem;
+				font-size: 0.78rem;
 				font-weight: 500;
-				color: var(--text-muted);
+				color: #64748b;
+				border-bottom: 2px solid transparent;
+				margin-bottom: -2px;
+				border-radius: 5px 5px 0 0;
+				transition: color 120ms, background 120ms;
+				white-space: nowrap;
+				flex-shrink: 0;
 			}
-
-			/* ── Two-column body ────────────────────────────────── */
-			.fh-body {
-				display: grid;
-				grid-template-columns: 1.3fr 1fr;
-				gap: 0.65rem;
+			.fh-tab:hover { color: #0f172a; background: #f8fafc; }
+			.fh-tab.is-active {
+				color: var(--fh-tab-accent, var(--primary));
+				border-bottom-color: var(--fh-tab-accent, var(--primary));
+				font-weight: 600;
 			}
-			.fh-right { display: flex; flex-direction: column; gap: 0.65rem; }
+			.fh-tab__badge {
+				font-size: 0.68rem;
+				font-weight: 700;
+				padding: 0.08rem 0.38rem;
+				border-radius: 9px;
+				background: #f1f5f9;
+				color: #64748b;
+				line-height: 1.4;
+			}
+			.fh-tab.is-active .fh-tab__badge {
+				background: #e0e7ff;
+				color: var(--fh-tab-accent, var(--primary));
+			}
+			.fh-tab__badge.is-zero { opacity: 0.45; }
 
 			/* ── Shared panel chrome ────────────────────────────── */
 			.fh-panel {
@@ -695,17 +701,11 @@ opero.FlowHubPage = class FlowHubPage {
 
 	render_loading() {
 		this.$root.html(`
-			<div class="fh-skeleton" style="height:40px; margin-bottom:0.65rem;"></div>
-			<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:0.65rem; margin-bottom:0.65rem;">
-				${Array(4).fill('<div class="fh-skeleton" style="height:72px;"></div>').join("")}
+			<div class="fh-skeleton" style="height:38px; margin-bottom:0.65rem;"></div>
+			<div style="display:flex; gap:0.35rem; margin-bottom:0.65rem;">
+				${Array(6).fill('<div class="fh-skeleton" style="height:34px; width:90px; border-radius:5px;"></div>').join("")}
 			</div>
-			<div style="display:grid; grid-template-columns:1.3fr 1fr; gap:0.65rem;">
-				<div class="fh-skeleton" style="height:320px;"></div>
-				<div style="display:flex; flex-direction:column; gap:0.65rem;">
-					<div class="fh-skeleton" style="height:148px;"></div>
-					<div class="fh-skeleton" style="height:148px;"></div>
-				</div>
-			</div>
+			<div class="fh-skeleton" style="height:320px;"></div>
 		`);
 	}
 
@@ -740,48 +740,66 @@ opero.FlowHubPage = class FlowHubPage {
 
 	render() {
 		const s = this.snapshot;
-		const attention = s.attention || "";
 		this.$root.html(`
-			${this._render_status_bar(attention, s.updated_at, s.counts || [])}
-			<div class="fh-body">
-				${this._render_focus_queue(s.focus_queue || [])}
-				<div class="fh-right">
-					${this._render_risk(s.risk || [])}
-					${this._render_throughput(s.throughput_7d || {})}
-				</div>
+			${this._render_status_bar(s.attention || "", s.updated_at)}
+			${this._render_tab_bar(s.counts || [])}
+			<div class="fh-tab-content">
+				${this._render_tab_content(s)}
 			</div>
 		`);
-
 		this._bind_events(s);
 	}
 
 	// ── Section renderers ────────────────────────────────────────────
 
-	_render_status_bar(attention, updatedAt, counts) {
+	_render_status_bar(attention, updatedAt) {
 		const msgClass = attention.startsWith("Welcome") ? "is-clear" : "is-ahead";
-		const chips = (counts || [])
-			.map(
-				(c, i) => `
-				<button type="button" class="fh-chip" data-count-index="${i}"
-				        style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
-					<span class="fh-chip__value ${c.value === 0 ? "is-zero" : ""}">${c.value}</span>
-					<span class="fh-chip__label">${this.esc(c.label || "")}</span>
-				</button>
-			`
-			)
-			.join("");
 		return `
 			<div class="fh-status">
 				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
-				<div class="fh-chips">
-					${chips}
-					<button type="button" class="fh-status__btn" data-action="queue">
-						${this.esc(__("Action Queue"))}
-					</button>
-				</div>
+				<button type="button" class="fh-status__btn" data-action="queue">
+					${this.esc(__("Action Queue"))}
+				</button>
 				<span class="fh-status__time">${this._fmt_time(updatedAt)}</span>
 			</div>
 		`;
+	}
+
+	_render_tab_bar(counts) {
+		const EXTRA_TABS = [
+			{ key: "risk",       label: __("Risk Signals") },
+			{ key: "throughput", label: __("Last 7 Days")  },
+		];
+		const allTabs = [
+			...counts.map(c => ({ key: c.key, label: c.label, value: c.value, accent: c.accent })),
+			...EXTRA_TABS,
+		];
+		return `<div class="fh-tabs">
+			${allTabs.map(t => {
+				const isActive = this._active_tab === t.key;
+				const accentStyle = t.accent ? `--fh-tab-accent:${t.accent}` : "";
+				const badge = t.value !== undefined
+					? `<span class="fh-tab__badge ${t.value === 0 ? "is-zero" : ""}">${t.value}</span>`
+					: "";
+				return `<button type="button" class="fh-tab ${isActive ? "is-active" : ""}"
+					data-tab="${this.esc(t.key)}" style="${accentStyle}">
+					${badge}${this.esc(t.label)}
+				</button>`;
+			}).join("")}
+		</div>`;
+	}
+
+	_render_tab_content(s) {
+		const queue = s.focus_queue || [];
+		switch (this._active_tab) {
+			case "overdue":     return this._render_focus_queue(queue.filter(r => r.urgency_band === "overdue"));
+			case "due_today":   return this._render_focus_queue(queue.filter(r => r.urgency_band === "due_today"));
+			case "due_soon":    return this._render_focus_queue(queue.filter(r => r.urgency_band === "due_soon"));
+			case "in_progress": return this._render_focus_queue(queue.filter(r => r.status === "In Progress"));
+			case "risk":        return this._render_risk(s.risk || []);
+			case "throughput":  return this._render_throughput(s.throughput_7d || {});
+			default:            return this._render_focus_queue(queue);
+		}
 	}
 
 	_render_focus_queue(queue) {
@@ -901,15 +919,15 @@ opero.FlowHubPage = class FlowHubPage {
 	// ── Event binding ─────────────────────────────────────────────────
 
 	_bind_events(s) {
-		const counts = s.counts || [];
 		const queue = s.focus_queue || [];
 		const risk = s.risk || [];
 
 		this.$root.find("[data-action='queue']").on("click", () => this.open_action_queue());
 
-		this.$root.find("[data-count-index]").each((_, el) => {
-			const card = counts[parseInt($(el).attr("data-count-index"), 10)];
-			if (card) $(el).on("click", () => this._navigate(card));
+		this.$root.find("[data-tab]").on("click", (e) => {
+			const key = $(e.currentTarget).attr("data-tab");
+			this._active_tab = (this._active_tab === key) ? null : key;
+			this.render();
 		});
 
 		this.$root.find("[data-queue-index]").each((_, el) => {
