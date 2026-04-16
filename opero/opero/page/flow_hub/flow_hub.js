@@ -508,18 +508,17 @@ opero.FlowHubPage = class FlowHubPage {
 				width: 26px;
 				height: 26px;
 				border-radius: 50%;
-				border: 1.5px dashed #cbd5e1;
-				background: none;
+				border: 2px solid #ffffff;
+				background: #e2e8f0;
 				color: #94a3b8;
 				cursor: pointer;
-				transition: border-color 130ms, color 130ms, background 130ms;
+				transition: background 130ms, color 130ms;
 				flex-shrink: 0;
 				padding: 0;
 			}
-			.fh-add-alloc:hover {
-				border-color: #64748b;
-				color: #475569;
-				background: #f8fafc;
+			.fh-add-alloc:not(.fh-avatars):hover {
+				background: #cbd5e1;
+				color: #64748b;
 			}
 			.fh-add-alloc svg { pointer-events: none; }
 
@@ -956,9 +955,8 @@ opero.FlowHubPage = class FlowHubPage {
 		const nameAttr = `data-add-alloc="${this.esc(todoName || "")}"`;
 		if (!assignees || !assignees.length) {
 			return `<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" ${nameAttr}>
-				<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-					<line x1="12" y1="3" x2="12" y2="21" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.5"/>
+				<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/>
 				</svg>
 			</span>`;
 		}
