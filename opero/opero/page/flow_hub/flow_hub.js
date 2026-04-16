@@ -23,6 +23,7 @@ opero.FlowHubPage = class FlowHubPage {
 		});
 
 		this.page.set_primary_action(__("Refresh"), () => this.refresh({ force: true }), "refresh");
+		this.page.set_secondary_action(__("New ToDo"), () => frappe.new_doc("ToDo"), "add");
 		this.page.add_menu_item(__("Open Action Queue"), () => this.open_action_queue());
 		frappe.breadcrumbs.add("Opero");
 
@@ -58,17 +59,17 @@ opero.FlowHubPage = class FlowHubPage {
 				margin-bottom: 0.65rem;
 			}
 			.fh-status__msg {
-				flex: 0 0 100%;
+				flex: 0 0 auto;
 				font-size: 0.88rem;
 				font-weight: 600;
-				color: #0f172a;
+				color: var(--text-color);
 			}
 			.fh-status__msg.is-urgent { color: #b91c1c; }
 			.fh-status__msg.is-clear  { color: #047857; }
 			.fh-status__time {
-				flex: 1 1 auto;
+				flex-shrink: 0;
 				font-size: 0.72rem;
-				color: #94a3b8;
+				color: var(--text-muted);
 			}
 			.fh-status__btn {
 				border: 1px solid var(--border-color);
@@ -84,47 +85,43 @@ opero.FlowHubPage = class FlowHubPage {
 				flex-shrink: 0;
 			}
 			.fh-status__btn:hover { background: var(--bg-color); }
-			.fh-status__btn.is-new {
-				color: var(--primary);
-				border-color: var(--primary);
-			}
-			.fh-status__btn.is-new:hover { background: var(--primary-light); }
 
-			/* ── Count cards ────────────────────────────────────── */
-			.fh-counts {
-				display: grid;
-				grid-template-columns: repeat(4, 1fr);
-				gap: 0.65rem;
-				margin-bottom: 0.65rem;
+			/* ── Count chips (inline in status bar) ─────────────── */
+			.fh-chips {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 0.3rem;
+				flex: 1 1 auto;
+				flex-wrap: wrap;
+				min-width: 0;
 			}
-			.fh-card {
-				background: #ffffff;
-				border: 1px solid #e2e8f0;
-				border-top: 3px solid var(--fh-accent, #2563eb);
-				border-radius: 10px;
-				padding: 0.7rem 0.8rem;
-				text-align: left;
+			.fh-chip {
+				display: flex;
+				align-items: baseline;
+				gap: 0.25rem;
+				padding: 0.22rem 0.5rem;
+				border-radius: 6px;
+				border: 1px solid var(--border-color);
+				border-top: 3px solid var(--fh-accent, var(--border-color));
+				background: var(--fg-color);
 				cursor: pointer;
-				transition: transform 140ms, box-shadow 140ms;
+				transition: background 130ms;
+				white-space: nowrap;
 			}
-			.fh-card:hover {
-				transform: translateY(-2px);
-				box-shadow: 0 4px 14px rgba(0,0,0,0.07);
-			}
-			.fh-card__label {
-				font-size: 0.69rem;
-				color: #64748b;
-				text-transform: uppercase;
-				letter-spacing: 0.06em;
-				margin-bottom: 0.3rem;
-			}
-			.fh-card__value {
-				font-size: 1.55rem;
+			.fh-chip:hover { background: var(--bg-color); }
+			.fh-chip__value {
+				font-size: 0.76rem;
 				font-weight: 700;
-				color: #0f172a;
+				color: var(--fh-accent, var(--text-color));
 				line-height: 1;
 			}
-			.fh-card__value.is-zero { color: #cbd5e1; }
+			.fh-chip__value.is-zero { color: var(--text-muted); }
+			.fh-chip__label {
+				font-size: 0.76rem;
+				font-weight: 500;
+				color: var(--text-muted);
+			}
 
 			/* ── Two-column body ────────────────────────────────── */
 			.fh-body {
@@ -136,26 +133,30 @@ opero.FlowHubPage = class FlowHubPage {
 
 			/* ── Shared panel chrome ────────────────────────────── */
 			.fh-panel {
-				background: #ffffff;
-				border: 1px solid #e2e8f0;
+				background: var(--fg-color);
+				border: 1px solid var(--border-color);
 				border-radius: 10px;
 				overflow: hidden;
 			}
 			.fh-panel__head {
-				padding: 0.65rem 0.75rem 0;
+				display: flex;
+				align-items: baseline;
+				flex-wrap: wrap;
+				gap: 0 0.5rem;
+				padding: 0.65rem 0.75rem 0.35rem;
 			}
 			.fh-panel__title {
 				font-size: 0.69rem;
 				font-weight: 700;
-				color: #64748b;
+				color: var(--text-muted);
 				text-transform: uppercase;
 				letter-spacing: 0.07em;
-				margin: 0 0 0.1rem;
+				margin: 0;
 			}
 			.fh-panel__sub {
 				font-size: 0.71rem;
-				color: #94a3b8;
-				margin: 0 0 0.45rem;
+				color: var(--text-muted);
+				margin: 0 0 0 auto;
 			}
 
 			/* ── Focus queue ────────────────────────────────────── */
@@ -169,13 +170,13 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.5rem 0.6rem;
 				margin-bottom: 0.35rem;
 				border-radius: 8px;
-				border: 1px solid #f1f5f9;
-				border-left: 4px solid var(--fh-band-color, #e2e8f0);
-				background: #fcfcfd;
+				border: 1px solid var(--border-color);
+				border-left: 4px solid var(--fh-band-color, var(--border-color));
+				background: var(--fg-color);
 				cursor: pointer;
 				transition: background 130ms;
 			}
-			.fh-item:hover { background: #f1f5f9; }
+			.fh-item:hover { background: var(--bg-color); }
 			.fh-item:last-child { margin-bottom: 0; }
 			.fh-item__body {
 				flex: 1;
@@ -184,7 +185,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-item__title {
 				font-size: 0.83rem;
 				font-weight: 600;
-				color: #0f172a;
+				color: var(--text-color);
 				line-height: 1.3;
 				white-space: nowrap;
 				overflow: hidden;
@@ -197,17 +198,16 @@ opero.FlowHubPage = class FlowHubPage {
 				gap: 0.35rem;
 				flex-wrap: wrap;
 				font-size: 0.71rem;
-				color: #64748b;
+				color: var(--text-muted);
 			}
 
-			/* Urgency band colours */
+			/* Urgency band accent (left border colour) */
 			.fh-band-overdue   { --fh-band-color: #ef4444; }
 			.fh-band-due_today { --fh-band-color: #f97316; }
 			.fh-band-stale     { --fh-band-color: #7c3aed; }
 			.fh-band-due_soon  { --fh-band-color: #2563eb; }
-			.fh-band-active    { --fh-band-color: #e2e8f0; }
 
-			/* Urgency tag pill */
+			/* Urgency tag pill — keep hardcoded, these are semantic colours */
 			.fh-tag {
 				padding: 0.11rem 0.34rem;
 				border-radius: 4px;
@@ -221,7 +221,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-tag.band-stale     { background: #faf5ff; color: #6d28d9; }
 			.fh-tag.band-due_soon  { background: #eff6ff; color: #1d4ed8; }
 
-			/* Priority pill */
+			/* Priority pill — semantic amber, keep hardcoded */
 			.fh-priority {
 				padding: 0.1rem 0.32rem;
 				border-radius: 4px;
@@ -446,8 +446,7 @@ opero.FlowHubPage = class FlowHubPage {
 		const isAllClear = attention.startsWith("All clear");
 
 		this.$root.html(`
-			${this._render_status_bar(attention, isAllClear, s.updated_at)}
-			${this._render_counts(s.counts || [])}
+			${this._render_status_bar(attention, isAllClear, s.updated_at, s.counts || [])}
 			<div class="fh-body">
 				${this._render_focus_queue(s.focus_queue || [])}
 				<div class="fh-right">
@@ -462,35 +461,31 @@ opero.FlowHubPage = class FlowHubPage {
 
 	// ── Section renderers ────────────────────────────────────────────
 
-	_render_status_bar(attention, isAllClear, updatedAt) {
+	_render_status_bar(attention, isAllClear, updatedAt, counts) {
 		const msgClass = isAllClear ? "is-clear" : "is-urgent";
-		return `
-			<div class="fh-status">
-				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
-				<span class="fh-status__time">${this.esc(this._fmt_time(updatedAt))}</span>
-				<button type="button" class="fh-status__btn" data-action="queue">
-					${this.esc(__("Action Queue"))}
-				</button>
-				<button type="button" class="fh-status__btn is-new" data-action="new">
-					+ ${this.esc(__("New ToDo"))}
-				</button>
-			</div>
-		`;
-	}
-
-	_render_counts(counts) {
-		const cards = counts
+		const chips = (counts || [])
 			.map(
 				(c, i) => `
-				<button type="button" class="fh-card" data-count-index="${i}"
-				        style="--fh-accent:${this.esc(c.accent || "#2563eb")}">
-					<div class="fh-card__label">${this.esc(c.label || "")}</div>
-					<div class="fh-card__value ${c.value === 0 ? "is-zero" : ""}">${c.value}</div>
+				<button type="button" class="fh-chip" data-count-index="${i}"
+				        style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
+					<span class="fh-chip__value ${c.value === 0 ? "is-zero" : ""}">${c.value}</span>
+					<span class="fh-chip__label">${this.esc(c.label || "")}</span>
 				</button>
 			`
 			)
 			.join("");
-		return `<div class="fh-counts">${cards}</div>`;
+		return `
+			<div class="fh-status">
+				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
+				<div class="fh-chips">
+					${chips}
+					<button type="button" class="fh-status__btn" data-action="queue">
+						${this.esc(__("Action Queue"))}
+					</button>
+				</div>
+				<span class="fh-status__time">${this._fmt_time(updatedAt)}</span>
+			</div>
+		`;
 	}
 
 	_render_focus_queue(queue) {
@@ -521,7 +516,7 @@ opero.FlowHubPage = class FlowHubPage {
 					})
 					.join("")
 			: `<div class="fh-empty is-clear">${this.esc(
-					__("All clear. Nothing needs attention right now.")
+					__("All clear.")
 			  )}</div>`;
 
 		return `
@@ -612,7 +607,6 @@ opero.FlowHubPage = class FlowHubPage {
 		const risk = s.risk || [];
 
 		this.$root.find("[data-action='queue']").on("click", () => this.open_action_queue());
-		this.$root.find("[data-action='new']").on("click", () => frappe.new_doc("ToDo"));
 
 		this.$root.find("[data-count-index]").each((_, el) => {
 			const card = counts[parseInt($(el).attr("data-count-index"), 10)];
@@ -669,11 +663,11 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	_fmt_time(value) {
-		if (!value) return __("Just now");
+		if (!value) return "";
 		try {
-			return __("Updated {0}", [frappe.datetime.str_to_user(value)]);
+			return __("Updated") + " " + frappe.datetime.comment_when(value);
 		} catch {
-			return __("Just now");
+			return "";
 		}
 	}
 
