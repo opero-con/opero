@@ -406,40 +406,55 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid #e2e8f0;
 				border-radius: 8px;
 				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-				min-width: 130px;
-				padding: 0.25rem;
+				width: 308px;
+				padding: 0;
+				overflow: hidden;
 				display: none;
 			}
 			.fh-due-pop.is-open { display: block; }
+			.fh-due-pop__cal .flatpickr-calendar {
+				box-shadow: none !important;
+				border: none !important;
+				border-radius: 0 !important;
+				width: 100% !important;
+			}
+			.fh-due-pop__shortcuts {
+				border-top: 1px solid #f1f5f9;
+				padding: 0.25rem;
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 0.15rem;
+			}
 			.fh-due-pop__short {
 				display: flex;
 				align-items: center;
-				gap: 0.4rem;
-				padding: 0.35rem 0.55rem;
+				justify-content: space-between;
+				padding: 0.32rem 0.5rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.78rem;
+				font-size: 0.76rem;
 				font-weight: 500;
 				color: #0f172a;
 				transition: background 100ms;
 				white-space: nowrap;
 			}
 			.fh-due-pop__short:hover { background: #f8fafc; }
-			.fh-due-pop__divider { border: none; border-top: 1px solid #f1f5f9; margin: 0.2rem 0; }
+			.fh-due-pop__short-day { color: #94a3b8; font-size: 0.7rem; }
 			.fh-due-pop__clear {
+				grid-column: 1 / -1;
 				display: flex;
 				align-items: center;
-				gap: 0.4rem;
-				padding: 0.35rem 0.55rem;
+				justify-content: center;
+				padding: 0.32rem 0.5rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.78rem;
+				font-size: 0.76rem;
 				font-weight: 500;
 				color: #94a3b8;
 				transition: background 100ms;
-				white-space: nowrap;
+				margin-top: 0.05rem;
 			}
-			.fh-due-pop__clear:hover { background: #f8fafc; color: #ef4444; }
+			.fh-due-pop__clear:hover { background: #fff1f2; color: #ef4444; }
 
 			/* ── Add allocatee button ──────────────────────────── */
 			.fh-add-alloc {
@@ -1090,7 +1105,6 @@ opero.FlowHubPage = class FlowHubPage {
 	_open_due_date_popover(btn) {
 		const todoName = $(btn).attr("data-due-todo");
 		const currentDate = $(btn).attr("data-due-date") || "";
-		const today = frappe.datetime.get_today();
 
 		const SHORTCUTS = [
 			{ label: __("Today"),     days: 0 },
@@ -1101,7 +1115,31 @@ opero.FlowHubPage = class FlowHubPage {
 
 		let $pop = $("#fh-due-pop");
 		if (!$pop.length) {
-			$pop = $(`<div id="fh-due-pop" class="fh-due-pop"></div>`).appendTo(document.body);
+			$pop = $(`<div id="fh-due-pop" class="fh-due-pop">
+				<div class="fh-due-pop__cal"></div>
+				<div class="fh-due-pop__shortcuts">
+					${SHORTCUTS.map(s => `<div class="fh-due-pop__short" data-due-days="${s.days}">
+						<span>${this.esc(s.label)}</span>
+						<span class="fh-due-pop__short-day"></span>
+					</div>`).join("")}
+					<div class="fh-due-pop__clear" data-due-shortcut="clear" style="display:none">${__("Clear")}</div>
+				</div>
+			</div>`).appendTo(document.body);
+
+			// Initialise flatpickr inline
+			const calEl = $pop.find(".fh-due-pop__cal")[0];
+			if (window.flatpickr) {
+				this._due_fp = flatpickr(calEl, {
+					inline: true,
+					dateFormat: "Y-m-d",
+					onChange: (dates, dateStr) => {
+						const name = $pop.data("active-todo");
+						if (!name || !dateStr) return;
+						$pop.removeClass("is-open");
+						this._save_due_date(name, dateStr);
+					},
+				});
+			}
 
 			$pop.on("click", "[data-due-days]", (e) => {
 				e.stopPropagation();
@@ -1126,24 +1164,25 @@ opero.FlowHubPage = class FlowHubPage {
 			return;
 		}
 
-		// Build content fresh each open so dates are current
-		const shortcuts = SHORTCUTS.map(s => {
-			const d = frappe.datetime.add_days(today, s.days);
+		// Update shortcut day labels and calendar selection
+		const today = frappe.datetime.get_today();
+		$pop.find("[data-due-days]").each((_, el) => {
+			const days = parseInt($(el).attr("data-due-days"), 10);
+			const d = frappe.datetime.add_days(today, days);
 			const dayName = new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
-			return `<div class="fh-due-pop__short" data-due-days="${s.days}">
-				<span style="flex:1">${this.esc(s.label)}</span>
-				<span style="color:#94a3b8;font-size:0.72rem">${this.esc(dayName)}</span>
-			</div>`;
-		}).join("");
+			$(el).find(".fh-due-pop__short-day").text(dayName);
+		});
 
-		const clearRow = currentDate
-			? `<hr class="fh-due-pop__divider"><div class="fh-due-pop__clear" data-due-shortcut="clear">${__("Clear")}</div>`
-			: "";
+		if (this._due_fp) {
+			if (currentDate) this._due_fp.setDate(currentDate, false);
+			else this._due_fp.clear();
+		}
 
-		$pop.html(shortcuts + clearRow);
+		$pop.find("[data-due-shortcut='clear']").toggle(!!currentDate);
 
 		const rect = btn.getBoundingClientRect();
-		$pop.css({ top: rect.bottom + 4, left: Math.max(4, rect.left) });
+		const left = Math.min(Math.max(4, rect.left), window.innerWidth - 316);
+		$pop.css({ top: rect.bottom + 4, left });
 		$pop.data("active-todo", todoName).addClass("is-open");
 
 		setTimeout(() => {
