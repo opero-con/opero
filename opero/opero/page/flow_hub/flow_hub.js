@@ -16,6 +16,7 @@ opero.FlowHubPage = class FlowHubPage {
 		this.loading = false;
 		this.snapshot = {};
 		this._active_tab = null;
+		this._selected_todo = null;
 
 		this.page = frappe.ui.make_app_page({
 			parent: wrapper,
@@ -205,6 +206,86 @@ opero.FlowHubPage = class FlowHubPage {
 				text-align: left;
 				font-size: 0.71rem;
 				color: var(--text-muted);
+			}
+
+			/* ── Queue + detail split ───────────────────────────── */
+			.fh-queue-layout {
+				display: flex;
+				gap: 0.65rem;
+				align-items: flex-start;
+			}
+			.fh-queue-layout > .fh-panel { flex: 1; min-width: 0; }
+
+			/* ── Detail panel ───────────────────────────────────── */
+			.fh-detail {
+				width: 300px;
+				flex-shrink: 0;
+				background: var(--fg-color);
+				border: 1px solid var(--border-color);
+				border-radius: 10px;
+				overflow: hidden;
+			}
+			.fh-detail__bar {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 0.45rem 0.65rem;
+				border-bottom: 1px solid #f1f5f9;
+			}
+			.fh-detail__close {
+				border: none;
+				background: none;
+				cursor: pointer;
+				font-size: 1rem;
+				line-height: 1;
+				color: #94a3b8;
+				padding: 0.1rem 0.3rem;
+				border-radius: 4px;
+			}
+			.fh-detail__close:hover { background: #f1f5f9; color: #475569; }
+			.fh-detail__open {
+				font-size: 0.73rem;
+				color: var(--primary);
+				text-decoration: none;
+			}
+			.fh-detail__open:hover { text-decoration: underline; }
+			.fh-detail__scroll { padding: 0.75rem; }
+			.fh-detail__title {
+				font-size: 0.88rem;
+				font-weight: 600;
+				color: #0f172a;
+				margin: 0 0 0.8rem;
+				line-height: 1.45;
+			}
+			.fh-detail__fields {
+				display: flex;
+				flex-direction: column;
+				gap: 0.45rem;
+				margin-bottom: 0.75rem;
+			}
+			.fh-detail__row {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				font-size: 0.76rem;
+			}
+			.fh-detail__key {
+				width: 72px;
+				flex-shrink: 0;
+				color: #94a3b8;
+				font-weight: 500;
+			}
+			.fh-detail__val { color: #334155; }
+			.fh-detail__desc {
+				font-size: 0.76rem;
+				color: #475569;
+				line-height: 1.55;
+				border-top: 1px solid #f1f5f9;
+				padding-top: 0.65rem;
+			}
+			.fh-item.is-selected {
+				background: #f8fafc;
+				border-color: #94a3b8;
 			}
 
 			/* Urgency band accent (left border colour) */
@@ -763,24 +844,30 @@ opero.FlowHubPage = class FlowHubPage {
 			body = this._render_throughput(s.throughput_7d || {});
 		} else if (tab === "risk") {
 			body = this._render_risk(s.risk || []);
-		} else if (tab === "overdue") {
-			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.urgency_band === "overdue"), __("Overdue"));
-		} else if (tab === "due_today") {
-			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.urgency_band === "due_today"), __("Due Today"));
-		} else if (tab === "due_soon") {
-			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.urgency_band === "due_soon"), __("Due Soon"));
-		} else if (tab === "in_progress") {
-			body = this._render_focus_queue((s.focus_queue || []).filter(r => r.status === "In Progress"), __("In Progress"));
-		} else if (tab === "action_queue") {
-			body = this._render_focus_queue(s.focus_queue || [], __("Action Queue"));
 		} else {
-			body = this._render_focus_queue(s.focus_queue || []);
+			const { queue, title } = this._queue_for_tab(s, tab);
+			const queueHtml = this._render_focus_queue(queue, title);
+			body = this._selected_todo
+				? `<div class="fh-queue-layout">${queueHtml}${this._render_detail(this._selected_todo)}</div>`
+				: queueHtml;
 		}
 		this.$root.html(`
 			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [])}
 			${body}
 		`);
 		this._bind_events(s);
+	}
+
+	_queue_for_tab(s, tab) {
+		const q = s.focus_queue || [];
+		switch (tab) {
+			case "overdue":      return { queue: q.filter(r => r.urgency_band === "overdue"), title: __("Overdue") };
+			case "due_today":    return { queue: q.filter(r => r.urgency_band === "due_today"), title: __("Due Today") };
+			case "due_soon":     return { queue: q.filter(r => r.urgency_band === "due_soon"), title: __("Due Soon") };
+			case "in_progress":  return { queue: q.filter(r => r.status === "In Progress"), title: __("In Progress") };
+			case "action_queue": return { queue: q, title: __("Action Queue") };
+			default:             return { queue: q, title: null };
+		}
 	}
 
 	// ── Section renderers ────────────────────────────────────────────
@@ -839,10 +926,11 @@ opero.FlowHubPage = class FlowHubPage {
 						const avatars = this._render_avatars(row.assignees, row.name);
 						const pc = this._prio_config(row.priority);
 						const prioTip = this.esc(row.priority || __("Priority"));
+						const isSelected = this._selected_todo?.name === row.name;
 						return `
 						<div class="fh-item-wrap">
 							<button type="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}" title="">${pc.icon}</button>
-							<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
+							<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
 								<div class="fh-item__body">
 									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
 								</div>
@@ -947,12 +1035,21 @@ opero.FlowHubPage = class FlowHubPage {
 		this.$root.find("[data-chip-key]").on("click", (e) => {
 			const key = $(e.currentTarget).attr("data-chip-key");
 			this._active_tab = (this._active_tab === key) ? null : key;
+			this._selected_todo = null;
 			this.render();
 		});
 
 		this.$root.find("[data-queue-index]").each((_, el) => {
 			const row = queue[parseInt($(el).attr("data-queue-index"), 10)];
-			if (row?.name) $(el).on("click", () => frappe.set_route("Form", "ToDo", row.name));
+			if (row?.name) $(el).on("click", () => {
+				this._selected_todo = (this._selected_todo?.name === row.name) ? null : row;
+				this.render();
+			});
+		});
+
+		this.$root.find("[data-close-detail]").on("click", () => {
+			this._selected_todo = null;
+			this.render();
 		});
 
 		this.$root.find("[data-prio-index]").on("click", (e) => {
@@ -1316,6 +1413,57 @@ opero.FlowHubPage = class FlowHubPage {
 			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || "" },
 			callback: () => this.refresh({ force: true }),
 		});
+	}
+
+	_render_detail(todo) {
+		const name      = todo.name || "";
+		const title     = todo.title || todo.name || "";
+		const status    = todo.status || "";
+		const priority  = todo.priority || "";
+		const dueLabel  = todo.due_label || "";
+		const band      = todo.urgency_band || "";
+		const dueBandClass = band && band !== "active" ? `fh-due-btn--${band}` : "";
+		const desc      = (todo.description || "").trim();
+		const assignees = todo.assignees || [];
+
+		const priorityPc = this._prio_config(priority);
+		const assigneeList = assignees.length
+			? assignees.map(a => `<span class="fh-detail__assignee">
+					<span class="fh-avatar" style="width:18px;height:18px;font-size:0.55rem;background:${this._avatar_color(a.user)}">${this.esc(a.initials)}</span>
+					${this.esc(a.full_name || a.user)}
+				</span>`).join("")
+			: `<span style="color:#94a3b8">${__("Unallocated")}</span>`;
+
+		const rows = [
+			{ key: __("Status"),   val: `<span style="color:#334155">${this.esc(status)}</span>` },
+			priority ? { key: __("Priority"), val: `<span style="color:${priorityPc.color}">${priorityPc.icon} ${this.esc(priority)}</span>` } : null,
+			dueLabel ? { key: __("Due"),      val: `<span class="fh-due-btn ${dueBandClass}" style="cursor:default">${this.esc(dueLabel)}</span>` } : null,
+			{ key: __("Assigned"), val: `<span class="fh-detail__assignees">${assigneeList}</span>` },
+		].filter(Boolean);
+
+		return `<div class="fh-detail">
+			<div class="fh-detail__bar">
+				<button type="button" class="fh-detail__close" data-close-detail title="${__("Close")}">✕</button>
+				<a class="fh-detail__open" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
+			</div>
+			<div class="fh-detail__scroll">
+				<h3 class="fh-detail__title">${this.esc(title)}</h3>
+				<div class="fh-detail__fields">
+					${rows.map(r => `<div class="fh-detail__row">
+						<span class="fh-detail__key">${r.key}</span>
+						<span class="fh-detail__val">${r.val}</span>
+					</div>`).join("")}
+				</div>
+				${desc ? `<div class="fh-detail__desc">${desc}</div>` : ""}
+			</div>
+		</div>`;
+	}
+
+	_avatar_color(user) {
+		const PALETTE = ["#2563eb","#059669","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#dc2626"];
+		let h = 0;
+		for (let i = 0; i < (user||"").length; i++) h = (h * 31 + user.charCodeAt(i)) >>> 0;
+		return PALETTE[h % PALETTE.length];
 	}
 
 	_band_label(band) {
