@@ -45,7 +45,6 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 1rem;
 				min-height: calc(100vh - 120px);
 				background: #f8fafc;
-				font-family: -apple-system, "Inter", "Segoe UI", sans-serif;
 			}
 
 			/* ── Status bar ─────────────────────────────────────── */
@@ -63,11 +62,11 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-status__msg {
 				flex: 0 0 auto;
 				font-size: 0.88rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				color: var(--text-color);
 			}
 			.fh-status__msg.is-clear  { color: #64748b; }
-			.fh-status__msg.is-ahead  { color: #047857; font-weight: 700; }
+			.fh-status__msg.is-ahead  { color: #047857; }
 			.fh-status__time {
 				flex-shrink: 0;
 				font-size: 0.72rem;
@@ -81,7 +80,7 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.28rem 0.6rem;
 				border-radius: 7px;
 				font-size: 0.76rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				cursor: pointer;
 				transition: background 130ms;
 				white-space: nowrap;
@@ -117,10 +116,10 @@ opero.FlowHubPage = class FlowHubPage {
 				box-shadow: 0 2px 6px rgba(0,0,0,0.07);
 			}
 			.fh-chip.is-active .fh-chip__label { color: var(--fh-accent, var(--text-color)); }
-			.fh-chip--label-only .fh-chip__label { font-weight: 600; }
+			.fh-chip--label-only .fh-chip__label { font-weight: var(--weight-medium); }
 			.fh-chip__value {
 				font-size: 0.76rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				color: var(--text-muted);
 				line-height: 1;
 			}
@@ -128,7 +127,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-chip__value.is-zero { color: var(--text-muted); }
 			.fh-chip__label {
 				font-size: 0.76rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: var(--text-muted);
 			}
 
@@ -155,7 +154,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-panel__title {
 				font-size: 0.69rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				color: var(--text-muted);
 				text-transform: uppercase;
 				letter-spacing: 0.07em;
@@ -177,9 +176,10 @@ opero.FlowHubPage = class FlowHubPage {
 				text-align: left;
 				padding: 0.5rem 0.6rem;
 				margin-bottom: 0.35rem;
-				border-radius: 8px;
-				border: 1px solid var(--border-color);
-				border-left: 4px solid var(--fh-band-color, var(--border-color));
+				border-radius: 0;
+				border: none;
+				border-top: 1px solid var(--border-color);
+				border-bottom: 1px solid var(--border-color);
 				background: var(--fg-color);
 				cursor: pointer;
 				transition: background 130ms;
@@ -192,7 +192,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-item__title {
 				font-size: 0.83rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				color: var(--text-color);
 				line-height: 1.3;
 				white-space: nowrap;
@@ -211,10 +211,15 @@ opero.FlowHubPage = class FlowHubPage {
 			/* ── Queue + detail split ───────────────────────────── */
 			.fh-queue-layout {
 				display: flex;
-				gap: 0.65rem;
+				gap: 0;
 				align-items: flex-start;
 			}
-			.fh-queue-layout > .fh-panel { flex: 1; min-width: 0; }
+			.fh-queue-layout > .fh-panel {
+				flex: 1;
+				min-width: 0;
+				border-radius: 10px 0 0 10px;
+				border-right: none;
+			}
 
 			/* ── Detail panel ───────────────────────────────────── */
 			.fh-detail {
@@ -222,7 +227,7 @@ opero.FlowHubPage = class FlowHubPage {
 				flex-shrink: 0;
 				background: var(--fg-color);
 				border: 1px solid var(--border-color);
-				border-radius: 10px;
+				border-radius: 0 10px 10px 0;
 				overflow: hidden;
 			}
 			.fh-detail__bar {
@@ -252,7 +257,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-detail__scroll { padding: 0.75rem; }
 			.fh-detail__title {
 				font-size: 0.88rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				color: #0f172a;
 				margin: 0 0 0.8rem;
 				line-height: 1.45;
@@ -273,7 +278,7 @@ opero.FlowHubPage = class FlowHubPage {
 				width: 72px;
 				flex-shrink: 0;
 				color: #94a3b8;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 			}
 			.fh-detail__val { color: #334155; }
 			.fh-detail__desc {
@@ -284,22 +289,22 @@ opero.FlowHubPage = class FlowHubPage {
 				padding-top: 0.65rem;
 			}
 			.fh-item.is-selected {
-				background: #f8fafc;
-				border-color: #94a3b8;
+				background: var(--bg-color);
+				border-left: none;
+				border-right: none;
+				border-radius: 0;
+				padding-right: calc(0.6rem + 0.5rem);
 			}
-
-			/* Urgency band accent (left border colour) */
-			.fh-band-overdue   { --fh-band-color: #ef4444; }
-			.fh-band-due_today { --fh-band-color: #f97316; }
-			.fh-band-stale     { --fh-band-color: #7c3aed; }
-			.fh-band-due_soon  { --fh-band-color: #2563eb; }
+			.fh-item-wrap:has(.fh-item.is-selected) {
+				margin-right: -0.5rem;
+			}
 
 			/* Urgency tag pill — keep hardcoded, these are semantic colours */
 			.fh-tag {
 				padding: 0.11rem 0.34rem;
 				border-radius: 4px;
 				font-size: 0.65rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				text-transform: uppercase;
 				letter-spacing: 0.06em;
 			}
@@ -315,7 +320,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: #fff7ed;
 				color: #b45309;
 				font-size: 0.65rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				text-transform: uppercase;
 				letter-spacing: 0.04em;
 			}
@@ -338,7 +343,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border: none;
 				background: none;
 				font-size: 0.82rem;
-				font-weight: 800;
+				font-weight: var(--weight-semibold);
 				cursor: pointer;
 				padding: 0;
 				line-height: 1;
@@ -368,14 +373,14 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 0.78rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: #0f172a;
 				transition: background 100ms;
 			}
 			.fh-prio-drop__opt:hover { background: #f8fafc; }
 			.fh-prio-drop__icon {
 				font-size: 0.75rem;
-				font-weight: 800;
+				font-weight: var(--weight-semibold);
 				width: 14px;
 				text-align: center;
 				flex-shrink: 0;
@@ -406,7 +411,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: #1e293b;
 				color: #f8fafc;
 				font-size: 0.72rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				padding: 0.25rem 0.55rem;
 				border-radius: 5px;
 				pointer-events: none;
@@ -424,7 +429,7 @@ opero.FlowHubPage = class FlowHubPage {
 				color: #94a3b8;
 				text-align: center;
 			}
-			.fh-empty.is-clear { color: #047857; font-weight: 600; }
+			.fh-empty.is-clear { color: #047857; font-weight: var(--weight-semibold); }
 
 			/* ── Assignee avatars ───────────────────────────────── */
 			.fh-avatar-col {
@@ -450,7 +455,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 50%;
 				border: 2px solid #ffffff;
 				font-size: 0.6rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -467,7 +472,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 2px solid #ffffff;
 				margin-left: -6px;
 				font-size: 0.58rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -531,7 +536,7 @@ opero.FlowHubPage = class FlowHubPage {
 				transition: background 100ms;
 			}
 			.fh-cal__nav-btn:hover { background: #f1f5f9; }
-			.fh-cal__month { font-size: 0.8rem; font-weight: 600; color: #0f172a; }
+			.fh-cal__month { font-size: 0.8rem; font-weight: var(--weight-semibold); color: #0f172a; }
 			.fh-cal__grid {
 				display: grid;
 				grid-template-columns: repeat(7, 1fr);
@@ -540,7 +545,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-cal__dow {
 				text-align: center;
 				font-size: 0.62rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				color: #94a3b8;
 				padding: 0.15rem 0 0.25rem;
 			}
@@ -556,8 +561,8 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-cal__day:hover { background: #f1f5f9; }
 			.fh-cal__day.is-other { color: #cbd5e1; cursor: default; }
 			.fh-cal__day.is-other:hover { background: none; }
-			.fh-cal__day.is-today { font-weight: 700; color: #2563eb; }
-			.fh-cal__day.is-selected { background: #2563eb !important; color: #fff !important; font-weight: 600; }
+			.fh-cal__day.is-today { font-weight: var(--weight-bold); color: #2563eb; }
+			.fh-cal__day.is-selected { background: #2563eb !important; color: #fff !important; font-weight: var(--weight-semibold); }
 
 			/* Shortcuts strip */
 			.fh-due-pop__shortcuts {
@@ -575,7 +580,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 0.75rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: #0f172a;
 				transition: background 100ms;
 				white-space: nowrap;
@@ -592,7 +597,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 0.75rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: #94a3b8;
 				transition: background 100ms;
 			}
@@ -675,7 +680,14 @@ opero.FlowHubPage = class FlowHubPage {
 				cursor: pointer;
 			}
 			.fh-alloc-pop__remove:hover { color: #ef4444; }
-			.fh-avatars.fh-add-alloc { cursor: pointer; }
+			.fh-avatars.fh-add-alloc {
+				cursor: pointer;
+				width: auto;
+				height: auto;
+				border-radius: 0;
+				background: none;
+				border: none;
+			}
 
 			/* ── Risk signals ───────────────────────────────────── */
 			.fh-risk { padding: 0 0.4rem 0.5rem; }
@@ -696,7 +708,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-risk-row__value {
 				font-size: 0.92rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				color: #0f172a;
 				min-width: 1.4rem;
 				text-align: right;
@@ -741,7 +753,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-trow__count {
 				width: 1.4rem;
 				text-align: right;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				color: #0f172a;
 				flex-shrink: 0;
 			}
@@ -750,7 +762,7 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.32rem 0.5rem;
 				border-radius: 7px;
 				font-size: 0.76rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				text-align: center;
 			}
 			.fh-net.is-ahead   { background: #f0fdf4; color: #047857; }
@@ -1368,19 +1380,23 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	_cal_html(year, month, selectedDate) {
-		const DOWS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+		const ALL_DOWS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+		const weekStartName = frappe.sys_defaults?.first_day_of_the_week || "Sunday";
+		const weekStart = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(weekStartName);
+		const startDay = weekStart < 0 ? 0 : weekStart;
+		const DOWS = [...ALL_DOWS.slice(startDay), ...ALL_DOWS.slice(0, startDay)];
+
 		const today = frappe.datetime.get_today();
-		const firstDay = new Date(year, month, 1).getDay();
+		const rawFirstDay = new Date(year, month, 1).getDay();
+		const firstDay = (rawFirstDay - startDay + 7) % 7;
 		const daysInMonth = new Date(year, month + 1, 0).getDate();
 		const daysInPrev  = new Date(year, month, 0).getDate();
 		const monthLabel  = new Date(year, month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
 		let cells = "";
-		// trailing days from prev month
 		for (let i = firstDay - 1; i >= 0; i--) {
 			cells += `<span class="fh-cal__day is-other">${daysInPrev - i}</span>`;
 		}
-		// current month days
 		for (let d = 1; d <= daysInMonth; d++) {
 			const ds = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 			let cls = "fh-cal__day";
@@ -1388,7 +1404,6 @@ opero.FlowHubPage = class FlowHubPage {
 			if (ds === selectedDate) cls += " is-selected";
 			cells += `<span class="${cls}" data-cal-date="${ds}">${d}</span>`;
 		}
-		// leading days from next month
 		const total = Math.ceil((firstDay + daysInMonth) / 7) * 7;
 		for (let d = 1; d <= total - firstDay - daysInMonth; d++) {
 			cells += `<span class="fh-cal__day is-other">${d}</span>`;
@@ -1410,7 +1425,7 @@ opero.FlowHubPage = class FlowHubPage {
 	_save_due_date(todoName, date) {
 		frappe.call({
 			method: "frappe.client.set_value",
-			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || "" },
+			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || null },
 			callback: () => this.refresh({ force: true }),
 		});
 	}
