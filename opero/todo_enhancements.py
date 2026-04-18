@@ -247,7 +247,7 @@ def _get_desired_secondary_assignees(doc: Document) -> list[str]:
 
 
 def _sync_child_values(child_name: str, parent_doc: Document, group_id: str):
-	updates = {field: getattr(parent_doc, field, None) for field in SYNC_FIELDS}
+	updates = {field: (getattr(parent_doc, field, None) or None) for field in SYNC_FIELDS}
 	updates["custom_assignment_group"] = group_id
 	frappe.db.set_value("ToDo", child_name, updates, update_modified=False)
 
