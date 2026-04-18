@@ -15,6 +15,8 @@ opero.FlowHubPage = class FlowHubPage {
 		this.wrapper = wrapper;
 		this.loading = false;
 		this.snapshot = {};
+		this._active_tab = null;
+		this._selected_todo = null;
 
 		this.page = frappe.ui.make_app_page({
 			parent: wrapper,
@@ -43,7 +45,6 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 1rem;
 				min-height: calc(100vh - 120px);
 				background: #f8fafc;
-				font-family: -apple-system, "Inter", "Segoe UI", sans-serif;
 			}
 
 			/* ── Status bar ─────────────────────────────────────── */
@@ -61,11 +62,11 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-status__msg {
 				flex: 0 0 auto;
 				font-size: 0.88rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				color: var(--text-color);
 			}
 			.fh-status__msg.is-clear  { color: #64748b; }
-			.fh-status__msg.is-ahead  { color: #047857; font-weight: 700; }
+			.fh-status__msg.is-ahead  { color: #047857; }
 			.fh-status__time {
 				flex-shrink: 0;
 				font-size: 0.72rem;
@@ -79,7 +80,7 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.28rem 0.6rem;
 				border-radius: 7px;
 				font-size: 0.76rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				cursor: pointer;
 				transition: background 130ms;
 				white-space: nowrap;
@@ -104,23 +105,29 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.22rem 0.5rem;
 				border-radius: 6px;
 				border: 1px solid var(--border-color);
-				border-top: 3px solid var(--fh-accent, var(--border-color));
 				background: var(--fg-color);
 				cursor: pointer;
 				transition: background 130ms;
 				white-space: nowrap;
 			}
 			.fh-chip:hover { background: var(--bg-color); }
+			.fh-chip.is-active {
+				background: var(--bg-color);
+				box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+			}
+			.fh-chip.is-active .fh-chip__label { color: var(--fh-accent, var(--text-color)); }
+			.fh-chip--label-only .fh-chip__label { font-weight: var(--weight-medium); }
 			.fh-chip__value {
 				font-size: 0.76rem;
-				font-weight: 700;
-				color: var(--fh-accent, var(--text-color));
+				font-weight: var(--weight-semibold);
+				color: var(--text-muted);
 				line-height: 1;
 			}
+			.fh-chip__value:not(.is-zero) { color: var(--fh-accent, var(--text-color)); }
 			.fh-chip__value.is-zero { color: var(--text-muted); }
 			.fh-chip__label {
 				font-size: 0.76rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: var(--text-muted);
 			}
 
@@ -147,7 +154,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-panel__title {
 				font-size: 0.69rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				color: var(--text-muted);
 				text-transform: uppercase;
 				letter-spacing: 0.07em;
@@ -169,9 +176,10 @@ opero.FlowHubPage = class FlowHubPage {
 				text-align: left;
 				padding: 0.5rem 0.6rem;
 				margin-bottom: 0.35rem;
-				border-radius: 8px;
-				border: 1px solid var(--border-color);
-				border-left: 4px solid var(--fh-band-color, var(--border-color));
+				border-radius: 0;
+				border: none;
+				border-top: 1px solid var(--border-color);
+				border-bottom: 1px solid var(--border-color);
 				background: var(--fg-color);
 				cursor: pointer;
 				transition: background 130ms;
@@ -184,7 +192,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-item__title {
 				font-size: 0.83rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				color: var(--text-color);
 				line-height: 1.3;
 				white-space: nowrap;
@@ -192,27 +200,111 @@ opero.FlowHubPage = class FlowHubPage {
 				text-overflow: ellipsis;
 				margin-bottom: 0.22rem;
 			}
-			.fh-item__meta {
-				display: flex;
-				align-items: center;
-				gap: 0.35rem;
-				flex-wrap: wrap;
+			.fh-item__due {
+				width: 130px;
+				flex-shrink: 0;
+				text-align: left;
 				font-size: 0.71rem;
 				color: var(--text-muted);
 			}
 
-			/* Urgency band accent (left border colour) */
-			.fh-band-overdue   { --fh-band-color: #ef4444; }
-			.fh-band-due_today { --fh-band-color: #f97316; }
-			.fh-band-stale     { --fh-band-color: #7c3aed; }
-			.fh-band-due_soon  { --fh-band-color: #2563eb; }
+			/* ── Queue + detail split ───────────────────────────── */
+			.fh-queue-layout {
+				display: flex;
+				gap: 0;
+				align-items: flex-start;
+			}
+			.fh-queue-layout > .fh-panel {
+				flex: 1;
+				min-width: 0;
+				border-radius: 10px 0 0 10px;
+				border-right: none;
+			}
+
+			/* ── Detail panel ───────────────────────────────────── */
+			.fh-detail {
+				width: 300px;
+				flex-shrink: 0;
+				background: var(--fg-color);
+				border: 1px solid var(--border-color);
+				border-radius: 0 10px 10px 0;
+				overflow: hidden;
+			}
+			.fh-detail__bar {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 0.45rem 0.65rem;
+				border-bottom: 1px solid #f1f5f9;
+			}
+			.fh-detail__close {
+				border: none;
+				background: none;
+				cursor: pointer;
+				font-size: 1rem;
+				line-height: 1;
+				color: #94a3b8;
+				padding: 0.1rem 0.3rem;
+				border-radius: 4px;
+			}
+			.fh-detail__close:hover { background: #f1f5f9; color: #475569; }
+			.fh-detail__open {
+				font-size: 0.73rem;
+				color: var(--primary);
+				text-decoration: none;
+			}
+			.fh-detail__open:hover { text-decoration: underline; }
+			.fh-detail__scroll { padding: 0.75rem; }
+			.fh-detail__title {
+				font-size: 0.88rem;
+				font-weight: var(--weight-semibold);
+				color: #0f172a;
+				margin: 0 0 0.8rem;
+				line-height: 1.45;
+			}
+			.fh-detail__fields {
+				display: flex;
+				flex-direction: column;
+				gap: 0.45rem;
+				margin-bottom: 0.75rem;
+			}
+			.fh-detail__row {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				font-size: 0.76rem;
+			}
+			.fh-detail__key {
+				width: 72px;
+				flex-shrink: 0;
+				color: #94a3b8;
+				font-weight: var(--weight-medium);
+			}
+			.fh-detail__val { color: #334155; }
+			.fh-detail__desc {
+				font-size: 0.76rem;
+				color: #475569;
+				line-height: 1.55;
+				border-top: 1px solid #f1f5f9;
+				padding-top: 0.65rem;
+			}
+			.fh-item.is-selected {
+				background: var(--bg-color);
+				border-left: none;
+				border-right: none;
+				border-radius: 0;
+				padding-right: calc(0.6rem + 0.5rem);
+			}
+			.fh-item-wrap:has(.fh-item.is-selected) {
+				margin-right: -0.5rem;
+			}
 
 			/* Urgency tag pill — keep hardcoded, these are semantic colours */
 			.fh-tag {
 				padding: 0.11rem 0.34rem;
 				border-radius: 4px;
 				font-size: 0.65rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				text-transform: uppercase;
 				letter-spacing: 0.06em;
 			}
@@ -228,7 +320,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: #fff7ed;
 				color: #b45309;
 				font-size: 0.65rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				text-transform: uppercase;
 				letter-spacing: 0.04em;
 			}
@@ -251,7 +343,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border: none;
 				background: none;
 				font-size: 0.82rem;
-				font-weight: 800;
+				font-weight: var(--weight-semibold);
 				cursor: pointer;
 				padding: 0;
 				line-height: 1;
@@ -281,14 +373,14 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 0.78rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: #0f172a;
 				transition: background 100ms;
 			}
 			.fh-prio-drop__opt:hover { background: #f8fafc; }
 			.fh-prio-drop__icon {
 				font-size: 0.75rem;
-				font-weight: 800;
+				font-weight: var(--weight-semibold);
 				width: 14px;
 				text-align: center;
 				flex-shrink: 0;
@@ -319,7 +411,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: #1e293b;
 				color: #f8fafc;
 				font-size: 0.72rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				padding: 0.25rem 0.55rem;
 				border-radius: 5px;
 				pointer-events: none;
@@ -337,9 +429,16 @@ opero.FlowHubPage = class FlowHubPage {
 				color: #94a3b8;
 				text-align: center;
 			}
-			.fh-empty.is-clear { color: #047857; font-weight: 600; }
+			.fh-empty.is-clear { color: #047857; font-weight: var(--weight-semibold); }
 
 			/* ── Assignee avatars ───────────────────────────────── */
+			.fh-avatar-col {
+				display: flex;
+				align-items: center;
+				justify-content: flex-end;
+				width: 68px;
+				flex-shrink: 0;
+			}
 			.fh-avatars {
 				display: flex;
 				align-items: center;
@@ -356,7 +455,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 50%;
 				border: 2px solid #ffffff;
 				font-size: 0.6rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -373,7 +472,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 2px solid #ffffff;
 				margin-left: -6px;
 				font-size: 0.58rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -397,6 +496,10 @@ opero.FlowHubPage = class FlowHubPage {
 				font-size: 0.68rem;
 			}
 			.fh-due-btn--empty:hover { color: #94a3b8; background: #f1f5f9; }
+			.fh-due-btn--overdue   { color: #ef4444; }
+			.fh-due-btn--due_today { color: #f97316; }
+			.fh-due-btn--due_soon  { color: #2563eb; }
+			.fh-due-btn--stale     { color: #7c3aed; }
 
 			/* Due date popover */
 			.fh-due-pop {
@@ -433,7 +536,7 @@ opero.FlowHubPage = class FlowHubPage {
 				transition: background 100ms;
 			}
 			.fh-cal__nav-btn:hover { background: #f1f5f9; }
-			.fh-cal__month { font-size: 0.8rem; font-weight: 600; color: #0f172a; }
+			.fh-cal__month { font-size: 0.8rem; font-weight: var(--weight-semibold); color: #0f172a; }
 			.fh-cal__grid {
 				display: grid;
 				grid-template-columns: repeat(7, 1fr);
@@ -442,7 +545,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-cal__dow {
 				text-align: center;
 				font-size: 0.62rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				color: #94a3b8;
 				padding: 0.15rem 0 0.25rem;
 			}
@@ -458,8 +561,8 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-cal__day:hover { background: #f1f5f9; }
 			.fh-cal__day.is-other { color: #cbd5e1; cursor: default; }
 			.fh-cal__day.is-other:hover { background: none; }
-			.fh-cal__day.is-today { font-weight: 700; color: #2563eb; }
-			.fh-cal__day.is-selected { background: #2563eb !important; color: #fff !important; font-weight: 600; }
+			.fh-cal__day.is-today { font-weight: var(--weight-bold); color: #2563eb; }
+			.fh-cal__day.is-selected { background: #2563eb !important; color: #fff !important; font-weight: var(--weight-semibold); }
 
 			/* Shortcuts strip */
 			.fh-due-pop__shortcuts {
@@ -477,7 +580,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 0.75rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: #0f172a;
 				transition: background 100ms;
 				white-space: nowrap;
@@ -494,7 +597,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 5px;
 				cursor: pointer;
 				font-size: 0.75rem;
-				font-weight: 500;
+				font-weight: var(--weight-medium);
 				color: #94a3b8;
 				transition: background 100ms;
 			}
@@ -577,7 +680,14 @@ opero.FlowHubPage = class FlowHubPage {
 				cursor: pointer;
 			}
 			.fh-alloc-pop__remove:hover { color: #ef4444; }
-			.fh-avatars.fh-add-alloc { cursor: pointer; }
+			.fh-avatars.fh-add-alloc {
+				cursor: pointer;
+				width: auto;
+				height: auto;
+				border-radius: 0;
+				background: none;
+				border: none;
+			}
 
 			/* ── Risk signals ───────────────────────────────────── */
 			.fh-risk { padding: 0 0.4rem 0.5rem; }
@@ -598,7 +708,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-risk-row__value {
 				font-size: 0.92rem;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				color: #0f172a;
 				min-width: 1.4rem;
 				text-align: right;
@@ -643,7 +753,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-trow__count {
 				width: 1.4rem;
 				text-align: right;
-				font-weight: 700;
+				font-weight: var(--weight-semibold);
 				color: #0f172a;
 				flex-shrink: 0;
 			}
@@ -652,7 +762,7 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.32rem 0.5rem;
 				border-radius: 7px;
 				font-size: 0.76rem;
-				font-weight: 600;
+				font-weight: var(--weight-semibold);
 				text-align: center;
 			}
 			.fh-net.is-ahead   { background: #f0fdf4; color: #047857; }
@@ -740,19 +850,36 @@ opero.FlowHubPage = class FlowHubPage {
 
 	render() {
 		const s = this.snapshot;
-		const attention = s.attention || "";
+		const tab = this._active_tab;
+		let body;
+		if (tab === "throughput") {
+			body = this._render_throughput(s.throughput_7d || {});
+		} else if (tab === "risk") {
+			body = this._render_risk(s.risk || []);
+		} else {
+			const { queue, title } = this._queue_for_tab(s, tab);
+			const queueHtml = this._render_focus_queue(queue, title);
+			body = this._selected_todo
+				? `<div class="fh-queue-layout">${queueHtml}${this._render_detail(this._selected_todo)}</div>`
+				: queueHtml;
+		}
 		this.$root.html(`
-			${this._render_status_bar(attention, s.updated_at, s.counts || [])}
-			<div class="fh-body">
-				${this._render_focus_queue(s.focus_queue || [])}
-				<div class="fh-right">
-					${this._render_risk(s.risk || [])}
-					${this._render_throughput(s.throughput_7d || {})}
-				</div>
-			</div>
+			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [])}
+			${body}
 		`);
-
 		this._bind_events(s);
+	}
+
+	_queue_for_tab(s, tab) {
+		const q = s.focus_queue || [];
+		switch (tab) {
+			case "overdue":      return { queue: q.filter(r => r.urgency_band === "overdue"), title: __("Overdue") };
+			case "due_today":    return { queue: q.filter(r => r.urgency_band === "due_today"), title: __("Due Today") };
+			case "due_soon":     return { queue: q.filter(r => r.urgency_band === "due_soon"), title: __("Due Soon") };
+			case "in_progress":  return { queue: q.filter(r => r.status === "In Progress"), title: __("In Progress") };
+			case "action_queue": return { queue: q, title: __("Action Queue") };
+			default:             return { queue: q, title: null };
+		}
 	}
 
 	// ── Section renderers ────────────────────────────────────────────
@@ -760,23 +887,33 @@ opero.FlowHubPage = class FlowHubPage {
 	_render_status_bar(attention, updatedAt, counts) {
 		const msgClass = attention.startsWith("Welcome") ? "is-clear" : "is-ahead";
 		const chips = (counts || [])
-			.map(
-				(c, i) => `
-				<button type="button" class="fh-chip" data-count-index="${i}"
-				        style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
+			.map(c => {
+				const isActive = this._active_tab === c.key;
+				return `<button type="button" class="fh-chip ${isActive ? "is-active" : ""}"
+					data-chip-key="${this.esc(c.key)}"
+					style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
 					<span class="fh-chip__value ${c.value === 0 ? "is-zero" : ""}">${c.value}</span>
 					<span class="fh-chip__label">${this.esc(c.label || "")}</span>
-				</button>
-			`
-			)
+				</button>`;
+			})
 			.join("");
+		const isRiskActive = this._active_tab === "risk";
 		return `
 			<div class="fh-status">
 				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
 				<div class="fh-chips">
 					${chips}
-					<button type="button" class="fh-status__btn" data-action="queue">
-						${this.esc(__("Action Queue"))}
+					<button type="button" class="fh-chip fh-chip--label-only ${isRiskActive ? "is-active" : ""}"
+						data-chip-key="risk" style="--fh-accent:#7c3aed">
+						<span class="fh-chip__label">${this.esc(__("Risk Signals"))}</span>
+					</button>
+					<button type="button" class="fh-chip fh-chip--label-only ${this._active_tab === "throughput" ? "is-active" : ""}"
+						data-chip-key="throughput" style="--fh-accent:#059669">
+						<span class="fh-chip__label">${this.esc(__("Last 7 Days"))}</span>
+					</button>
+					<button type="button" class="fh-chip fh-chip--label-only ${this._active_tab === "action_queue" ? "is-active" : ""}"
+						data-chip-key="action_queue" style="--fh-accent:#0ea5e9">
+						<span class="fh-chip__label">${this.esc(__("Action Queue"))}</span>
 					</button>
 				</div>
 				<span class="fh-status__time">${this._fmt_time(updatedAt)}</span>
@@ -784,7 +921,7 @@ opero.FlowHubPage = class FlowHubPage {
 		`;
 	}
 
-	_render_focus_queue(queue) {
+	_render_focus_queue(queue, title) {
 		const body = queue.length
 			? queue
 					.map((row, i) => {
@@ -794,20 +931,22 @@ opero.FlowHubPage = class FlowHubPage {
 								weekday: "short", month: "short", day: "numeric",
 							  })
 							: "";
+						const dueBandClass = band !== "active" ? `fh-due-btn--${band}` : "";
 						const dueLabel = row.due_label
-							? `<span role="button" class="fh-due-btn" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
+							? `<span role="button" class="fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
 							: `<span role="button" class="fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(row.name)}" data-due-date="" title="${this.esc(__('Set due date'))}">📅</span>`;
 						const avatars = this._render_avatars(row.assignees, row.name);
 						const pc = this._prio_config(row.priority);
 						const prioTip = this.esc(row.priority || __("Priority"));
+						const isSelected = this._selected_todo?.name === row.name;
 						return `
 						<div class="fh-item-wrap">
 							<button type="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}" title="">${pc.icon}</button>
-							<button type="button" class="fh-item fh-band-${band}" data-queue-index="${i}">
+							<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
 								<div class="fh-item__body">
 									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
-									<div class="fh-item__meta">${dueLabel}</div>
 								</div>
+								<div class="fh-item__due">${dueLabel}</div>
 								${avatars}
 							</button>
 						</div>
@@ -821,7 +960,7 @@ opero.FlowHubPage = class FlowHubPage {
 		return `
 			<div class="fh-panel">
 				<div class="fh-panel__head">
-					<h2 class="fh-panel__title">${this.esc(__("Focus Queue"))}</h2>
+					<h2 class="fh-panel__title">${this.esc(title || __("Focus Queue"))}</h2>
 					<p class="fh-panel__sub">${this.esc(__("Sorted by urgency, click to open"))}</p>
 				</div>
 				<div class="fh-queue">${body}</div>
@@ -905,16 +1044,24 @@ opero.FlowHubPage = class FlowHubPage {
 		const queue = s.focus_queue || [];
 		const risk = s.risk || [];
 
-		this.$root.find("[data-action='queue']").on("click", () => this.open_action_queue());
-
-		this.$root.find("[data-count-index]").each((_, el) => {
-			const card = counts[parseInt($(el).attr("data-count-index"), 10)];
-			if (card) $(el).on("click", () => this._navigate(card));
+		this.$root.find("[data-chip-key]").on("click", (e) => {
+			const key = $(e.currentTarget).attr("data-chip-key");
+			this._active_tab = (this._active_tab === key) ? null : key;
+			this._selected_todo = null;
+			this.render();
 		});
 
 		this.$root.find("[data-queue-index]").each((_, el) => {
 			const row = queue[parseInt($(el).attr("data-queue-index"), 10)];
-			if (row?.name) $(el).on("click", () => frappe.set_route("Form", "ToDo", row.name));
+			if (row?.name) $(el).on("click", () => {
+				this._selected_todo = (this._selected_todo?.name === row.name) ? null : row;
+				this.render();
+			});
+		});
+
+		this.$root.find("[data-close-detail]").on("click", () => {
+			this._selected_todo = null;
+			this.render();
 		});
 
 		this.$root.find("[data-prio-index]").on("click", (e) => {
@@ -954,10 +1101,12 @@ opero.FlowHubPage = class FlowHubPage {
 	_render_avatars(assignees, todoName) {
 		const nameAttr = `data-add-alloc="${this.esc(todoName || "")}"`;
 		if (!assignees || !assignees.length) {
-			return `<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" ${nameAttr}>
-				<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/>
-				</svg>
+			return `<span class="fh-avatar-col">
+				<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" ${nameAttr}>
+					<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/>
+					</svg>
+				</span>
 			</span>`;
 		}
 		const PALETTE = ["#2563eb","#059669","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#dc2626"];
@@ -976,7 +1125,9 @@ opero.FlowHubPage = class FlowHubPage {
 			return `<span data-tip="${this.esc(a.full_name)}"><span class="fh-avatar" style="background:${_color(a.user)}">${this.esc(a.initials)}</span></span>`;
 		}).join("");
 		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
-		return `<span role="button" tabindex="0" class="fh-avatars fh-add-alloc" ${nameAttr}>${chips}${more}</span>`;
+		return `<span class="fh-avatar-col">
+			<span role="button" tabindex="0" class="fh-avatars fh-add-alloc" ${nameAttr}>${chips}${more}</span>
+		</span>`;
 	}
 
 	_open_allocatee_popover(btn) {
@@ -1229,19 +1380,23 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	_cal_html(year, month, selectedDate) {
-		const DOWS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+		const ALL_DOWS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+		const weekStartName = frappe.sys_defaults?.first_day_of_the_week || "Sunday";
+		const weekStart = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(weekStartName);
+		const startDay = weekStart < 0 ? 0 : weekStart;
+		const DOWS = [...ALL_DOWS.slice(startDay), ...ALL_DOWS.slice(0, startDay)];
+
 		const today = frappe.datetime.get_today();
-		const firstDay = new Date(year, month, 1).getDay();
+		const rawFirstDay = new Date(year, month, 1).getDay();
+		const firstDay = (rawFirstDay - startDay + 7) % 7;
 		const daysInMonth = new Date(year, month + 1, 0).getDate();
 		const daysInPrev  = new Date(year, month, 0).getDate();
 		const monthLabel  = new Date(year, month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
 		let cells = "";
-		// trailing days from prev month
 		for (let i = firstDay - 1; i >= 0; i--) {
 			cells += `<span class="fh-cal__day is-other">${daysInPrev - i}</span>`;
 		}
-		// current month days
 		for (let d = 1; d <= daysInMonth; d++) {
 			const ds = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 			let cls = "fh-cal__day";
@@ -1249,7 +1404,6 @@ opero.FlowHubPage = class FlowHubPage {
 			if (ds === selectedDate) cls += " is-selected";
 			cells += `<span class="${cls}" data-cal-date="${ds}">${d}</span>`;
 		}
-		// leading days from next month
 		const total = Math.ceil((firstDay + daysInMonth) / 7) * 7;
 		for (let d = 1; d <= total - firstDay - daysInMonth; d++) {
 			cells += `<span class="fh-cal__day is-other">${d}</span>`;
@@ -1271,9 +1425,60 @@ opero.FlowHubPage = class FlowHubPage {
 	_save_due_date(todoName, date) {
 		frappe.call({
 			method: "frappe.client.set_value",
-			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || "" },
+			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || null },
 			callback: () => this.refresh({ force: true }),
 		});
+	}
+
+	_render_detail(todo) {
+		const name      = todo.name || "";
+		const title     = todo.title || todo.name || "";
+		const status    = todo.status || "";
+		const priority  = todo.priority || "";
+		const dueLabel  = todo.due_label || "";
+		const band      = todo.urgency_band || "";
+		const dueBandClass = band && band !== "active" ? `fh-due-btn--${band}` : "";
+		const desc      = (todo.description || "").trim();
+		const assignees = todo.assignees || [];
+
+		const priorityPc = this._prio_config(priority);
+		const assigneeList = assignees.length
+			? assignees.map(a => `<span class="fh-detail__assignee">
+					<span class="fh-avatar" style="width:18px;height:18px;font-size:0.55rem;background:${this._avatar_color(a.user)}">${this.esc(a.initials)}</span>
+					${this.esc(a.full_name || a.user)}
+				</span>`).join("")
+			: `<span style="color:#94a3b8">${__("Unallocated")}</span>`;
+
+		const rows = [
+			{ key: __("Status"),   val: `<span style="color:#334155">${this.esc(status)}</span>` },
+			priority ? { key: __("Priority"), val: `<span style="color:${priorityPc.color}">${priorityPc.icon} ${this.esc(priority)}</span>` } : null,
+			dueLabel ? { key: __("Due"),      val: `<span class="fh-due-btn ${dueBandClass}" style="cursor:default">${this.esc(dueLabel)}</span>` } : null,
+			{ key: __("Assigned"), val: `<span class="fh-detail__assignees">${assigneeList}</span>` },
+		].filter(Boolean);
+
+		return `<div class="fh-detail">
+			<div class="fh-detail__bar">
+				<button type="button" class="fh-detail__close" data-close-detail title="${__("Close")}">✕</button>
+				<a class="fh-detail__open" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
+			</div>
+			<div class="fh-detail__scroll">
+				<h3 class="fh-detail__title">${this.esc(title)}</h3>
+				<div class="fh-detail__fields">
+					${rows.map(r => `<div class="fh-detail__row">
+						<span class="fh-detail__key">${r.key}</span>
+						<span class="fh-detail__val">${r.val}</span>
+					</div>`).join("")}
+				</div>
+				${desc ? `<div class="fh-detail__desc">${desc}</div>` : ""}
+			</div>
+		</div>`;
+	}
+
+	_avatar_color(user) {
+		const PALETTE = ["#2563eb","#059669","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#dc2626"];
+		let h = 0;
+		for (let i = 0; i < (user||"").length; i++) h = (h * 31 + user.charCodeAt(i)) >>> 0;
+		return PALETTE[h % PALETTE.length];
 	}
 
 	_band_label(band) {
