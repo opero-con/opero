@@ -107,7 +107,7 @@ def get_data(filters):
 				todo.allocated_to = %s
 				OR EXISTS (
 					SELECT 1
-					FROM `tabToDo Allocatee` assignee_row
+					FROM `tabToDo Assignee` assignee_row
 					WHERE assignee_row.parent = todo.name
 						AND assignee_row.parenttype = 'ToDo'
 						AND assignee_row.user = %s
