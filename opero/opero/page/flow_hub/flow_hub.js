@@ -42,9 +42,9 @@ opero.FlowHubPage = class FlowHubPage {
 		style.id = "fh-styles";
 		style.textContent = `
 			.fh {
-				padding: 0 1rem 1rem;
+				padding: 0 0 1rem 0;
 				min-height: calc(100vh - 120px);
-				background: #f8fafc;
+				background: var(--bg-color);
 			}
 
 			/* ── Status bar ─────────────────────────────────────── */
@@ -146,6 +146,9 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid var(--border-color);
 				border-radius: 10px;
 			}
+			.fh-panel--queue {
+				overflow: hidden;
+			}
 			.fh-panel__head {
 				display: flex;
 				align-items: baseline;
@@ -175,8 +178,8 @@ opero.FlowHubPage = class FlowHubPage {
 				gap: 0.6rem;
 				width: 100%;
 				text-align: left;
-				padding: 0.3rem 0.6rem;
-				margin-bottom: 0;
+				padding: 0.3rem 0;
+				margin: 0;
 				border-radius: 0;
 				border: none;
 				border-bottom: 1px solid var(--border-color);
@@ -212,22 +215,26 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-queue-layout {
 				display: flex;
 				gap: 0;
-				align-items: flex-start;
+				align-items: stretch;
+				transition: width 280ms ease-in-out, margin 280ms ease-in-out;
+				overflow-x: visible;
 			}
-			.fh-queue-layout > .fh-queue {
+			.fh-queue-layout > .fh-panel--queue {
 				flex: 1;
 				min-width: 0;
-				border-right: 1px solid var(--border-color);
+				border-right: none;
+				border-radius: 10px 0 0 10px;
+				overflow-y: auto;
 			}
 
 			/* ── Detail panel ───────────────────────────────────── */
 			.fh-detail {
-				width: 300px;
+				width: 420px;
 				flex-shrink: 0;
 				background: var(--fg-color);
 				border: 1px solid var(--border-color);
 				border-radius: 0 10px 10px 0;
-				overflow: hidden;
+				overflow-y: auto;
 			}
 			.fh-detail__bar {
 				display: flex;
@@ -289,13 +296,9 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-item.is-selected {
 				background: var(--bg-color);
-				border-left: none;
+				border-left: 3px solid var(--primary);
 				border-right: none;
 				border-radius: 0;
-				padding-right: calc(0.6rem + 0.5rem);
-			}
-			.fh-item-wrap:has(.fh-item.is-selected) {
-				margin-right: -0.5rem;
 			}
 
 			/* Urgency tag pill — keep hardcoded, these are semantic colours */
@@ -325,21 +328,12 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 
 			/* ── Priority icon (sits left of the band border) ───────── */
-			.fh-item-wrap {
-				display: flex;
-				align-items: stretch;
-				gap: 0.3rem;
-				margin-bottom: 0.35rem;
-			}
-			.fh-item-wrap:last-child { margin-bottom: 0; }
-			.fh-item-wrap .fh-item  { flex: 1; margin-bottom: 0; }
 			.fh-prio-btn {
-				display: flex;
+				display: inline-flex;
 				align-items: center;
 				justify-content: center;
-				width: 18px;
+				width: 20px;
 				flex-shrink: 0;
-				border: none;
 				background: none;
 				font-size: 0.82rem;
 				font-weight: var(--weight-semibold);
@@ -390,11 +384,11 @@ opero.FlowHubPage = class FlowHubPage {
 			[data-tip]::before {
 				content: "";
 				position: absolute;
-				top: calc(100% + 1px);
+				bottom: calc(100% + 1px);
 				left: 50%;
 				transform: translateX(-50%);
 				border: 5px solid transparent;
-				border-bottom-color: #1e293b;
+				border-top-color: #1e293b;
 				pointer-events: none;
 				opacity: 0;
 				transition: opacity 0.15s ease;
@@ -403,7 +397,7 @@ opero.FlowHubPage = class FlowHubPage {
 			[data-tip]::after {
 				content: attr(data-tip);
 				position: absolute;
-				top: calc(100% + 11px);
+				bottom: calc(100% + 11px);
 				left: 50%;
 				transform: translateX(-50%);
 				white-space: nowrap;
@@ -894,15 +888,44 @@ opero.FlowHubPage = class FlowHubPage {
 		} else {
 			const { queue, title } = this._queue_for_tab(s, tab);
 			const queueHtml = this._render_focus_queue(queue, title);
+			const queuePanel = `<div class="fh-panel fh-panel--queue"><div class="fh-panel__head"><h2 class="fh-panel__title">${this.esc(title)}</h2></div>${queueHtml}</div>`;
 			body = this._selected_todo
-				? `<div class="fh-queue-layout">${queueHtml}${this._render_detail(this._selected_todo)}</div>`
-				: queueHtml;
+				? `<div class="fh-queue-layout">${queuePanel}${this._render_detail(this._selected_todo)}</div>`
+				: queuePanel;
 		}
 		this.$root.html(`
 			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [], s.throughput_7d || {})}
 			${body}
 		`);
 		this._bind_events(s);
+		if (this._selected_todo) {
+			requestAnimationFrame(() => this._apply_queue_layout_stretch());
+		}
+	}
+
+	_apply_queue_layout_stretch() {
+		const $layout = this.$root.find(".fh-queue-layout");
+		if (!$layout.length) return;
+		const layout = $layout[0];
+
+		layout.style.width = "";
+		layout.style.marginLeft = "";
+		layout.style.marginRight = "";
+
+		const rect = layout.getBoundingClientRect();
+		const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+		const rightInset = 1;
+		const targetRight = viewportWidth - rightInset;
+		const extraLeft = Math.max(0, rect.left);
+		const extraRight = Math.max(0, targetRight - rect.right);
+		const overflowRight = Math.max(0, rect.right - targetRight);
+		const totalExtra = extraLeft + extraRight;
+		const shiftLeft = extraLeft + overflowRight;
+		if (totalExtra <= 0 && shiftLeft <= 0) return;
+
+		layout.style.width = `calc(100% + ${totalExtra}px)`;
+		layout.style.marginLeft = `${-shiftLeft}px`;
+		layout.style.marginRight = `${-extraRight}px`;
 	}
 
 	_queue_for_tab(s, tab) {
@@ -1015,16 +1038,14 @@ opero.FlowHubPage = class FlowHubPage {
 						const prioTip = this.esc(row.priority || __("Priority"));
 						const isSelected = this._selected_todo?.name === row.name;
 						return `
-						<div class="fh-item-wrap">
-							<button type="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}" title="">${pc.icon}</button>
-							<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
-								<div class="fh-item__body">
-									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
-								</div>
-								<div class="fh-item__due">${dueLabel}</div>
-								${avatars}
-							</button>
-						</div>
+						<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
+							<span role="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}">${pc.icon}</span>
+							<div class="fh-item__body">
+								<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
+							</div>
+							<div class="fh-item__due">${dueLabel}</div>
+							${avatars}
+						</button>
 					`;
 					})
 					.join("")
