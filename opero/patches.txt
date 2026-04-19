@@ -2,6 +2,7 @@
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
 opero.patches.v0_0.restore_todo_allocatee_custom_field
+opero.patches.v0_0.restore_todo_assignee_custom_field
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
@@ -39,3 +40,4 @@ opero.patches.v0_0.trim_todo_hub_workspace_shortcuts
 opero.patches.v0_0.rename_todo_action_queue_report
 opero.patches.v0_0.fix_todo_in_progress_status_casing
 opero.patches.v0_0.rename_todo_assignee_to_allocatee
+opero.patches.v0_0.rename_todo_allocatee_to_assignee
