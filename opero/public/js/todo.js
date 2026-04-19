@@ -78,16 +78,130 @@ const setDueDateDescription = (frm) => {
 	frm.set_df_property("date", "description", description)
 }
 
+const renderAssigneesSidebar = (frm) => {
+	frm.assign_to.parent.siblings(".opero-assignees-section").remove()
+
+	if (frm.doc.__islocal) return
+
+	const $section = $(`
+		<ul class="list-unstyled sidebar-menu opero-assignees-section">
+			<li>
+				<span class="form-sidebar-items">
+					<span>
+						<svg class="es-icon ml-0 icon-sm"><use href="#es-line-add-people"></use></svg>
+						<span class="ellipsis">${__("Assignees")}</span>
+					</span>
+					<button class="opero-add-assignee-btn btn btn-link icon-btn">
+						<svg class="es-icon icon-sm"><use href="#es-line-add"></use></svg>
+					</button>
+				</span>
+				<div class="opero-assignees-list"></div>
+			</li>
+		</ul>
+	`)
+
+	frm.assign_to.parent.after($section)
+
+	const users = (frm.doc.custom_assignees || []).map(r => r.user).filter(Boolean)
+	if (users.length) {
+		const avatarGroup = frappe.avatar_group(users, 5, { align: "left", overlap: true })
+		$section.find(".opero-assignees-list").append(avatarGroup)
+		avatarGroup.click(() => openAssigneesDialog(frm))
+	}
+
+	$section.find(".opero-add-assignee-btn").on("click", () => openAssigneesDialog(frm))
+}
+
+const openAssigneesDialog = (frm) => {
+	let adding = false
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Assignees"),
+		size: "small",
+		no_focus: true,
+		fields: [
+			{
+				label: __("Add a user"),
+				fieldname: "user",
+				fieldtype: "Link",
+				options: "User",
+				get_query: () => ({ filters: { enabled: 1, user_type: "System User" } }),
+				change() {
+					const value = dialog.get_value("user")
+					if (!value || adding) return
+					adding = true
+					dialog.set_df_property("user", "read_only", 1)
+					const currentRows = frm.doc.custom_assignees || []
+					if (currentRows.some(r => r.user === value)) {
+						dialog.set_value("user", null)
+						dialog.set_df_property("user", "read_only", 0)
+						adding = false
+						return
+					}
+					frm.set_value("custom_assignees", [...currentRows, { user: value }])
+					frm.save()
+						.then(() => {
+							dialog.set_value("user", null)
+							refreshDialogList()
+							renderAssigneesSidebar(frm)
+						})
+						.finally(() => {
+							dialog.set_df_property("user", "read_only", 0)
+							adding = false
+						})
+				},
+			},
+			{ fieldtype: "HTML", fieldname: "assignees_list" },
+		],
+	})
+
+	const refreshDialogList = () => {
+		const $list = $(dialog.get_field("assignees_list").wrapper)
+		$list.removeClass("frappe-control").empty()
+
+		;(frm.doc.custom_assignees || []).forEach(row => {
+			if (!row.user) return
+			const $row = $(`
+				<div class="dialog-assignment-row" data-user="${row.user}">
+					<div class="assignee">
+						${frappe.avatar(row.user)}
+						${frappe.user.full_name(row.user)}
+					</div>
+					<div class="btn-group btn-group-sm">
+						<button type="button" class="btn btn-default remove-assignee-btn" title="${__("Remove")}">
+							${frappe.utils.icon("close")}
+						</button>
+					</div>
+				</div>
+			`)
+			$row.find(".remove-assignee-btn").on("click", () => {
+				const newRows = (frm.doc.custom_assignees || []).filter(r => r.user !== row.user)
+				frm.set_value("custom_assignees", newRows)
+				frm.save().then(() => {
+					$row.remove()
+					renderAssigneesSidebar(frm)
+				})
+			})
+			$list.append($row)
+		})
+	}
+
+	refreshDialogList()
+	dialog.show()
+}
+
 frappe.ui.form.on("ToDo", {
 	refresh(frm) {
 		frm.toggle_display("allocated_to", false)
-		frm.set_query("custom_allocatees", () => ({
+		frm.set_query("custom_assignees", () => ({
 			filters: {
 				enabled: 1,
 			},
 		}))
 		setDueDateDescription(frm)
 		frm.add_custom_button(__("Flow Hub"), () => { window.location.href = "/app/flow-hub"; })
+		frm.assign_to.parent.hide()
+		renderAssigneesSidebar(frm)
 	},
 
 	custom_title(frm) {

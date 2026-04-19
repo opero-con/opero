@@ -132,7 +132,7 @@ def get_todo_assignees(todo_names: list[str]) -> dict[str, list[str]]:
 	rows = frappe.db.sql(
 		f"""
 			SELECT parent, user
-			FROM `tabToDo Allocatee`
+			FROM `tabToDo Assignee`
 			WHERE parenttype = 'ToDo'
 				AND parent IN ({placeholders})
 			ORDER BY idx ASC
@@ -199,21 +199,21 @@ def get_completion_metrics(filters=None, default_days: int = 30) -> dict[str, fl
 
 
 @frappe.whitelist()
-def add_todo_allocatee(todo_name: str, user: str):
-	"""Add a user to a ToDo's allocatees list and save."""
+def add_todo_assignee(todo_name: str, user: str):
+	"""Add a user to a ToDo's assignees list and save."""
 	doc = frappe.get_doc("ToDo", todo_name)
-	existing = [row.user for row in (doc.custom_allocatees or [])]
+	existing = [row.user for row in (doc.custom_assignees or [])]
 	if user not in existing:
-		doc.append("custom_allocatees", {"user": user})
+		doc.append("custom_assignees", {"user": user})
 		doc.save(ignore_permissions=True)
 	return {"success": True}
 
 
 @frappe.whitelist()
-def remove_todo_allocatee(todo_name: str, user: str):
-	"""Remove a user from a ToDo's allocatees list and save."""
+def remove_todo_assignee(todo_name: str, user: str):
+	"""Remove a user from a ToDo's assignees list and save."""
 	doc = frappe.get_doc("ToDo", todo_name)
-	doc.custom_allocatees = [row for row in (doc.custom_allocatees or []) if row.user != user]
+	doc.custom_assignees = [row for row in (doc.custom_assignees or []) if row.user != user]
 	doc.save(ignore_permissions=True)
 	return {"success": True}
 
@@ -696,7 +696,7 @@ def _get_unassigned_active_count() -> int:
 				AND (todo.allocated_to IS NULL OR todo.allocated_to = '')
 				AND NOT EXISTS (
 					SELECT 1
-					FROM `tabToDo Allocatee` assignee_row
+					FROM `tabToDo Assignee` assignee_row
 					WHERE assignee_row.parent = todo.name
 						AND assignee_row.parenttype = 'ToDo'
 				)
@@ -707,7 +707,10 @@ def _get_unassigned_active_count() -> int:
 
 def _get_throughput_7d() -> dict:
 	today = getdate(nowdate())
-	seven_days_ago = getdate(add_days(today, -6))
+	period_from = getdate(add_days(today, -6))
+	prev_to = getdate(add_days(today, -7))
+	prev_from = getdate(add_days(today, -13))
+
 	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 	creation_expr = _date_expr("todo.creation")
 	closed_on_expr = _date_expr("todo.custom_closed_on")
@@ -720,22 +723,80 @@ def _get_throughput_7d() -> dict:
 				COUNT(CASE WHEN todo.status = 'Closed'
 				           AND {closed_on_expr} BETWEEN %s AND %s THEN 1 END) AS closed,
 				COUNT(CASE WHEN todo.status = 'Cancelled'
-				           AND {cancelled_on_expr} BETWEEN %s AND %s THEN 1 END) AS cancelled
+				           AND {cancelled_on_expr} BETWEEN %s AND %s THEN 1 END) AS cancelled,
+				COUNT(CASE WHEN {creation_expr} BETWEEN %s AND %s THEN 1 END) AS prev_created,
+				COUNT(CASE WHEN todo.status = 'Closed'
+				           AND {closed_on_expr} BETWEEN %s AND %s THEN 1 END) AS prev_closed,
+				COUNT(CASE WHEN todo.status = 'Cancelled'
+				           AND {cancelled_on_expr} BETWEEN %s AND %s THEN 1 END) AS prev_cancelled
 			FROM `tabToDo` todo
 			WHERE {user_scope_sql}
 		""",
-		[seven_days_ago, today, seven_days_ago, today, seven_days_ago, today, *user_scope_params],
+		[
+			period_from, today, period_from, today, period_from, today,
+			prev_from, prev_to, prev_from, prev_to, prev_from, prev_to,
+			*user_scope_params,
+		],
 		as_dict=True,
 	)
 
 	result = row[0] if row else {}
 	created = cint(result.get("created") or 0)
 	closed = cint(result.get("closed") or 0) + cint(result.get("cancelled") or 0)
+	prev_created = cint(result.get("prev_created") or 0)
+	prev_closed = cint(result.get("prev_closed") or 0) + cint(result.get("prev_cancelled") or 0)
+
+	net = closed - created
+	prev_net = prev_closed - prev_created
+
+	if net > prev_net:
+		trend = "improving"
+	elif net < prev_net:
+		trend = "worsening"
+	else:
+		trend = "stable"
+
 	return {
 		"created": created,
 		"closed": closed,
-		"net": closed - created,
+		"net": net,
+		"prev_net": prev_net,
+		"trend": trend,
+		"daily_closed": _get_daily_closed(period_from, today, user_scope_sql, user_scope_params),
 	}
+
+
+def _get_daily_closed(from_date: date, to_date: date, user_scope_sql: str, user_scope_params: list) -> list[int]:
+	closed_expr = _date_expr("todo.custom_closed_on")
+	cancelled_expr = _date_expr("todo.custom_cancelled_on")
+
+	rows = frappe.db.sql(
+		f"""
+			SELECT day_val, SUM(cnt) AS total
+			FROM (
+				SELECT {closed_expr} AS day_val, COUNT(*) AS cnt
+				FROM `tabToDo` todo
+				WHERE todo.status = 'Closed'
+					AND {closed_expr} BETWEEN %s AND %s
+					AND {user_scope_sql}
+				GROUP BY {closed_expr}
+				UNION ALL
+				SELECT {cancelled_expr} AS day_val, COUNT(*) AS cnt
+				FROM `tabToDo` todo
+				WHERE todo.status = 'Cancelled'
+					AND {cancelled_expr} BETWEEN %s AND %s
+					AND {user_scope_sql}
+				GROUP BY {cancelled_expr}
+			) sub
+			GROUP BY day_val
+			ORDER BY day_val
+		""",
+		[from_date, to_date, *user_scope_params, from_date, to_date, *user_scope_params],
+		as_dict=True,
+	)
+
+	day_map = {str(_to_date(r.day_val) or ""): cint(r.total) for r in rows if r.day_val}
+	return [day_map.get(str(getdate(add_days(str(from_date), i))), 0) for i in range(7)]
 
 
 def serialize_json(value) -> str:
@@ -823,7 +884,7 @@ def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 			OR {alias}.allocated_to = %s
 			OR EXISTS (
 				SELECT 1
-				FROM `tabToDo Allocatee` assignee_row
+				FROM `tabToDo Assignee` assignee_row
 				WHERE assignee_row.parent = {alias}.name
 					AND assignee_row.parenttype = 'ToDo'
 					AND assignee_row.user = %s
