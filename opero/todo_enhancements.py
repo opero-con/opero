@@ -6,7 +6,6 @@ from collections.abc import Iterable
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint
-from frappe.utils.data import getdate
 from frappe.utils.data import now_datetime
 from frappe.utils.data import strip_html
 from frappe.utils.html_utils import unescape_html
@@ -14,9 +13,6 @@ from frappe.utils.html_utils import unescape_html
 
 USER_TOKEN_SPLIT = re.compile(r"[\n,;]+")
 
-# Todos created before this date may only have allocated_to set (pre-multi-allocatee era).
-# The legacy fallback that seeds custom_allocatees from allocated_to applies only to them.
-_LEGACY_ALLOCATEE_CUTOFF = getdate("2026-04-14")
 SYNC_FIELDS = (
 	"description",
 	"custom_title",
@@ -39,6 +35,8 @@ def sync_child_todos(doc: Document, _method: str | None = None):
 	if _should_skip_sync(doc):
 		return
 
+	is_new = bool(doc.flags.get("in_insert"))
+
 	group_id = _ensure_assignment_group(doc)
 	desired_secondary_assignees = _get_desired_secondary_assignees(doc)
 	existing_children = frappe.get_all(
@@ -54,11 +52,23 @@ def sync_child_todos(doc: Document, _method: str | None = None):
 			_sync_child_values(existing_child.name, doc, group_id)
 		else:
 			_create_child_todo(doc, user, group_id)
+			_create_assignment_notification(doc, user)
 
 	desired_set = set(desired_secondary_assignees)
 	for child in existing_children:
 		if child.allocated_to not in desired_set:
 			frappe.delete_doc("ToDo", child.name, ignore_permissions=True, force=True)
+
+	# Notify primary assignee on new insert, or if primary changed on update.
+	primary = (getattr(doc, "allocated_to", None) or "").strip()
+	if primary:
+		if is_new:
+			_create_assignment_notification(doc, primary)
+		else:
+			doc_before = getattr(doc, "_doc_before_save", None)
+			old_primary = (doc_before.get("allocated_to") or "" if doc_before else "") .strip()
+			if old_primary != primary:
+				_create_assignment_notification(doc, primary)
 
 
 def delete_child_todos(doc: Document, _method: str | None = None):
@@ -135,28 +145,11 @@ def _sync_status_timestamps(doc: Document):
 
 
 def _normalize_assignees(doc: Document):
-	assignees = _get_doc_assignees(doc)
-
-	if not assignees:
-		creation = _safe_getdate(getattr(doc, "creation", None))
-		if creation and creation < _LEGACY_ALLOCATEE_CUTOFF:
-			legacy_primary = (getattr(doc, "allocated_to", None) or "").strip()
-			assignees = [user for user in [legacy_primary] if user]
-
-	valid_assignees = _validate_assignees_exist(assignees)
+	valid_assignees = _validate_assignees_exist(_get_doc_assignees(doc))
 	primary = valid_assignees[0] if valid_assignees else ""
-
 	_set_doc_assignees(doc, valid_assignees)
 	doc.allocated_to = primary or None
 
-
-def _safe_getdate(value):
-	if not value:
-		return None
-	try:
-		return getdate(value)
-	except Exception:
-		return None
 
 
 def _parse_assignees(raw_values) -> list[str]:
@@ -186,20 +179,20 @@ def _parse_assignees(raw_values) -> list[str]:
 
 
 def _get_doc_assignees(doc: Document) -> list[str]:
-	return _parse_assignees(getattr(doc, "custom_allocatees", None))
+	return _parse_assignees(getattr(doc, "custom_assignees", None))
 
 
 def _set_doc_assignees(doc: Document, users: list[str]):
-	field_meta = doc.meta.get_field("custom_allocatees") if getattr(doc, "meta", None) else None
+	field_meta = doc.meta.get_field("custom_assignees") if getattr(doc, "meta", None) else None
 	if field_meta and field_meta.fieldtype == "Table MultiSelect":
-		doc.set("custom_allocatees", [{"user": user} for user in users])
+		doc.set("custom_assignees", [{"user": user} for user in users])
 		return
 
-	current_value = getattr(doc, "custom_allocatees", None)
+	current_value = getattr(doc, "custom_assignees", None)
 	if isinstance(current_value, list):
-		doc.set("custom_allocatees", [{"user": user} for user in users])
+		doc.set("custom_assignees", [{"user": user} for user in users])
 	else:
-		doc.custom_allocatees = "\n".join(users)
+		doc.custom_assignees = "\n".join(users)
 
 
 def _validate_assignees_exist(users: Iterable[str]) -> list[str]:
@@ -270,6 +263,28 @@ def _create_child_todo(parent_doc: Document, user: str, group_id: str):
 	child_todo.custom_is_group_child = 1
 
 	child_todo.insert(ignore_permissions=True)
+
+
+def _create_assignment_notification(parent_doc: Document, user: str):
+	"""Create a Notification Log for a ToDo assignment so downstream apps can act on it."""
+	if not user:
+		return
+	try:
+		actor = frappe.session.user
+		title = _extract_plain_text(
+			getattr(parent_doc, "custom_title", None) or getattr(parent_doc, "description", None) or ""
+		) or parent_doc.name
+
+		notif = frappe.new_doc("Notification Log")
+		notif.for_user = user
+		notif.from_user = actor
+		notif.type = "Assignment"
+		notif.document_type = "ToDo"
+		notif.document_name = parent_doc.name
+		notif.subject = f"<strong>{actor}</strong> assigned you to <strong>{title}</strong>"
+		notif.insert(ignore_permissions=True)
+	except Exception:
+		frappe.log_error(title="ToDo Assignment Notification Error", message=frappe.get_traceback())
 
 
 def _dedupe(users: list[str]) -> list[str]:
