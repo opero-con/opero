@@ -59,7 +59,7 @@ def sync_child_todos(doc: Document, _method: str | None = None):
 		if child.allocated_to not in desired_set:
 			frappe.delete_doc("ToDo", child.name, ignore_permissions=True, force=True)
 
-	# Notify primary allocatee on new insert, or if primary changed on update.
+	# Notify primary assignee on new insert, or if primary changed on update.
 	primary = (getattr(doc, "allocated_to", None) or "").strip()
 	if primary:
 		if is_new:
@@ -179,20 +179,20 @@ def _parse_assignees(raw_values) -> list[str]:
 
 
 def _get_doc_assignees(doc: Document) -> list[str]:
-	return _parse_assignees(getattr(doc, "custom_allocatees", None))
+	return _parse_assignees(getattr(doc, "custom_assignees", None))
 
 
 def _set_doc_assignees(doc: Document, users: list[str]):
-	field_meta = doc.meta.get_field("custom_allocatees") if getattr(doc, "meta", None) else None
+	field_meta = doc.meta.get_field("custom_assignees") if getattr(doc, "meta", None) else None
 	if field_meta and field_meta.fieldtype == "Table MultiSelect":
-		doc.set("custom_allocatees", [{"user": user} for user in users])
+		doc.set("custom_assignees", [{"user": user} for user in users])
 		return
 
-	current_value = getattr(doc, "custom_allocatees", None)
+	current_value = getattr(doc, "custom_assignees", None)
 	if isinstance(current_value, list):
-		doc.set("custom_allocatees", [{"user": user} for user in users])
+		doc.set("custom_assignees", [{"user": user} for user in users])
 	else:
-		doc.custom_allocatees = "\n".join(users)
+		doc.custom_assignees = "\n".join(users)
 
 
 def _validate_assignees_exist(users: Iterable[str]) -> list[str]:
