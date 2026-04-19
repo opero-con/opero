@@ -294,7 +294,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 0;
 				padding-right: calc(0.6rem + 0.5rem);
 			}
-			.fh-item-wrap:has(.fh-item.is-selected) {
+			.fh-item.is-selected {
 				margin-right: -0.5rem;
 			}
 
@@ -325,21 +325,12 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 
 			/* ── Priority icon (sits left of the band border) ───────── */
-			.fh-item-wrap {
-				display: flex;
-				align-items: stretch;
-				gap: 0.3rem;
-				margin-bottom: 0.35rem;
-			}
-			.fh-item-wrap:last-child { margin-bottom: 0; }
-			.fh-item-wrap .fh-item  { flex: 1; margin-bottom: 0; }
 			.fh-prio-btn {
-				display: flex;
+				display: inline-flex;
 				align-items: center;
 				justify-content: center;
-				width: 18px;
+				width: 20px;
 				flex-shrink: 0;
-				border: none;
 				background: none;
 				font-size: 0.82rem;
 				font-weight: var(--weight-semibold);
@@ -1015,16 +1006,14 @@ opero.FlowHubPage = class FlowHubPage {
 						const prioTip = this.esc(row.priority || __("Priority"));
 						const isSelected = this._selected_todo?.name === row.name;
 						return `
-						<div class="fh-item-wrap">
-							<button type="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}" title="">${pc.icon}</button>
-							<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
-								<div class="fh-item__body">
-									<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
-								</div>
-								<div class="fh-item__due">${dueLabel}</div>
-								${avatars}
-							</button>
-						</div>
+						<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
+							<span role="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}">${pc.icon}</span>
+							<div class="fh-item__body">
+								<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
+							</div>
+							<div class="fh-item__due">${dueLabel}</div>
+							${avatars}
+						</button>
 					`;
 					})
 					.join("")
