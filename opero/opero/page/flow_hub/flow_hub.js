@@ -42,9 +42,9 @@ opero.FlowHubPage = class FlowHubPage {
 		style.id = "fh-styles";
 		style.textContent = `
 			.fh {
-				padding: 0 1rem 1rem;
+				padding: 0 0 1rem 0;
 				min-height: calc(100vh - 120px);
-				background: #f8fafc;
+				background: var(--bg-color);
 			}
 
 			/* ── Status bar ─────────────────────────────────────── */
@@ -146,6 +146,9 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid var(--border-color);
 				border-radius: 10px;
 			}
+			.fh-panel--queue {
+				overflow: hidden;
+			}
 			.fh-panel__head {
 				display: flex;
 				align-items: baseline;
@@ -176,7 +179,7 @@ opero.FlowHubPage = class FlowHubPage {
 				width: 100%;
 				text-align: left;
 				padding: 0.3rem 0;
-				margin-bottom: 0;
+				margin: 0;
 				border-radius: 0;
 				border: none;
 				border-bottom: 1px solid var(--border-color);
@@ -212,22 +215,26 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-queue-layout {
 				display: flex;
 				gap: 0;
-				align-items: flex-start;
+				align-items: stretch;
+				transition: width 280ms ease-in-out, margin 280ms ease-in-out;
+				overflow-x: visible;
 			}
-			.fh-queue-layout > .fh-queue {
+			.fh-queue-layout > .fh-panel--queue {
 				flex: 1;
 				min-width: 0;
-				border-right: 1px solid var(--border-color);
+				border-right: none;
+				border-radius: 10px 0 0 10px;
+				overflow-y: auto;
 			}
 
 			/* ── Detail panel ───────────────────────────────────── */
 			.fh-detail {
-				width: 300px;
+				width: 420px;
 				flex-shrink: 0;
 				background: var(--fg-color);
 				border: 1px solid var(--border-color);
 				border-radius: 0 10px 10px 0;
-				overflow: hidden;
+				overflow-y: auto;
 			}
 			.fh-detail__bar {
 				display: flex;
@@ -377,11 +384,11 @@ opero.FlowHubPage = class FlowHubPage {
 			[data-tip]::before {
 				content: "";
 				position: absolute;
-				top: calc(100% + 1px);
+				bottom: calc(100% + 1px);
 				left: 50%;
 				transform: translateX(-50%);
 				border: 5px solid transparent;
-				border-bottom-color: #1e293b;
+				border-top-color: #1e293b;
 				pointer-events: none;
 				opacity: 0;
 				transition: opacity 0.15s ease;
@@ -390,7 +397,7 @@ opero.FlowHubPage = class FlowHubPage {
 			[data-tip]::after {
 				content: attr(data-tip);
 				position: absolute;
-				top: calc(100% + 11px);
+				bottom: calc(100% + 11px);
 				left: 50%;
 				transform: translateX(-50%);
 				white-space: nowrap;
@@ -881,15 +888,44 @@ opero.FlowHubPage = class FlowHubPage {
 		} else {
 			const { queue, title } = this._queue_for_tab(s, tab);
 			const queueHtml = this._render_focus_queue(queue, title);
+			const queuePanel = `<div class="fh-panel fh-panel--queue"><div class="fh-panel__head"><h2 class="fh-panel__title">${this.esc(title)}</h2></div>${queueHtml}</div>`;
 			body = this._selected_todo
-				? `<div class="fh-queue-layout">${queueHtml}${this._render_detail(this._selected_todo)}</div>`
-				: queueHtml;
+				? `<div class="fh-queue-layout">${queuePanel}${this._render_detail(this._selected_todo)}</div>`
+				: queuePanel;
 		}
 		this.$root.html(`
 			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [], s.throughput_7d || {})}
 			${body}
 		`);
 		this._bind_events(s);
+		if (this._selected_todo) {
+			requestAnimationFrame(() => this._apply_queue_layout_stretch());
+		}
+	}
+
+	_apply_queue_layout_stretch() {
+		const $layout = this.$root.find(".fh-queue-layout");
+		if (!$layout.length) return;
+		const layout = $layout[0];
+
+		layout.style.width = "";
+		layout.style.marginLeft = "";
+		layout.style.marginRight = "";
+
+		const rect = layout.getBoundingClientRect();
+		const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+		const rightInset = 1;
+		const targetRight = viewportWidth - rightInset;
+		const extraLeft = Math.max(0, rect.left);
+		const extraRight = Math.max(0, targetRight - rect.right);
+		const overflowRight = Math.max(0, rect.right - targetRight);
+		const totalExtra = extraLeft + extraRight;
+		const shiftLeft = extraLeft + overflowRight;
+		if (totalExtra <= 0 && shiftLeft <= 0) return;
+
+		layout.style.width = `calc(100% + ${totalExtra}px)`;
+		layout.style.marginLeft = `${-shiftLeft}px`;
+		layout.style.marginRight = `${-extraRight}px`;
 	}
 
 	_queue_for_tab(s, tab) {
