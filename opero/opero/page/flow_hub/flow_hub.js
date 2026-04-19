@@ -42,7 +42,7 @@ opero.FlowHubPage = class FlowHubPage {
 		style.id = "fh-styles";
 		style.textContent = `
 			.fh {
-				padding: 1rem;
+				padding: 0 1rem 1rem;
 				min-height: calc(100vh - 120px);
 				background: #f8fafc;
 			}
@@ -100,9 +100,9 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-chip {
 				display: flex;
-				align-items: baseline;
-				gap: 0.25rem;
-				padding: 0.22rem 0.5rem;
+				align-items: center;
+				gap: 0.22rem;
+				padding: 0.28rem 0.45rem;
 				border-radius: 6px;
 				border: 1px solid var(--border-color);
 				background: var(--fg-color);
@@ -115,21 +115,22 @@ opero.FlowHubPage = class FlowHubPage {
 				background: var(--bg-color);
 				box-shadow: 0 2px 6px rgba(0,0,0,0.07);
 			}
-			.fh-chip.is-active .fh-chip__label { color: var(--fh-accent, var(--text-color)); }
-			.fh-chip--label-only .fh-chip__label { font-weight: var(--weight-medium); }
+			.fh-chip.is-active .fh-chip__icon { color: var(--fh-accent, var(--text-color)); }
+			.fh-chip__icon {
+				width: 14px;
+				height: 14px;
+				flex-shrink: 0;
+				color: var(--text-muted);
+				transition: color 130ms;
+			}
+			.fh-chip__icon.is-accented { color: var(--fh-accent, var(--text-muted)); }
 			.fh-chip__value {
 				font-size: 0.76rem;
 				font-weight: var(--weight-semibold);
-				color: var(--text-muted);
 				line-height: 1;
-			}
-			.fh-chip__value:not(.is-zero) { color: var(--fh-accent, var(--text-color)); }
-			.fh-chip__value.is-zero { color: var(--text-muted); }
-			.fh-chip__label {
-				font-size: 0.76rem;
-				font-weight: var(--weight-medium);
 				color: var(--text-muted);
 			}
+			.fh-chip__value.is-nonzero { color: var(--fh-accent, var(--text-color)); }
 
 			/* ── Two-column body ────────────────────────────────── */
 			.fh-body {
@@ -167,25 +168,24 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 
 			/* ── Focus queue ────────────────────────────────────── */
-			.fh-queue { padding: 0 0.5rem 0.6rem; }
+			.fh-queue { padding: 0; }
 			.fh-item {
 				display: flex;
 				align-items: center;
 				gap: 0.6rem;
 				width: 100%;
 				text-align: left;
-				padding: 0.5rem 0.6rem;
-				margin-bottom: 0.35rem;
+				padding: 0.3rem 0.6rem;
+				margin-bottom: 0;
 				border-radius: 0;
 				border: none;
-				border-top: 1px solid var(--border-color);
 				border-bottom: 1px solid var(--border-color);
 				background: var(--fg-color);
 				cursor: pointer;
 				transition: background 130ms;
 			}
 			.fh-item:hover { background: var(--bg-color); }
-			.fh-item:last-child { margin-bottom: 0; }
+			.fh-item:last-child { border-bottom: none; }
 			.fh-item__body {
 				flex: 1;
 				min-width: 0;
@@ -198,7 +198,7 @@ opero.FlowHubPage = class FlowHubPage {
 				white-space: nowrap;
 				overflow: hidden;
 				text-overflow: ellipsis;
-				margin-bottom: 0.22rem;
+				margin-bottom: 0.1rem;
 			}
 			.fh-item__due {
 				width: 130px;
@@ -214,11 +214,10 @@ opero.FlowHubPage = class FlowHubPage {
 				gap: 0;
 				align-items: flex-start;
 			}
-			.fh-queue-layout > .fh-panel {
+			.fh-queue-layout > .fh-queue {
 				flex: 1;
 				min-width: 0;
-				border-radius: 10px 0 0 10px;
-				border-right: none;
+				border-right: 1px solid var(--border-color);
 			}
 
 			/* ── Detail panel ───────────────────────────────────── */
@@ -603,7 +602,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-due-pop__clear:hover { background: #fff1f2; color: #ef4444; }
 
-			/* ── Add allocatee button ──────────────────────────── */
+			/* ── Add assignee button ──────────────────────────── */
 			.fh-add-alloc {
 				display: inline-flex;
 				align-items: center;
@@ -625,7 +624,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-add-alloc svg { pointer-events: none; }
 
-			/* Add allocatee popover */
+			/* Add assignee popover */
 			.fh-alloc-pop {
 				position: fixed;
 				z-index: 2000;
@@ -720,9 +719,42 @@ opero.FlowHubPage = class FlowHubPage {
 				border-top: 1px solid #f8fafc;
 				margin: 0 0.45rem;
 			}
+			.fh-health-divider {
+				border: none;
+				border-top: 1px solid var(--border-color);
+				margin: 0.5rem 0.6rem 0;
+			}
+			.fh-health-section-title {
+				font-size: 0.7rem;
+				font-weight: var(--weight-semibold);
+				color: var(--text-muted);
+				text-transform: uppercase;
+				letter-spacing: 0.04em;
+				padding: 0.45rem 0.6rem 0.1rem;
+			}
 
 			/* ── Throughput ─────────────────────────────────────── */
 			.fh-throughput { padding: 0 0.6rem 0.65rem; }
+			.fh-sparkline-wrap {
+				margin-bottom: 0.6rem;
+			}
+			.fh-sparkline {
+				display: block;
+				width: 100%;
+				height: 40px;
+				overflow: visible;
+			}
+			.fh-sparkline__day-labels {
+				display: flex;
+				justify-content: space-between;
+				margin-top: 0.15rem;
+			}
+			.fh-sparkline__day-labels span {
+				font-size: 0.65rem;
+				color: var(--text-muted);
+				text-align: center;
+				flex: 1;
+			}
 			.fh-trow {
 				display: flex;
 				align-items: center;
@@ -763,8 +795,13 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 7px;
 				font-size: 0.76rem;
 				font-weight: var(--weight-semibold);
-				text-align: center;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5rem;
 			}
+			.fh-net__main { flex: 1; text-align: center; }
+			.fh-net__prev { font-size: 0.7rem; font-weight: var(--weight-medium); opacity: 0.8; white-space: nowrap; }
 			.fh-net.is-ahead   { background: #f0fdf4; color: #047857; }
 			.fh-net.is-behind  { background: #fff1f2; color: #be123c; }
 			.fh-net.is-neutral { background: #f8fafc; color: #64748b; }
@@ -852,10 +889,8 @@ opero.FlowHubPage = class FlowHubPage {
 		const s = this.snapshot;
 		const tab = this._active_tab;
 		let body;
-		if (tab === "throughput") {
-			body = this._render_throughput(s.throughput_7d || {});
-		} else if (tab === "risk") {
-			body = this._render_risk(s.risk || []);
+		if (tab === "health") {
+			body = this._render_health(s.throughput_7d || {}, s.risk || []);
 		} else {
 			const { queue, title } = this._queue_for_tab(s, tab);
 			const queueHtml = this._render_focus_queue(queue, title);
@@ -864,7 +899,7 @@ opero.FlowHubPage = class FlowHubPage {
 				: queueHtml;
 		}
 		this.$root.html(`
-			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [])}
+			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [], s.throughput_7d || {})}
 			${body}
 		`);
 		this._bind_events(s);
@@ -878,42 +913,82 @@ opero.FlowHubPage = class FlowHubPage {
 			case "due_soon":     return { queue: q.filter(r => r.urgency_band === "due_soon"), title: __("Due Soon") };
 			case "in_progress":  return { queue: q.filter(r => r.status === "In Progress"), title: __("In Progress") };
 			case "action_queue": return { queue: q, title: __("Action Queue") };
-			default:             return { queue: q, title: null };
+			default: {
+				const focus = q.filter(r =>
+					r.urgency_band === "overdue" ||
+					r.urgency_band === "due_today" ||
+					r.status === "In Progress"
+				);
+				return { queue: focus, title: __("Focus") };
+			}
 		}
 	}
 
 	// ── Section renderers ────────────────────────────────────────────
 
-	_render_status_bar(attention, updatedAt, counts) {
+	_chip_icon(key, accented) {
+		const MAP = {
+			overdue:      "es-line-overdue",
+			due_today:    "es-line-today",
+			due_soon:     "es-line-tomorrow",
+			in_progress:  "es-solid-inprogress",
+			health:       "es-line-activity",
+			action_queue: "es-line-bullet-list",
+		};
+		const id = MAP[key];
+		if (!id) return "";
+		const base = id.startsWith("es-solid") ? "es-icon es-solid" : "es-icon es-line";
+		const accent = accented ? " is-accented" : "";
+		return `<svg class="fh-chip__icon ${base}${accent}"><use href="#${id}"></use></svg>`;
+	}
+
+	_render_health_chip(t) {
+		const net = t.net !== undefined ? t.net : 0;
+		const trend = t.trend || "stable";
+		const isActive = this._active_tab === "health";
+
+		let accent;
+		if (net > 0)       accent = "#059669";
+		else if (net < 0)  accent = "#e11d48";
+		else               accent = "#64748b";
+
+		const trendLabel = trend === "improving" ? "↑ improving" : trend === "worsening" ? "↓ worsening" : "→ stable";
+		const sign = net > 0 ? "+" : "";
+		const tip = `${__("Velocity")}: ${sign}${net} · ${trendLabel}`;
+
+		return `<button type="button" class="fh-chip ${isActive ? "is-active" : ""}"
+			data-chip-key="health"
+			data-tip="${this.esc(tip)}"
+			style="--fh-accent:${accent}">
+			${this._chip_icon("health", true)}
+			<span class="fh-chip__value ${net !== 0 ? "is-nonzero" : ""}">${sign}${net}</span>
+		</button>`;
+	}
+
+	_render_status_bar(attention, updatedAt, counts, throughput) {
 		const msgClass = attention.startsWith("Welcome") ? "is-clear" : "is-ahead";
 		const chips = (counts || [])
 			.map(c => {
 				const isActive = this._active_tab === c.key;
+				const isNonZero = c.value > 0;
 				return `<button type="button" class="fh-chip ${isActive ? "is-active" : ""}"
 					data-chip-key="${this.esc(c.key)}"
+					data-tip="${this.esc(c.label || "")}"
 					style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
-					<span class="fh-chip__value ${c.value === 0 ? "is-zero" : ""}">${c.value}</span>
-					<span class="fh-chip__label">${this.esc(c.label || "")}</span>
+					${this._chip_icon(c.key, isNonZero)}
+					<span class="fh-chip__value ${isNonZero ? "is-nonzero" : ""}">${c.value}</span>
 				</button>`;
 			})
 			.join("");
-		const isRiskActive = this._active_tab === "risk";
 		return `
 			<div class="fh-status">
 				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
 				<div class="fh-chips">
 					${chips}
-					<button type="button" class="fh-chip fh-chip--label-only ${isRiskActive ? "is-active" : ""}"
-						data-chip-key="risk" style="--fh-accent:#7c3aed">
-						<span class="fh-chip__label">${this.esc(__("Risk Signals"))}</span>
-					</button>
-					<button type="button" class="fh-chip fh-chip--label-only ${this._active_tab === "throughput" ? "is-active" : ""}"
-						data-chip-key="throughput" style="--fh-accent:#059669">
-						<span class="fh-chip__label">${this.esc(__("Last 7 Days"))}</span>
-					</button>
-					<button type="button" class="fh-chip fh-chip--label-only ${this._active_tab === "action_queue" ? "is-active" : ""}"
-						data-chip-key="action_queue" style="--fh-accent:#0ea5e9">
-						<span class="fh-chip__label">${this.esc(__("Action Queue"))}</span>
+					${this._render_health_chip(throughput)}
+					<button type="button" class="fh-chip ${this._active_tab === "action_queue" ? "is-active" : ""}"
+						data-chip-key="action_queue" data-tip="${this.esc(__("Action Queue"))}" style="--fh-accent:#0ea5e9">
+						${this._chip_icon("action_queue", true)}
 					</button>
 				</div>
 				<span class="fh-status__time">${this._fmt_time(updatedAt)}</span>
@@ -957,15 +1032,7 @@ opero.FlowHubPage = class FlowHubPage {
 					__("All clear.")
 			  )}</div>`;
 
-		return `
-			<div class="fh-panel">
-				<div class="fh-panel__head">
-					<h2 class="fh-panel__title">${this.esc(title || __("Focus Queue"))}</h2>
-					<p class="fh-panel__sub">${this.esc(__("Sorted by urgency, click to open"))}</p>
-				</div>
-				<div class="fh-queue">${body}</div>
-			</div>
-		`;
+		return `<div class="fh-queue">${body}</div>`;
 	}
 
 	_render_risk(risk) {
@@ -991,32 +1058,49 @@ opero.FlowHubPage = class FlowHubPage {
 		`;
 	}
 
-	_render_throughput(t) {
-		const created = t.created || 0;
-		const closed = t.closed || 0;
-		const net = t.net !== undefined ? t.net : closed - created;
+	_render_health(throughput, risk) {
+		const created = throughput.created || 0;
+		const closed = throughput.closed || 0;
+		const net = throughput.net !== undefined ? throughput.net : closed - created;
+		const prevNet = throughput.prev_net !== undefined ? throughput.prev_net : null;
+		const trend = throughput.trend || "stable";
 		const maxVal = Math.max(created, closed, 1);
 		const createdPct = Math.round((created / maxVal) * 100);
 		const closedPct = Math.round((closed / maxVal) * 100);
 
-		let netClass, netText;
-		if (net > 0) {
-			netClass = "is-behind";
-			netText = __("Net +{0}, falling behind", [net]);
-		} else if (net < 0) {
-			netClass = "is-ahead";
-			netText = __("Net {0}, keeping up", [net]);
-		} else {
-			netClass = "is-neutral";
-			netText = __("Net 0, balanced");
+		let netClass;
+		if (net > 0)       netClass = "is-ahead";
+		else if (net < 0)  netClass = "is-behind";
+		else               netClass = "is-neutral";
+
+		const sign = net > 0 ? "+" : "";
+		const netLabel = net === 0 ? __("Balanced") : __("Net {0}", [sign + net]);
+
+		let prevText = "";
+		if (prevNet !== null) {
+			const prevSign = prevNet > 0 ? "+" : "";
+			const trendIcon = trend === "improving" ? "↑" : trend === "worsening" ? "↓" : "→";
+			prevText = `<span class="fh-net__prev">${trendIcon} ${__("prev")} ${prevSign}${prevNet}</span>`;
 		}
+
+		const riskRows = (risk || [])
+			.map((r, i) => `
+				<div class="fh-risk-row" data-risk-index="${i}" role="button">
+					<span class="fh-risk-row__label">${this.esc(r.label || "")}</span>
+					<span class="fh-risk-row__value ${r.value === 0 ? "is-zero" : ""}">${r.value}</span>
+					<span class="fh-risk-row__arrow">›</span>
+				</div>
+			`)
+			.join('<hr class="fh-divider">');
 
 		return `
 			<div class="fh-panel">
 				<div class="fh-panel__head">
-					<h2 class="fh-panel__title">${this.esc(__("Last 7 Days"))}</h2>
+					<h2 class="fh-panel__title">${this.esc(__("Health"))}</h2>
 				</div>
+				<div class="fh-health-section-title">${this.esc(__("Velocity"))}</div>
 				<div class="fh-throughput">
+					${this._render_sparkline(throughput.daily_closed)}
 					<div class="fh-trow">
 						<span class="fh-trow__label">${this.esc(__("Created"))}</span>
 						<div class="fh-trow__bar-wrap">
@@ -1031,7 +1115,100 @@ opero.FlowHubPage = class FlowHubPage {
 						</div>
 						<span class="fh-trow__count">${closed}</span>
 					</div>
-					<div class="fh-net ${netClass}">${this.esc(netText)}</div>
+					<div class="fh-net ${netClass}">
+						<span class="fh-net__main">${this.esc(netLabel)}</span>
+						${prevText}
+					</div>
+				</div>
+				<hr class="fh-health-divider">
+				<div class="fh-health-section-title">${this.esc(__("Risk Signals"))}</div>
+				<div class="fh-risk">${riskRows}</div>
+			</div>
+		`;
+	}
+
+	_render_sparkline(dailyClosed) {
+		const days = dailyClosed || Array(7).fill(0);
+		const maxVal = Math.max(...days, 1);
+		const W = 200;
+		const H = 40;
+		const barW = Math.floor(W / days.length);
+		const gap = 3;
+		const innerW = barW - gap;
+
+		const bars = days.map((v, i) => {
+			const h = Math.max(Math.round((v / maxVal) * H), v > 0 ? 3 : 1);
+			const x = i * barW + Math.floor(gap / 2);
+			const y = H - h;
+			const opacity = v > 0 ? 1 : 0.18;
+			return `<rect x="${x}" y="${y}" width="${innerW}" height="${h}" rx="2" fill="#059669" opacity="${opacity}"/>`;
+		}).join("");
+
+		const today = new Date();
+		const labels = days.map((_, i) => {
+			const d = new Date(today);
+			d.setDate(d.getDate() - (6 - i));
+			return `<span>${d.toLocaleDateString(undefined, { weekday: "narrow" })}</span>`;
+		}).join("");
+
+		return `
+			<div class="fh-sparkline-wrap">
+				<svg class="fh-sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>
+				<div class="fh-sparkline__day-labels">${labels}</div>
+			</div>
+		`;
+	}
+
+	_render_throughput(t) {
+		const created = t.created || 0;
+		const closed = t.closed || 0;
+		const net = t.net !== undefined ? t.net : closed - created;
+		const prevNet = t.prev_net !== undefined ? t.prev_net : null;
+		const trend = t.trend || "stable";
+		const maxVal = Math.max(created, closed, 1);
+		const createdPct = Math.round((created / maxVal) * 100);
+		const closedPct = Math.round((closed / maxVal) * 100);
+
+		let netClass;
+		if (net > 0)       netClass = "is-ahead";
+		else if (net < 0)  netClass = "is-behind";
+		else               netClass = "is-neutral";
+
+		const sign = net > 0 ? "+" : "";
+		const netLabel = net === 0 ? __("Balanced") : __("Net {0}", [sign + net]);
+
+		let prevText = "";
+		if (prevNet !== null) {
+			const prevSign = prevNet > 0 ? "+" : "";
+			const trendIcon = trend === "improving" ? "↑" : trend === "worsening" ? "↓" : "→";
+			prevText = `<span class="fh-net__prev">${trendIcon} ${__("prev")} ${prevSign}${prevNet}</span>`;
+		}
+
+		return `
+			<div class="fh-panel">
+				<div class="fh-panel__head">
+					<h2 class="fh-panel__title">${this.esc(__("Velocity"))}</h2>
+				</div>
+				<div class="fh-throughput">
+					${this._render_sparkline(t.daily_closed)}
+					<div class="fh-trow">
+						<span class="fh-trow__label">${this.esc(__("Created"))}</span>
+						<div class="fh-trow__bar-wrap">
+							<div class="fh-trow__bar is-created" style="width:${createdPct}%"></div>
+						</div>
+						<span class="fh-trow__count">${created}</span>
+					</div>
+					<div class="fh-trow">
+						<span class="fh-trow__label">${this.esc(__("Closed"))}</span>
+						<div class="fh-trow__bar-wrap">
+							<div class="fh-trow__bar is-closed" style="width:${closedPct}%"></div>
+						</div>
+						<span class="fh-trow__count">${closed}</span>
+					</div>
+					<div class="fh-net ${netClass}">
+						<span class="fh-net__main">${this.esc(netLabel)}</span>
+						${prevText}
+					</div>
 				</div>
 			</div>
 		`;
@@ -1071,7 +1248,7 @@ opero.FlowHubPage = class FlowHubPage {
 
 		this.$root.find("[data-add-alloc]").on("click", (e) => {
 			e.stopPropagation();
-			this._open_allocatee_popover(e.currentTarget);
+			this._open_assignee_popover(e.currentTarget);
 		});
 
 		this.$root.find("[data-due-todo]").on("click", (e) => {
@@ -1102,7 +1279,7 @@ opero.FlowHubPage = class FlowHubPage {
 		const nameAttr = `data-add-alloc="${this.esc(todoName || "")}"`;
 		if (!assignees || !assignees.length) {
 			return `<span class="fh-avatar-col">
-				<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Allocatee"))}" ${nameAttr}>
+				<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Assignee"))}" ${nameAttr}>
 					<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
 						<path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/>
 					</svg>
@@ -1130,7 +1307,7 @@ opero.FlowHubPage = class FlowHubPage {
 		</span>`;
 	}
 
-	_open_allocatee_popover(btn) {
+	_open_assignee_popover(btn) {
 		const todoName = $(btn).attr("data-add-alloc");
 		const queueRow = (this.snapshot.focus_queue || []).find(r => r.name === todoName);
 		const current = (queueRow && queueRow.assignees) || [];
@@ -1147,7 +1324,7 @@ opero.FlowHubPage = class FlowHubPage {
 				const name = $($pop.data("active-btn")).attr("data-add-alloc");
 				const row = (this.snapshot.focus_queue || []).find(r => r.name === name);
 				const existing = new Set(((row && row.assignees) || []).map(a => a.user));
-				this._search_allocatee_users($(e.target).val(), $pop, existing);
+				this._search_assignee_users($(e.target).val(), $pop, existing);
 			});
 
 			$pop.on("click", ".fh-alloc-pop__opt[data-user]", (e) => {
@@ -1157,7 +1334,7 @@ opero.FlowHubPage = class FlowHubPage {
 				if (!user || !name) return;
 				$pop.removeClass("is-open");
 				frappe.call({
-					method: "opero.todo_dashboard.add_todo_allocatee",
+					method: "opero.todo_dashboard.add_todo_assignee",
 					args: { todo_name: name, user },
 					callback: () => this.refresh({ force: true }),
 				});
@@ -1170,7 +1347,7 @@ opero.FlowHubPage = class FlowHubPage {
 				if (!user || !name) return;
 				$pop.removeClass("is-open");
 				frappe.call({
-					method: "opero.todo_dashboard.remove_todo_allocatee",
+					method: "opero.todo_dashboard.remove_todo_assignee",
 					args: { todo_name: name, user },
 					callback: () => this.refresh({ force: true }),
 				});
@@ -1182,7 +1359,7 @@ opero.FlowHubPage = class FlowHubPage {
 			return;
 		}
 
-		// Render current allocatees with remove buttons
+		// Render current assignees with remove buttons
 		const $curr = $pop.find(".fh-alloc-pop__current").empty();
 		if (current.length) {
 			current.forEach(a => {
@@ -1199,14 +1376,14 @@ opero.FlowHubPage = class FlowHubPage {
 		$pop.data("active-btn", btn).addClass("is-open");
 		$pop.find(".fh-alloc-pop__input").val("").focus();
 		const existing = new Set(current.map(a => a.user));
-		this._search_allocatee_users("", $pop, existing);
+		this._search_assignee_users("", $pop, existing);
 
 		setTimeout(() => {
 			$(document).one("click.fh-alloc", () => $pop.removeClass("is-open"));
 		}, 0);
 	}
 
-	_search_allocatee_users(query, $pop, excludeSet = new Set()) {
+	_search_assignee_users(query, $pop, excludeSet = new Set()) {
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
@@ -1447,7 +1624,7 @@ opero.FlowHubPage = class FlowHubPage {
 					<span class="fh-avatar" style="width:18px;height:18px;font-size:0.55rem;background:${this._avatar_color(a.user)}">${this.esc(a.initials)}</span>
 					${this.esc(a.full_name || a.user)}
 				</span>`).join("")
-			: `<span style="color:#94a3b8">${__("Unallocated")}</span>`;
+			: `<span style="color:#94a3b8">${__("Unassigned")}</span>`;
 
 		const rows = [
 			{ key: __("Status"),   val: `<span style="color:#334155">${this.esc(status)}</span>` },
