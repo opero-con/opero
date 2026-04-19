@@ -175,7 +175,7 @@ opero.FlowHubPage = class FlowHubPage {
 				gap: 0.6rem;
 				width: 100%;
 				text-align: left;
-				padding: 0.3rem 0.6rem;
+				padding: 0.3rem 0;
 				margin-bottom: 0;
 				border-radius: 0;
 				border: none;
@@ -292,7 +292,6 @@ opero.FlowHubPage = class FlowHubPage {
 				border-left: 3px solid var(--primary);
 				border-right: none;
 				border-radius: 0;
-				padding-left: calc(0.6rem - 2px);
 			}
 
 			/* Urgency tag pill — keep hardcoded, these are semantic colours */
