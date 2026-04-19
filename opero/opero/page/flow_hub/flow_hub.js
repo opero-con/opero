@@ -289,13 +289,10 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-item.is-selected {
 				background: var(--bg-color);
-				border-left: none;
+				border-left: 3px solid var(--primary);
 				border-right: none;
 				border-radius: 0;
-				padding-right: calc(0.6rem + 0.5rem);
-			}
-			.fh-item.is-selected {
-				margin-right: -0.5rem;
+				padding-left: calc(0.6rem - 2px);
 			}
 
 			/* Urgency tag pill — keep hardcoded, these are semantic colours */
