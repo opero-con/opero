@@ -1,0 +1,239 @@
+{
+ "actions": [],
+ "creation": "2026-04-20 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "tab_api",
+  "enabled",
+  "section_oauth",
+  "client_id",
+  "client_secret",
+  "authorization_uri",
+  "token_uri",
+  "redirect_uri",
+  "scope",
+  "section_tokens",
+  "connect_button",
+  "access_token",
+  "refresh_token",
+  "token_expiry",
+  "organization_id",
+  "section_sync",
+  "fallback_project_id",
+  "fallback_task_id",
+  "tab_personnel",
+  "fetch_users_button",
+  "personnel_mapping",
+  "tab_projects",
+  "fetch_projects_button",
+  "project_mapping"
+ ],
+ "fields": [
+  {
+   "fieldname": "tab_api",
+   "fieldtype": "Tab Break",
+   "label": "API Configuration",
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "section_oauth",
+   "fieldtype": "Section Break",
+   "label": "OAuth Configuration",
+   "permlevel": 1
+  },
+  {
+   "description": "Your Zoho Books OAuth App Client ID",
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "Client ID",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "permlevel": 1
+  },
+  {
+   "description": "Your Zoho Books OAuth App Client Secret",
+   "fieldname": "client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "permlevel": 1
+  },
+  {
+   "default": "https://accounts.zoho.com/oauth/v2/auth",
+   "description": "OAuth Authorization endpoint",
+   "fieldname": "authorization_uri",
+   "fieldtype": "Data",
+   "label": "Authorization URI",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "permlevel": 1
+  },
+  {
+   "default": "https://accounts.zoho.com/oauth/v2/token",
+   "description": "OAuth Token endpoint",
+   "fieldname": "token_uri",
+   "fieldtype": "Data",
+   "label": "Token URI",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "permlevel": 1
+  },
+  {
+   "description": "OAuth Redirect URI - URL where Zoho will send the authorization code",
+   "fieldname": "redirect_uri",
+   "fieldtype": "Data",
+   "label": "Redirect URI",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "permlevel": 1
+  },
+  {
+   "default": "projects",
+   "description": "OAuth scopes required (space-separated)",
+   "fieldname": "scope",
+   "fieldtype": "Data",
+   "label": "Scope",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "section_tokens",
+   "fieldtype": "Section Break",
+   "label": "Token Storage",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "connect_button",
+   "fieldtype": "Button",
+   "label": "Connect to Zoho",
+   "permlevel": 1
+  },
+  {
+   "description": "Current OAuth access token (auto-managed)",
+   "fieldname": "access_token",
+   "fieldtype": "Password",
+   "label": "Access Token",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "description": "OAuth refresh token (auto-managed)",
+   "fieldname": "refresh_token",
+   "fieldtype": "Password",
+   "label": "Refresh Token",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "description": "When the current access token expires",
+   "fieldname": "token_expiry",
+   "fieldtype": "Datetime",
+   "label": "Token Expiry",
+   "read_only": 1,
+   "permlevel": 1
+  },
+  {
+   "description": "Your Zoho Books Organization ID",
+   "fieldname": "organization_id",
+   "fieldtype": "Data",
+   "label": "Organization ID",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "section_sync",
+   "fieldtype": "Section Break",
+   "label": "Sync Settings",
+   "permlevel": 1
+  },
+  {
+   "description": "Default Zoho Books Project ID to use when time log has no project",
+   "fieldname": "fallback_project_id",
+   "fieldtype": "Data",
+   "label": "Fallback Project ID",
+   "permlevel": 1
+  },
+  {
+   "description": "Default Zoho Books Task ID to use when time log has no mapped task",
+   "fieldname": "fallback_task_id",
+   "fieldtype": "Data",
+   "label": "Fallback Task ID",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "tab_personnel",
+   "fieldtype": "Tab Break",
+   "label": "Personnel Mapping"
+  },
+  {
+   "fieldname": "fetch_users_button",
+   "fieldtype": "Button",
+   "label": "Fetch Users from Zoho"
+  },
+  {
+   "fieldname": "personnel_mapping",
+   "fieldtype": "Table",
+   "label": "Personnel Mapping",
+   "options": "Zoho Books Personnel Mapping"
+  },
+  {
+   "fieldname": "tab_projects",
+   "fieldtype": "Tab Break",
+   "label": "Project Mapping"
+  },
+  {
+   "fieldname": "fetch_projects_button",
+   "fieldtype": "Button",
+   "label": "Fetch Projects from Zoho"
+  },
+  {
+   "fieldname": "project_mapping",
+   "fieldtype": "Table",
+   "label": "Project Mapping",
+   "options": "Zoho Books Project Mapping"
+  }
+ ],
+ "idx": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-04-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Opero",
+ "name": "Zoho Books Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "permlevel": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 0,
+   "read": 1,
+   "role": "Projects Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
