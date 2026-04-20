@@ -143,6 +143,11 @@ doc_events = {
 		"after_insert": "opero.todo_enhancements.sync_child_todos",
 		"on_update": "opero.todo_enhancements.sync_child_todos",
 		"on_trash": "opero.todo_enhancements.delete_child_todos",
+	},
+	"Timesheet": {
+		"on_submit": "opero.zoho_books.sync_timesheet_to_zoho",
+		"on_cancel": "opero.zoho_books.sync_timesheet_to_zoho",
+		"on_amend": "opero.zoho_books.sync_timesheet_to_zoho",
 	}
 }
 
