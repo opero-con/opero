@@ -377,14 +377,46 @@ def _get_project_id(time_log) -> str:
     raise ZohoBooksException("No Zoho project ID found. Set a Fallback Project ID in Zoho Books Settings.")
 
 
-def _get_task_id(time_log, project_id: str) -> Optional[str]:
-    """Get Zoho task ID from time log's task custom field, or fall back to settings."""
+_zoho_task_cache: Dict[str, Dict[str, str]] = {}
+
+
+def _get_task_id(time_log, project_id: str, access_token: str, org_id: str) -> Optional[str]:
+    """Match ERPNext task name to Zoho task ID by name, fallback to settings."""
+    # 1. Already stored on the time log row
     if getattr(time_log, "zoho_task_id", None):
         return time_log.zoho_task_id
+
+    # 2. Try to match by name against Zoho tasks for this project
+    erpnext_task = getattr(time_log, "task", None)
+    if erpnext_task and project_id:
+        task_name = frappe.db.get_value("Task", erpnext_task, "subject") or erpnext_task
+        zoho_task_id = _match_zoho_task_by_name(project_id, task_name, access_token, org_id)
+        if zoho_task_id:
+            return zoho_task_id
+
+    # 3. Fall back to configured fallback task
     settings = _get_settings()
     if settings and settings.fallback_task_id:
         return settings.fallback_task_id
+
     return None
+
+
+def _match_zoho_task_by_name(project_id: str, task_name: str, access_token: str, org_id: str) -> Optional[str]:
+    """Fetch tasks for a Zoho project and return the ID whose name matches task_name."""
+    if project_id not in _zoho_task_cache:
+        try:
+            response = _make_api_request(
+                "GET", f"projects/{project_id}/tasks", access_token, org_id
+            )
+            tasks = response.get("tasks", [])
+            _zoho_task_cache[project_id] = {
+                t["task_name"].strip().lower(): t["task_id"] for t in tasks
+            }
+        except ZohoBooksException:
+            return None
+
+    return _zoho_task_cache[project_id].get(task_name.strip().lower())
 
 
 def _create_time_entry(
@@ -402,7 +434,7 @@ def _create_time_entry(
         to_time = get_datetime(time_log.to_time) if time_log.to_time else None
         log_date = from_time.date().isoformat() if from_time else ""
 
-        task_id = _get_task_id(time_log, project_id)
+        task_id = _get_task_id(time_log, project_id, access_token, org_id)
         if not task_id:
             raise ZohoBooksException("No task ID available. Configure a Fallback Task ID in Zoho Books Settings.")
 
@@ -449,7 +481,7 @@ def _update_time_entry(
         to_time = get_datetime(time_log.to_time) if time_log.to_time else None
         log_date = from_time.date().isoformat() if from_time else ""
 
-        task_id = _get_task_id(time_log, project_id)
+        task_id = _get_task_id(time_log, project_id, access_token, org_id)
         if not task_id:
             raise ZohoBooksException("No task ID available. Configure a Fallback Task ID in Zoho Books Settings.")
 
