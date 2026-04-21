@@ -5,13 +5,16 @@ from __future__ import annotations
 import frappe
 import requests
 from datetime import datetime, timedelta
-from frappe.utils import cint, get_datetime
+from frappe.utils import cint, get_datetime, get_url
 from typing import Optional, Dict, Any
 
 
 class ZohoBooksException(Exception):
     """Custom exception for Zoho Books integration errors."""
     pass
+
+
+ZOHO_OAUTH_CALLBACK_PATH = "/api/method/opero.zoho_books.oauth_callback"
 
 
 def sync_timesheet_to_zoho(doc, method: str = "submit"):
@@ -104,6 +107,7 @@ def oauth_callback():
         return
 
     settings = frappe.get_doc("Zoho Books Settings")
+    redirect_uri = _get_redirect_uri()
 
     try:
         response = requests.post(
@@ -113,7 +117,7 @@ def oauth_callback():
                 "code": code,
                 "client_id": settings.client_id,
                 "client_secret": settings.get_password("client_secret"),
-                "redirect_uri": settings.redirect_uri,
+                "redirect_uri": redirect_uri,
             },
             timeout=10,
         )
@@ -189,11 +193,16 @@ def get_authorization_url():
         "response_type": "code",
         "client_id": settings.client_id,
         "scope": settings.scope or "ZohoBooks.timetracking.ALL ZohoBooks.projects.ALL",
-        "redirect_uri": settings.redirect_uri,
+        "redirect_uri": _get_redirect_uri(),
         "access_type": "offline",
         "prompt": "consent",
     })
     return f"{settings.authorization_uri}?{params}"
+
+
+def _get_redirect_uri() -> str:
+    """Resolve the OAuth callback for the current site/request."""
+    return get_url(ZOHO_OAUTH_CALLBACK_PATH)
 
 
 def _get_settings() -> Optional[Dict[str, Any]]:
@@ -216,10 +225,15 @@ def _validate_settings(settings: Dict[str, Any]):
 
 def _get_or_refresh_token(settings: Dict[str, Any]) -> str:
     """Get access token, refresh if expired."""
-    if not settings.access_token or _is_token_expired(settings.token_expiry):
-        if not settings.refresh_token:
+    if _is_token_expired(settings.token_expiry):
+        try:
+            refresh_token = settings.get_password("refresh_token")
+        except Exception:
+            refresh_token = None
+        if not refresh_token:
             raise ZohoBooksException("No refresh token available. Please reconfigure Zoho Books authentication.")
         _refresh_access_token(settings)
+        settings.reload()
 
     return settings.get_password("access_token")
 
