@@ -129,11 +129,11 @@ def oauth_callback():
             return
 
         new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
-        settings.db_set({
-            "access_token": data["access_token"],
-            "refresh_token": data.get("refresh_token", settings.refresh_token),
-            "token_expiry": new_expiry.isoformat(),
-        })
+        settings.access_token = data["access_token"]
+        if data.get("refresh_token"):
+            settings.refresh_token = data["refresh_token"]
+        settings.token_expiry = new_expiry.isoformat()
+        settings.save(ignore_permissions=True)
 
         frappe.respond_as_web_page(
             "Zoho Connected",
@@ -264,14 +264,10 @@ def _refresh_access_token(settings: Dict[str, Any]):
         response.raise_for_status()
         data = response.json()
 
-        # Update settings with new token
         new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
-        settings.db_set({
-            "access_token": data["access_token"],
-            "token_expiry": new_expiry.isoformat(),
-        })
-
-        # Refresh the settings doc in memory
+        settings.access_token = data["access_token"]
+        settings.token_expiry = new_expiry.isoformat()
+        settings.save(ignore_permissions=True)
         settings.reload()
 
     except requests.RequestException as e:
