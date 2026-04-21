@@ -1,4 +1,8 @@
 app_name = "opero"
+
+fixtures = [
+    {"dt": "Custom Field", "filters": [["dt", "in", ["Project", "Timesheet Detail"]], ["fieldname", "in", ["zoho_project_id", "zoho_entry_id", "zoho_task_id"]]]}
+]
 app_title = "Opero Custom Development"
 app_publisher = "Patrick Willy"
 app_description = "Custom development app for Opero"
