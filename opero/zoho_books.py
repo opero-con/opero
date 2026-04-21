@@ -47,8 +47,11 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
         # Get employee's Zoho user ID
         zoho_user_id = _get_employee_zoho_user_id(doc.employee)
         if not zoho_user_id:
-            frappe.logger().warning(
-                f"No Zoho user ID mapping found for employee {doc.employee}, skipping sync"
+            frappe.msgprint(
+                f"Zoho Books: No personnel mapping found for <b>{doc.employee}</b>. "
+                "Add a row in Zoho Books Settings → Personnel Mapping.",
+                indicator="orange",
+                alert=True,
             )
             return
 
