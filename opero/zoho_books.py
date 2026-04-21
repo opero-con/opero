@@ -226,10 +226,7 @@ def _validate_settings(settings: Dict[str, Any]):
 def _get_or_refresh_token(settings: Dict[str, Any]) -> str:
     """Get access token, refresh if expired."""
     if _is_token_expired(settings.token_expiry):
-        try:
-            refresh_token = settings.get_password("refresh_token")
-        except Exception:
-            refresh_token = None
+        refresh_token = settings.get_password("refresh_token", raise_exception=False)
         if not refresh_token:
             raise ZohoBooksException("No refresh token available. Please reconfigure Zoho Books authentication.")
         _refresh_access_token(settings)
