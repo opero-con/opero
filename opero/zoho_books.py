@@ -177,6 +177,44 @@ def get_zoho_projects():
 
 
 @frappe.whitelist()
+def get_task_mapping_data(project):
+    """Return Cubenet tasks and Zoho tasks for a project."""
+    zoho_project_id = frappe.db.get_value("Project", project, "zoho_project_id")
+    if not zoho_project_id:
+        frappe.throw("This project has no Zoho Project ID. Map it in the Project Mapping tab first.")
+
+    cubenet_tasks = frappe.db.get_list(
+        "Task",
+        filters={"project": project},
+        fields=["name", "subject", "zoho_task_id"],
+        order_by="subject asc",
+    )
+
+    settings = _get_settings()
+    _validate_settings(settings)
+    access_token = _get_or_refresh_token(settings)
+    response = _make_api_request("GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id)
+    zoho_tasks = response.get("tasks", [])
+
+    return {"cubenet_tasks": cubenet_tasks, "zoho_tasks": zoho_tasks}
+
+
+@frappe.whitelist()
+def save_task_mappings(mappings):
+    """Store zoho_task_id on each Cubenet Task record."""
+    import json
+    if isinstance(mappings, str):
+        mappings = json.loads(mappings)
+    count = 0
+    for m in mappings:
+        if m.get("cubenet_task") and m.get("zoho_task_id"):
+            frappe.db.set_value("Task", m["cubenet_task"], "zoho_task_id", m["zoho_task_id"])
+            count += 1
+    frappe.db.commit()
+    return {"status": "ok", "count": count}
+
+
+@frappe.whitelist()
 def save_project_mappings(mappings):
     """Save project mappings and write zoho_project_id to each Cubenet Project."""
     import json

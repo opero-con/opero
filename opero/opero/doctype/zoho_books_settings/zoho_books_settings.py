@@ -3,10 +3,16 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import get_url
+
+
+ZOHO_OAUTH_CALLBACK_PATH = "/api/method/opero.zoho_books.oauth_callback"
 
 
 class ZohoBooksSettings(Document):
 	def validate(self):
+		self.redirect_uri = get_url(ZOHO_OAUTH_CALLBACK_PATH)
+
 		if self.enabled:
 			if not self.client_id:
 				frappe.throw("Client ID is required when Zoho Books integration is enabled")
