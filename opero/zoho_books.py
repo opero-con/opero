@@ -294,6 +294,12 @@ def _refresh_access_token(settings: Dict[str, Any]):
         response.raise_for_status()
         data = response.json()
 
+        if "error" in data or "access_token" not in data:
+            raise ZohoBooksException(
+                f"Token refresh failed: {data.get('error', data)}. "
+                "Please reconnect via Zoho Books Settings → Connect to Zoho."
+            )
+
         new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
         _save_tokens(access_token=data["access_token"], token_expiry=new_expiry.isoformat())
         settings.reload()
