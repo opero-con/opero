@@ -129,11 +129,11 @@ def oauth_callback():
             return
 
         new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
-        settings.access_token = data["access_token"]
-        if data.get("refresh_token"):
-            settings.refresh_token = data["refresh_token"]
-        settings.token_expiry = new_expiry.isoformat()
-        settings.save(ignore_permissions=True)
+        _save_tokens(
+            access_token=data["access_token"],
+            refresh_token=data.get("refresh_token"),
+            token_expiry=new_expiry.isoformat(),
+        )
 
         frappe.respond_as_web_page(
             "Zoho Connected",
@@ -205,6 +205,27 @@ def _get_redirect_uri() -> str:
     return get_url(ZOHO_OAUTH_CALLBACK_PATH)
 
 
+def _save_tokens(access_token=None, refresh_token=None, token_expiry=None):
+    """Write OAuth tokens directly via Frappe's password store + singles table."""
+    from frappe.utils.password import set_encrypted_password
+    if access_token:
+        set_encrypted_password("Zoho Books Settings", "Zoho Books Settings", access_token, "access_token")
+    if refresh_token:
+        set_encrypted_password("Zoho Books Settings", "Zoho Books Settings", refresh_token, "refresh_token")
+    if token_expiry:
+        frappe.db.set_singles_value("Zoho Books Settings", "token_expiry", token_expiry)
+    frappe.db.commit()
+
+
+def _get_token(fieldname: str) -> str:
+    """Read an OAuth token directly from Frappe's password store."""
+    from frappe.utils.password import get_decrypted_password
+    try:
+        return get_decrypted_password("Zoho Books Settings", "Zoho Books Settings", fieldname, raise_exception=False)
+    except Exception:
+        return None
+
+
 def _get_settings() -> Optional[Dict[str, Any]]:
     """Get Zoho Books Settings singleton document."""
     try:
@@ -226,13 +247,13 @@ def _validate_settings(settings: Dict[str, Any]):
 def _get_or_refresh_token(settings: Dict[str, Any]) -> str:
     """Get access token, refresh if expired."""
     if _is_token_expired(settings.token_expiry):
-        refresh_token = settings.get_password("refresh_token", raise_exception=False)
+        refresh_token = _get_token("refresh_token")
         if not refresh_token:
             raise ZohoBooksException("No refresh token available. Please reconfigure Zoho Books authentication.")
         _refresh_access_token(settings)
         settings.reload()
 
-    return settings.get_password("access_token")
+    return _get_token("access_token")
 
 
 def _is_token_expired(token_expiry: str) -> bool:
@@ -252,7 +273,7 @@ def _refresh_access_token(settings: Dict[str, Any]):
             settings.token_uri,
             data={
                 "grant_type": "refresh_token",
-                "refresh_token": settings.get_password("refresh_token"),
+                "refresh_token": _get_token("refresh_token"),
                 "client_id": settings.client_id,
                 "client_secret": settings.get_password("client_secret"),
             },
@@ -262,9 +283,7 @@ def _refresh_access_token(settings: Dict[str, Any]):
         data = response.json()
 
         new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
-        settings.access_token = data["access_token"]
-        settings.token_expiry = new_expiry.isoformat()
-        settings.save(ignore_permissions=True)
+        _save_tokens(access_token=data["access_token"], token_expiry=new_expiry.isoformat())
         settings.reload()
 
     except requests.RequestException as e:
