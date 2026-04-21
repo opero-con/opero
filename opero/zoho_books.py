@@ -1,4 +1,4 @@
-"""Zoho Books integration for Frappe/ERPNext timesheets."""
+"""Zoho Books integration for Cubenet timesheets."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
         if not zoho_user_id:
             frappe.msgprint(
                 f"Zoho Books: No personnel mapping found for <b>{doc.employee}</b>. "
-                "Add a row in Zoho Books Settings → Personnel Mapping.",
+                "Add a row in Cubenet → Zoho Books Settings → Personnel Mapping.",
                 indicator="orange",
                 alert=True,
             )
@@ -178,7 +178,7 @@ def get_zoho_projects():
 
 @frappe.whitelist()
 def save_project_mappings(mappings):
-    """Save project mappings and write zoho_project_id to each ERPNext Project."""
+    """Save project mappings and write zoho_project_id to each Cubenet Project."""
     import json
     if isinstance(mappings, str):
         mappings = json.loads(mappings)
@@ -364,7 +364,7 @@ def _get_project_id(time_log) -> str:
     """Get Zoho project ID from time log or fallback."""
     settings = _get_settings()
 
-    # Use zoho_project_id custom field if set on the ERPNext project
+    # Use zoho_project_id custom field if set on the Cubenet project
     if time_log.project:
         zoho_id = frappe.db.get_value("Project", time_log.project, "zoho_project_id")
         if zoho_id:
@@ -381,20 +381,34 @@ _zoho_task_cache: Dict[str, Dict[str, str]] = {}
 
 
 def _get_task_id(time_log, project_id: str, access_token: str, org_id: str) -> Optional[str]:
-    """Match ERPNext task name to Zoho task ID by name, fallback to settings."""
-    # 1. Already stored on the time log row
-    if getattr(time_log, "zoho_task_id", None):
-        return time_log.zoho_task_id
+    """Resolve Zoho task ID: stored ID → name match → auto-create → fallback."""
+    # 1. Already stored on the Task record (fastest path)
+    cubenet_task = getattr(time_log, "task", None)
+    if cubenet_task:
+        stored = frappe.db.get_value("Task", cubenet_task, "zoho_task_id")
+        if stored:
+            return stored
 
-    # 2. Try to match by name against Zoho tasks for this project
-    erpnext_task = getattr(time_log, "task", None)
-    if erpnext_task and project_id:
-        task_name = frappe.db.get_value("Task", erpnext_task, "subject") or erpnext_task
+    # 2. Name match against existing Zoho tasks
+    if cubenet_task and project_id:
+        task_name = frappe.db.get_value("Task", cubenet_task, "subject") or cubenet_task
         zoho_task_id = _match_zoho_task_by_name(project_id, task_name, access_token, org_id)
         if zoho_task_id:
+            frappe.db.set_value("Task", cubenet_task, "zoho_task_id", zoho_task_id)
             return zoho_task_id
 
-    # 3. Fall back to configured fallback task
+        # 3. No match — create the task in Zoho and store the ID back
+        zoho_task_id = _create_zoho_task(project_id, task_name, access_token, org_id)
+        if zoho_task_id:
+            frappe.db.set_value("Task", cubenet_task, "zoho_task_id", zoho_task_id)
+            frappe.msgprint(
+                f"Zoho Books: created new task <b>{task_name}</b> in Zoho project.",
+                indicator="blue",
+                alert=True,
+            )
+            return zoho_task_id
+
+    # 4. Fall back to configured fallback task
     settings = _get_settings()
     if settings and settings.fallback_task_id:
         return settings.fallback_task_id
@@ -406,9 +420,7 @@ def _match_zoho_task_by_name(project_id: str, task_name: str, access_token: str,
     """Fetch tasks for a Zoho project and return the ID whose name matches task_name."""
     if project_id not in _zoho_task_cache:
         try:
-            response = _make_api_request(
-                "GET", f"projects/{project_id}/tasks", access_token, org_id
-            )
+            response = _make_api_request("GET", f"projects/{project_id}/tasks", access_token, org_id)
             tasks = response.get("tasks", [])
             _zoho_task_cache[project_id] = {
                 t["task_name"].strip().lower(): t["task_id"] for t in tasks
@@ -417,6 +429,22 @@ def _match_zoho_task_by_name(project_id: str, task_name: str, access_token: str,
             return None
 
     return _zoho_task_cache[project_id].get(task_name.strip().lower())
+
+
+def _create_zoho_task(project_id: str, task_name: str, access_token: str, org_id: str) -> Optional[str]:
+    """Create a new task in a Zoho Books project and return its task_id."""
+    try:
+        response = _make_api_request(
+            "POST", f"projects/{project_id}/tasks", access_token, org_id,
+            data={"task_name": task_name}
+        )
+        task = response.get("task", {})
+        task_id = task.get("task_id")
+        if task_id and project_id in _zoho_task_cache:
+            _zoho_task_cache[project_id][task_name.strip().lower()] = task_id
+        return task_id
+    except ZohoBooksException:
+        return None
 
 
 def _create_time_entry(

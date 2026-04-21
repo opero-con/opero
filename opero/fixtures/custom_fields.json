@@ -28,5 +28,15 @@
     "label": "Zoho Task ID",
     "read_only": 1,
     "no_copy": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Task-zoho_task_id",
+    "dt": "Task",
+    "fieldname": "zoho_task_id",
+    "fieldtype": "Data",
+    "label": "Zoho Task ID",
+    "read_only": 1,
+    "no_copy": 1
   }
 ]
