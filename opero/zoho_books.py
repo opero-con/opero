@@ -213,7 +213,7 @@ def _save_tokens(access_token=None, refresh_token=None, token_expiry=None):
     if refresh_token:
         set_encrypted_password("Zoho Books Settings", "Zoho Books Settings", refresh_token, "refresh_token")
     if token_expiry:
-        frappe.db.set_singles_value("Zoho Books Settings", "token_expiry", token_expiry)
+        frappe.db.set_value("Zoho Books Settings", "Zoho Books Settings", "token_expiry", token_expiry)
     frappe.db.commit()
 
 
