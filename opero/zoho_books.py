@@ -57,6 +57,7 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
 
         # Process each time log
         ts_note = frappe.utils.strip_html(doc.note or "") if getattr(doc, "note", None) else ""
+        errors = []
         for time_log in doc.time_logs:
             try:
                 notes = getattr(time_log, "description", None) or ts_note
@@ -66,7 +67,15 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
                     _create_time_entry(time_log, zoho_user_id, access_token, org_id, notes)
             except ZohoBooksException as e:
                 frappe.logger().error(f"Failed to sync time log: {e}")
-                # Continue with next time log instead of failing the whole sync
+                errors.append(str(e))
+
+        if errors:
+            frappe.msgprint(
+                "Zoho Books sync failed for some entries:<br>" + "<br>".join(errors),
+                indicator="red",
+            )
+        else:
+            frappe.msgprint("Zoho Books: timesheet synced successfully.", indicator="green", alert=True)
 
     except ZohoBooksException as e:
         frappe.msgprint(f"Zoho Books sync failed: {e}", indicator="red")
