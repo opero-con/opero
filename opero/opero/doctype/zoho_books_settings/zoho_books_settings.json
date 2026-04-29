@@ -28,7 +28,11 @@
   "personnel_mapping",
   "tab_projects",
   "fetch_projects_button",
-  "project_mapping"
+  "project_mapping",
+  "tab_tasks",
+  "task_mapping_project",
+  "load_tasks_button",
+  "task_mapping_html"
  ],
  "fields": [
   {
@@ -85,11 +89,11 @@
    "permlevel": 1
   },
   {
-   "description": "OAuth Redirect URI - URL where Zoho will send the authorization code",
+   "description": "Auto-generated from this site's URL. Register this exact callback URI in Zoho.",
    "fieldname": "redirect_uri",
    "fieldtype": "Data",
    "label": "Redirect URI",
-   "mandatory_depends_on": "eval:doc.enabled",
+   "read_only": 1,
    "permlevel": 1
   },
   {
@@ -195,6 +199,28 @@
    "fieldtype": "Table",
    "label": "Project Mapping",
    "options": "Zoho Books Project Mapping"
+  },
+  {
+   "fieldname": "tab_tasks",
+   "fieldtype": "Tab Break",
+   "label": "Task Mapping"
+  },
+  {
+   "description": "Select a mapped project to load its tasks",
+   "fieldname": "task_mapping_project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "fieldname": "load_tasks_button",
+   "fieldtype": "Button",
+   "label": "Load Tasks"
+  },
+  {
+   "fieldname": "task_mapping_html",
+   "fieldtype": "HTML",
+   "label": "Task Mapping"
   }
  ],
  "idx": 0,

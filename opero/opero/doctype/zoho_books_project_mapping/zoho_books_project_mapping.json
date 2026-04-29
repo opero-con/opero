@@ -14,7 +14,7 @@
    "fieldname": "erpnext_project",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "ERPNext Project",
+   "label": "Cubenet Project",
    "options": "Project",
    "reqd": 1
   },

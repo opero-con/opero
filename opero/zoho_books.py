@@ -1,17 +1,20 @@
-"""Zoho Books integration for Frappe/ERPNext timesheets."""
+"""Zoho Books integration for Cubenet timesheets."""
 
 from __future__ import annotations
 
 import frappe
 import requests
 from datetime import datetime, timedelta
-from frappe.utils import cint, get_datetime
+from frappe.utils import cint, get_datetime, get_url
 from typing import Optional, Dict, Any
 
 
 class ZohoBooksException(Exception):
     """Custom exception for Zoho Books integration errors."""
     pass
+
+
+ZOHO_OAUTH_CALLBACK_PATH = "/api/method/opero.zoho_books.oauth_callback"
 
 
 def sync_timesheet_to_zoho(doc, method: str = "submit"):
@@ -44,13 +47,17 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
         # Get employee's Zoho user ID
         zoho_user_id = _get_employee_zoho_user_id(doc.employee)
         if not zoho_user_id:
-            frappe.logger().warning(
-                f"No Zoho user ID mapping found for employee {doc.employee}, skipping sync"
+            frappe.msgprint(
+                f"Zoho Books: No personnel mapping found for <b>{doc.employee}</b>. "
+                "Add a row in Cubenet → Zoho Books Settings → Personnel Mapping.",
+                indicator="orange",
+                alert=True,
             )
             return
 
         # Process each time log
         ts_note = frappe.utils.strip_html(doc.note or "") if getattr(doc, "note", None) else ""
+        errors = []
         for time_log in doc.time_logs:
             try:
                 notes = getattr(time_log, "description", None) or ts_note
@@ -60,7 +67,15 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
                     _create_time_entry(time_log, zoho_user_id, access_token, org_id, notes)
             except ZohoBooksException as e:
                 frappe.logger().error(f"Failed to sync time log: {e}")
-                # Continue with next time log instead of failing the whole sync
+                errors.append(str(e))
+
+        if errors:
+            frappe.msgprint(
+                "Zoho Books sync failed for some entries:<br>" + "<br>".join(errors),
+                indicator="red",
+            )
+        else:
+            frappe.msgprint("Zoho Books: timesheet synced successfully.", indicator="green", alert=True)
 
     except ZohoBooksException as e:
         frappe.msgprint(f"Zoho Books sync failed: {e}", indicator="red")
@@ -104,6 +119,7 @@ def oauth_callback():
         return
 
     settings = frappe.get_doc("Zoho Books Settings")
+    redirect_uri = _get_redirect_uri()
 
     try:
         response = requests.post(
@@ -113,7 +129,7 @@ def oauth_callback():
                 "code": code,
                 "client_id": settings.client_id,
                 "client_secret": settings.get_password("client_secret"),
-                "redirect_uri": settings.redirect_uri,
+                "redirect_uri": redirect_uri,
             },
             timeout=10,
         )
@@ -125,11 +141,11 @@ def oauth_callback():
             return
 
         new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
-        settings.db_set({
-            "access_token": data["access_token"],
-            "refresh_token": data.get("refresh_token", settings.refresh_token),
-            "token_expiry": new_expiry.isoformat(),
-        })
+        _save_tokens(
+            access_token=data["access_token"],
+            refresh_token=data.get("refresh_token"),
+            token_expiry=new_expiry.isoformat(),
+        )
 
         frappe.respond_as_web_page(
             "Zoho Connected",
@@ -161,8 +177,46 @@ def get_zoho_projects():
 
 
 @frappe.whitelist()
+def get_task_mapping_data(project):
+    """Return Cubenet tasks and Zoho tasks for a project."""
+    zoho_project_id = frappe.db.get_value("Project", project, "zoho_project_id")
+    if not zoho_project_id:
+        frappe.throw("This project has no Zoho Project ID. Map it in the Project Mapping tab first.")
+
+    cubenet_tasks = frappe.db.get_list(
+        "Task",
+        filters={"project": project},
+        fields=["name", "subject", "zoho_task_id"],
+        order_by="subject asc",
+    )
+
+    settings = _get_settings()
+    _validate_settings(settings)
+    access_token = _get_or_refresh_token(settings)
+    response = _make_api_request("GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id)
+    zoho_tasks = response.get("tasks", [])
+
+    return {"cubenet_tasks": cubenet_tasks, "zoho_tasks": zoho_tasks}
+
+
+@frappe.whitelist()
+def save_task_mappings(mappings):
+    """Store zoho_task_id on each Cubenet Task record."""
+    import json
+    if isinstance(mappings, str):
+        mappings = json.loads(mappings)
+    count = 0
+    for m in mappings:
+        if m.get("cubenet_task") and m.get("zoho_task_id"):
+            frappe.db.set_value("Task", m["cubenet_task"], "zoho_task_id", m["zoho_task_id"])
+            count += 1
+    frappe.db.commit()
+    return {"status": "ok", "count": count}
+
+
+@frappe.whitelist()
 def save_project_mappings(mappings):
-    """Save project mappings and write zoho_project_id to each ERPNext Project."""
+    """Save project mappings and write zoho_project_id to each Cubenet Project."""
     import json
     if isinstance(mappings, str):
         mappings = json.loads(mappings)
@@ -189,11 +243,37 @@ def get_authorization_url():
         "response_type": "code",
         "client_id": settings.client_id,
         "scope": settings.scope or "ZohoBooks.timetracking.ALL ZohoBooks.projects.ALL",
-        "redirect_uri": settings.redirect_uri,
+        "redirect_uri": _get_redirect_uri(),
         "access_type": "offline",
         "prompt": "consent",
     })
     return f"{settings.authorization_uri}?{params}"
+
+
+def _get_redirect_uri() -> str:
+    """Resolve the OAuth callback for the current site/request."""
+    return get_url(ZOHO_OAUTH_CALLBACK_PATH)
+
+
+def _save_tokens(access_token=None, refresh_token=None, token_expiry=None):
+    """Write OAuth tokens directly via Frappe's password store + singles table."""
+    from frappe.utils.password import set_encrypted_password
+    if access_token:
+        set_encrypted_password("Zoho Books Settings", "Zoho Books Settings", access_token, "access_token")
+    if refresh_token:
+        set_encrypted_password("Zoho Books Settings", "Zoho Books Settings", refresh_token, "refresh_token")
+    if token_expiry:
+        frappe.db.set_value("Zoho Books Settings", "Zoho Books Settings", "token_expiry", token_expiry)
+    frappe.db.commit()
+
+
+def _get_token(fieldname: str) -> str:
+    """Read an OAuth token directly from Frappe's password store."""
+    from frappe.utils.password import get_decrypted_password
+    try:
+        return get_decrypted_password("Zoho Books Settings", "Zoho Books Settings", fieldname, raise_exception=False)
+    except Exception:
+        return None
 
 
 def _get_settings() -> Optional[Dict[str, Any]]:
@@ -216,12 +296,14 @@ def _validate_settings(settings: Dict[str, Any]):
 
 def _get_or_refresh_token(settings: Dict[str, Any]) -> str:
     """Get access token, refresh if expired."""
-    if not settings.access_token or _is_token_expired(settings.token_expiry):
-        if not settings.refresh_token:
+    if _is_token_expired(settings.token_expiry):
+        refresh_token = _get_token("refresh_token")
+        if not refresh_token:
             raise ZohoBooksException("No refresh token available. Please reconfigure Zoho Books authentication.")
         _refresh_access_token(settings)
+        settings.reload()
 
-    return settings.get_password("access_token")
+    return _get_token("access_token")
 
 
 def _is_token_expired(token_expiry: str) -> bool:
@@ -241,7 +323,7 @@ def _refresh_access_token(settings: Dict[str, Any]):
             settings.token_uri,
             data={
                 "grant_type": "refresh_token",
-                "refresh_token": settings.get_password("refresh_token"),
+                "refresh_token": _get_token("refresh_token"),
                 "client_id": settings.client_id,
                 "client_secret": settings.get_password("client_secret"),
             },
@@ -250,14 +332,14 @@ def _refresh_access_token(settings: Dict[str, Any]):
         response.raise_for_status()
         data = response.json()
 
-        # Update settings with new token
-        new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
-        settings.db_set({
-            "access_token": data["access_token"],
-            "token_expiry": new_expiry.isoformat(),
-        })
+        if "error" in data or "access_token" not in data:
+            raise ZohoBooksException(
+                f"Token refresh failed: {data.get('error', data)}. "
+                "Please reconnect via Zoho Books Settings → Connect to Zoho."
+            )
 
-        # Refresh the settings doc in memory
+        new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
+        _save_tokens(access_token=data["access_token"], token_expiry=new_expiry.isoformat())
         settings.reload()
 
     except requests.RequestException as e:
@@ -320,7 +402,7 @@ def _get_project_id(time_log) -> str:
     """Get Zoho project ID from time log or fallback."""
     settings = _get_settings()
 
-    # Use zoho_project_id custom field if set on the ERPNext project
+    # Use zoho_project_id custom field if set on the Cubenet project
     if time_log.project:
         zoho_id = frappe.db.get_value("Project", time_log.project, "zoho_project_id")
         if zoho_id:
@@ -333,14 +415,74 @@ def _get_project_id(time_log) -> str:
     raise ZohoBooksException("No Zoho project ID found. Set a Fallback Project ID in Zoho Books Settings.")
 
 
-def _get_task_id(time_log, project_id: str) -> Optional[str]:
-    """Get Zoho task ID from time log's task custom field, or fall back to settings."""
-    if getattr(time_log, "zoho_task_id", None):
-        return time_log.zoho_task_id
+_zoho_task_cache: Dict[str, Dict[str, str]] = {}
+
+
+def _get_task_id(time_log, project_id: str, access_token: str, org_id: str) -> Optional[str]:
+    """Resolve Zoho task ID: stored ID → name match → auto-create → fallback."""
+    # 1. Already stored on the Task record (fastest path)
+    cubenet_task = getattr(time_log, "task", None)
+    if cubenet_task:
+        stored = frappe.db.get_value("Task", cubenet_task, "zoho_task_id")
+        if stored:
+            return stored
+
+    # 2. Name match against existing Zoho tasks
+    if cubenet_task and project_id:
+        task_name = frappe.db.get_value("Task", cubenet_task, "subject") or cubenet_task
+        zoho_task_id = _match_zoho_task_by_name(project_id, task_name, access_token, org_id)
+        if zoho_task_id:
+            frappe.db.set_value("Task", cubenet_task, "zoho_task_id", zoho_task_id)
+            return zoho_task_id
+
+        # 3. No match — create the task in Zoho and store the ID back
+        zoho_task_id = _create_zoho_task(project_id, task_name, access_token, org_id)
+        if zoho_task_id:
+            frappe.db.set_value("Task", cubenet_task, "zoho_task_id", zoho_task_id)
+            frappe.msgprint(
+                f"Zoho Books: created new task <b>{task_name}</b> in Zoho project.",
+                indicator="blue",
+                alert=True,
+            )
+            return zoho_task_id
+
+    # 4. Fall back to configured fallback task
     settings = _get_settings()
     if settings and settings.fallback_task_id:
         return settings.fallback_task_id
+
     return None
+
+
+def _match_zoho_task_by_name(project_id: str, task_name: str, access_token: str, org_id: str) -> Optional[str]:
+    """Fetch tasks for a Zoho project and return the ID whose name matches task_name."""
+    if project_id not in _zoho_task_cache:
+        try:
+            response = _make_api_request("GET", f"projects/{project_id}/tasks", access_token, org_id)
+            tasks = response.get("tasks", [])
+            _zoho_task_cache[project_id] = {
+                t["task_name"].strip().lower(): t["task_id"] for t in tasks
+            }
+        except ZohoBooksException:
+            return None
+
+    return _zoho_task_cache[project_id].get(task_name.strip().lower())
+
+
+def _create_zoho_task(project_id: str, task_name: str, access_token: str, org_id: str) -> Optional[str]:
+    """Create a new task in a Zoho Books project and return its task_id."""
+    try:
+        response = _make_api_request(
+            "POST", f"projects/{project_id}/tasks", access_token, org_id,
+            data={"task_name": task_name}
+        )
+        task = response.get("task", {})
+        task_id = task.get("task_id")
+        if task_id and project_id in _zoho_task_cache:
+            _zoho_task_cache[project_id][task_name.strip().lower()] = task_id
+        return task_id
+    except ZohoBooksException:
+        return None
 
 
 def _create_time_entry(
@@ -358,7 +500,7 @@ def _create_time_entry(
         to_time = get_datetime(time_log.to_time) if time_log.to_time else None
         log_date = from_time.date().isoformat() if from_time else ""
 
-        task_id = _get_task_id(time_log, project_id)
+        task_id = _get_task_id(time_log, project_id, access_token, org_id)
         if not task_id:
             raise ZohoBooksException("No task ID available. Configure a Fallback Task ID in Zoho Books Settings.")
 
@@ -405,7 +547,7 @@ def _update_time_entry(
         to_time = get_datetime(time_log.to_time) if time_log.to_time else None
         log_date = from_time.date().isoformat() if from_time else ""
 
-        task_id = _get_task_id(time_log, project_id)
+        task_id = _get_task_id(time_log, project_id, access_token, org_id)
         if not task_id:
             raise ZohoBooksException("No task ID available. Configure a Fallback Task ID in Zoho Books Settings.")
 
