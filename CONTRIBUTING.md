@@ -58,10 +58,21 @@ git branch -d feat/my-feature
 - Never push directly to `main`
 - Never commit secrets or `.env` files
 - Always bump the version in `opero/__init__.py` with each PR
+- Always tag the release after merging
 
 ## Versioning
 
 Format: `0.MINOR.PATCH` — stay on the patch track unless there is a major breaking change.
+
+After every PR merge, tag the release so Frappe Cloud shows a clean version history:
+
+```bash
+git checkout main && git pull origin main
+git tag v0.2.15
+git push origin v0.2.15
+```
+
+Tags must match the version in `opero/__init__.py` prefixed with `v`.
 
 ## Deployment
 
