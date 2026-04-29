@@ -71,6 +71,7 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
 	try:
 		settings = _get_settings()
 		if not settings or not settings.enabled:
+			frappe.logger().info(f"Zoho Books: sync skipped for {doc.name} — integration not enabled")
 			return
 
 		_validate_settings(settings)
@@ -84,6 +85,10 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
 				"Add a mapping in Zoho Books Settings → Personnel Mapping.",
 				indicator="orange",
 				alert=True,
+			)
+			frappe.log_error(
+				f"Zoho Books sync skipped — no personnel mapping for employee '{doc.employee}' on timesheet {doc.name}",
+				"Zoho Books Sync"
 			)
 			return
 
@@ -101,16 +106,23 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
 				frappe.logger().error(f"Failed to sync time log: {e}")
 				errors.append(str(e))
 
+		count = len(doc.time_logs) - len(errors)
 		if errors:
 			frappe.msgprint(
-				"Zoho Books sync failed for some entries:<br>" + "<br>".join(errors),
+				f"Zoho Books: {count} of {len(doc.time_logs)} entries synced.<br>"
+				+ "<br>".join(errors),
 				indicator="red",
+				alert=True,
 			)
 		else:
-			frappe.msgprint("Zoho Books: timesheet synced successfully.", indicator="green", alert=True)
+			frappe.msgprint(
+				f"Zoho Books: {count} time entries synced successfully.",
+				indicator="green",
+				alert=True,
+			)
 
 	except ZohoBooksException as e:
-		frappe.msgprint(f"Zoho Books sync failed: {e}", indicator="red")
+		frappe.msgprint(f"Zoho Books sync failed: {e}", indicator="red", alert=True)
 
 
 def _delete_timesheet_entries(doc):
@@ -212,6 +224,16 @@ def get_zoho_users():
 	access_token = _get_or_refresh_token(settings)
 	response = _make_api_request("GET", "users", access_token, settings.organization_id)
 	return response.get("users", [])
+
+
+@frappe.whitelist()
+def test_sync_timesheet(timesheet_name):
+	"""Manually trigger Zoho sync for a submitted timesheet — for diagnosing silent failures."""
+	doc = frappe.get_doc("Timesheet", timesheet_name)
+	if doc.docstatus != 1:
+		frappe.throw(f"Timesheet {timesheet_name} is not submitted (docstatus={doc.docstatus})")
+	_sync_timesheet_entries(doc, is_update=False)
+	return {"status": "done"}
 
 
 @frappe.whitelist()
@@ -535,6 +557,8 @@ def _create_time_entry(time_log, zoho_user_id: str, access_token: str, org_id: s
 		if entry_id and time_log.name:
 			_set_mapping("Timesheet Detail", time_log.name, entry_id)
 
+	except ZohoBooksException:
+		raise
 	except Exception as e:
 		raise ZohoBooksException(f"Failed to create Zoho time entry: {e}")
 
@@ -694,6 +718,12 @@ def _make_api_request(
 				body = response.json()
 			except Exception:
 				body = response.text
+			if response.status_code == 401 or (isinstance(body, dict) and body.get("code") == 57):
+				raise ZohoBooksException(
+					"Zoho Books: not authorized (code 57). "
+					"The connected Zoho account must be an Admin or have permission to log time on behalf of other users. "
+					"Go to Zoho Books → Settings → Users & Roles and verify the account role."
+				)
 			raise ZohoBooksException(f"Zoho Books API error {response.status_code}: {body}")
 		return response.json()
 
