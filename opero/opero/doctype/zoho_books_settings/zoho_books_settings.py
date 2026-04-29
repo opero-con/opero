@@ -21,7 +21,3 @@ class ZohoBooksSettings(Document):
 			if not self.organization_id:
 				frappe.throw("Organization ID is required when Zoho Books integration is enabled")
 
-	def on_update(self):
-		for row in self.project_mapping or []:
-			if row.erpnext_project and row.zoho_project_id:
-				frappe.db.set_value("Project", row.erpnext_project, "zoho_project_id", row.zoho_project_id)
