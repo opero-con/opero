@@ -25,10 +25,10 @@
   "fallback_task_id",
   "tab_personnel",
   "fetch_users_button",
-  "personnel_mapping",
+  "personnel_mapping_html",
   "tab_projects",
   "fetch_projects_button",
-  "project_mapping",
+  "project_mapping_html",
   "tab_tasks",
   "task_mapping_project",
   "load_tasks_button",
@@ -179,10 +179,9 @@
    "label": "Fetch Users from Zoho"
   },
   {
-   "fieldname": "personnel_mapping",
-   "fieldtype": "Table",
-   "label": "Personnel Mapping",
-   "options": "Zoho Books Personnel Mapping"
+   "fieldname": "personnel_mapping_html",
+   "fieldtype": "HTML",
+   "label": "Personnel Mapping"
   },
   {
    "fieldname": "tab_projects",
@@ -195,10 +194,9 @@
    "label": "Fetch Projects from Zoho"
   },
   {
-   "fieldname": "project_mapping",
-   "fieldtype": "Table",
-   "label": "Project Mapping",
-   "options": "Zoho Books Project Mapping"
+   "fieldname": "project_mapping_html",
+   "fieldtype": "HTML",
+   "label": "Project Mapping"
   },
   {
    "fieldname": "tab_tasks",
