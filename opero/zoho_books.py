@@ -215,6 +215,19 @@ def get_zoho_users():
 
 
 @frappe.whitelist()
+def debug_project_tasks(project):
+	"""Returns raw Zoho API response for a project's tasks — for diagnosing mapping issues."""
+	zoho_project_id = _get_mapping("Project", project)
+	if not zoho_project_id:
+		return {"error": f"No Zoho mapping found for project '{project}'"}
+	settings = _get_settings()
+	_validate_settings(settings)
+	access_token = _get_or_refresh_token(settings)
+	response = _make_api_request("GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id)
+	return {"zoho_project_id": zoho_project_id, "response": response}
+
+
+@frappe.whitelist()
 def get_zoho_projects():
 	settings = _get_settings()
 	_validate_settings(settings)
@@ -316,15 +329,9 @@ def delete_project_mapping(mapping_name):
 
 
 @frappe.whitelist()
-def delete_task_mapping(task_name):
-	name = frappe.db.get_value(
-		"Integration Mapping",
-		{"integration": _INTEGRATION, "entity_type": "Task", "local_name": task_name},
-		"name",
-	)
-	if name:
-		frappe.delete_doc("Integration Mapping", name, ignore_permissions=True)
-		frappe.db.commit()
+def delete_task_mapping(mapping_name):
+	frappe.delete_doc("Integration Mapping", mapping_name, ignore_permissions=True)
+	frappe.db.commit()
 	return {"status": "ok"}
 
 
@@ -360,22 +367,40 @@ def get_task_mapping_data(project):
 	if not zoho_project_id:
 		frappe.throw("This project has no Zoho mapping. Map it in the Project Mapping tab first.")
 
-	cubenet_tasks = frappe.db.get_list(
+	all_cubenet_tasks = frappe.db.get_list(
 		"Task",
 		filters={"project": project},
 		fields=["name", "subject"],
 		order_by="subject asc",
 	)
-	for task in cubenet_tasks:
-		task["zoho_task_id"] = _get_mapping("Task", task["name"]) or ""
+	cubenet_task_names = [t.name for t in all_cubenet_tasks]
+
+	existing_mappings = frappe.db.get_all(
+		"Integration Mapping",
+		filters={"integration": _INTEGRATION, "entity_type": "Task", "local_name": ["in", cubenet_task_names]},
+		fields=["name", "local_name", "remote_id", "remote_name"],
+	) if cubenet_task_names else []
+
+	mapped_remote_ids = {m.remote_id for m in existing_mappings}
+	mapped_local_names = {m.local_name for m in existing_mappings}
+	unmapped_cubenet_tasks = [t for t in all_cubenet_tasks if t.name not in mapped_local_names]
 
 	settings = _get_settings()
 	_validate_settings(settings)
 	access_token = _get_or_refresh_token(settings)
 	response = _make_api_request("GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id)
-	zoho_tasks = response.get("tasks", [])
 
-	return {"cubenet_tasks": cubenet_tasks, "zoho_tasks": zoho_tasks}
+	if response.get("code") not in (None, 0):
+		frappe.throw(f"Zoho API error fetching tasks: {response.get('message', response)}")
+
+	all_zoho_tasks = response.get("task", response.get("tasks", []))
+	unmapped_zoho_tasks = [t for t in all_zoho_tasks if t["task_id"] not in mapped_remote_ids]
+
+	return {
+		"unmapped_zoho_tasks": unmapped_zoho_tasks,
+		"unmapped_cubenet_tasks": unmapped_cubenet_tasks,
+		"existing_mappings": existing_mappings,
+	}
 
 
 @frappe.whitelist()
@@ -383,13 +408,25 @@ def save_task_mappings(mappings):
 	import json
 	if isinstance(mappings, str):
 		mappings = json.loads(mappings)
-	count = 0
+	saved = []
 	for m in mappings:
-		if m.get("cubenet_task") and m.get("zoho_task_id"):
-			_set_mapping("Task", m["cubenet_task"], m["zoho_task_id"])
-			count += 1
+		if m.get("local_name") and m.get("remote_id"):
+			existing_remote = frappe.db.get_value(
+				"Integration Mapping",
+				{"integration": _INTEGRATION, "entity_type": "Task", "local_name": m["local_name"]},
+				"remote_id",
+			)
+			if existing_remote and existing_remote != m["remote_id"]:
+				frappe.throw(f"'{m['local_name']}' is already mapped to another Zoho task. Unmap it first.")
+			_set_mapping("Task", m["local_name"], m["remote_id"], m.get("remote_name", ""))
+			doc_name = frappe.db.get_value(
+				"Integration Mapping",
+				{"integration": _INTEGRATION, "entity_type": "Task", "local_name": m["local_name"]},
+				"name",
+			)
+			saved.append({"name": doc_name, "local_name": m["local_name"], "remote_id": m["remote_id"], "remote_name": m.get("remote_name", "")})
 	frappe.db.commit()
-	return {"status": "ok", "count": count}
+	return {"status": "ok", "count": len(saved), "saved": saved}
 
 
 # : Internal sync helpers
@@ -446,7 +483,7 @@ def _match_zoho_task_by_name(project_id: str, task_name: str, access_token: str,
 	if project_id not in _zoho_task_cache:
 		try:
 			response = _make_api_request("GET", f"projects/{project_id}/tasks", access_token, org_id)
-			tasks = response.get("tasks", [])
+			tasks = response.get("task", response.get("tasks", []))
 			_zoho_task_cache[project_id] = {
 				t["task_name"].strip().lower(): t["task_id"] for t in tasks
 			}
