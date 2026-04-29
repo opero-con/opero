@@ -1,4 +1,38 @@
 frappe.ui.form.on("Zoho Books Settings", {
+	refresh(frm) {
+		// Auto-render mapped sections on every page load without requiring a Fetch
+		frappe.call({
+			method: "opero.zoho_books.get_personnel_mappings",
+			callback(r) {
+				if (r.message && r.message.length) {
+					render_mapped_section(
+						frm.get_field("personnel_mapping_html").$wrapper,
+						r.message, "personnel"
+					);
+				}
+			},
+		});
+		frappe.call({
+			method: "opero.zoho_books.get_project_mappings",
+			callback(r) {
+				const mappings = r.message || [];
+				if (mappings.length) {
+					render_mapped_section(
+						frm.get_field("project_mapping_html").$wrapper,
+						mappings, "project"
+					);
+				}
+				// Restrict task_mapping_project to mapped projects only
+				const mapped_names = mappings.map(m => m.local_name);
+				frm.set_query("task_mapping_project", () => ({
+					filters: mapped_names.length
+						? [["name", "in", mapped_names]]
+						: [["name", "=", "__none__"]],
+				}));
+			},
+		});
+	},
+
 	connect_button(frm) {
 		frm.save().then(() => {
 			frappe.call({
@@ -82,7 +116,7 @@ frappe.ui.form.on("Zoho Books Settings", {
 			freeze_message: "Loading tasks...",
 			callback(r) {
 				if (!r.message) return;
-				render_task_mapping(frm, r.message.cubenet_tasks, r.message.zoho_tasks);
+				render_task_mapping(frm, r.message);
 			},
 		});
 	},
@@ -127,6 +161,16 @@ function render_personnel_mapping(frm, unmapped_zoho_users, cubenet_employees, e
 					<th style="width:40%;padding:8px 10px;">Zoho User</th>
 					<th style="width:60%;padding:8px 10px;">Personnel (Cubenet)</th>
 				</tr>
+				<tr style="background:var(--bg-light-gray, #f8f8f8);">
+					<td style="padding:4px 6px;">
+						<input type="text" class="zoho-row-filter" autocomplete="off"
+							placeholder="Filter..."
+							style="width:100%;padding:3px 8px;border:1px solid var(--border-color, #d1d8dd);
+								border-radius:var(--border-radius, 4px);font-size:var(--text-sm, 12px);
+								background:var(--control-bg, #f5f7fa);color:var(--text-color, #333);outline:none;">
+					</td>
+					<td></td>
+				</tr>
 			</thead>
 			<tbody>${rows}</tbody>
 		</table>` : `<p class="text-muted" style="margin-bottom:12px;">All Zoho users are mapped.</p>`;
@@ -143,21 +187,16 @@ function render_personnel_mapping(frm, unmapped_zoho_users, cubenet_employees, e
 		</tr>`
 	).join("");
 
-	const mapped_section = existing_mappings.length ? `
-		<hr style="margin:16px 0 12px;">
-		<p style="font-weight:600;margin-bottom:8px;">Mapped (<span class="mapped-count">${existing_mappings.length}</span>)</p>
-		<table class="table table-bordered table-sm">
-			<thead style="background:var(--bg-light-gray, #f8f8f8);">
-				<tr>
-					<th style="width:40%;padding:8px 10px;">Zoho User</th>
-					<th style="width:45%;padding:8px 10px;">Personnel (Cubenet)</th>
-					<th style="width:15%;padding:8px 10px;"></th>
-				</tr>
-			</thead>
-			<tbody class="mapped-personnel-tbody">${mapped_rows}</tbody>
-		</table>` : "";
+	wrapper.html(unmapped_section);
+	render_mapped_section(wrapper, existing_mappings, "personnel");
 
-	wrapper.html(unmapped_section + mapped_section);
+	wrapper.find(".zoho-row-filter").on("input", function () {
+		const q = $(this).val().trim().toLowerCase();
+		wrapper.find("tbody tr").each(function () {
+			const name = $(this).find("td:first").text().trim().toLowerCase();
+			$(this).toggle(!q || name.includes(q));
+		});
+	});
 
 	const pending_selections = new Set();
 
@@ -272,32 +311,11 @@ function render_personnel_mapping(frm, unmapped_zoho_users, cubenet_employees, e
 									<tbody class="mapped-personnel-tbody">${new_row}</tbody>
 								</table>`);
 						}
-						wire_unmap_buttons(wrapper);
+						render_mapped_section(wrapper, [m], "personnel");
 						frappe.show_alert({ message: "Mapped successfully.", indicator: "green" });
 					});
 				}
 			},
-		});
-	});
-
-	wire_unmap_buttons(wrapper);
-}
-
-function wire_unmap_buttons(wrapper) {
-	wrapper.find(".unmap-btn").off("click").on("click", function () {
-		const mapping_name = $(this).data("mapping-name");
-		const $row = $(this).closest("tr");
-		frappe.confirm("Remove this mapping?", () => {
-			frappe.call({
-				method: "opero.zoho_books.delete_personnel_mapping",
-				args: { mapping_name },
-				callback(r) {
-					if (r.message) {
-						$row.fadeOut(200, () => $row.remove());
-						frappe.show_alert({ message: "Mapping removed.", indicator: "orange" });
-					}
-				},
-			});
 		});
 	});
 }
@@ -341,37 +359,30 @@ function render_project_mapping(frm, unmapped_zoho_projects, cubenet_projects, e
 					<th style="width:40%;padding:8px 10px;">Zoho Project</th>
 					<th style="width:60%;padding:8px 10px;">Project (Cubenet)</th>
 				</tr>
+				<tr style="background:var(--bg-light-gray, #f8f8f8);">
+					<td style="padding:4px 6px;">
+						<input type="text" class="zoho-row-filter" autocomplete="off"
+							placeholder="Filter..."
+							style="width:100%;padding:3px 8px;border:1px solid var(--border-color, #d1d8dd);
+								border-radius:var(--border-radius, 4px);font-size:var(--text-sm, 12px);
+								background:var(--control-bg, #f5f7fa);color:var(--text-color, #333);outline:none;">
+					</td>
+					<td></td>
+				</tr>
 			</thead>
 			<tbody>${rows}</tbody>
 		</table>` : `<p class="text-muted" style="margin-bottom:12px;">All Zoho projects are mapped.</p>`;
 
-	const mapped_rows = existing_mappings.map(m => `
-		<tr>
-			<td style="padding:8px 10px;vertical-align:middle;">${frappe.utils.escape_html(m.remote_name || m.remote_id)}</td>
-			<td style="padding:8px 10px;vertical-align:middle;">${frappe.utils.escape_html(m.local_name)}</td>
-			<td style="padding:6px 8px;text-align:right;">
-				<button class="btn btn-xs btn-danger unmap-project-btn" data-mapping-name="${frappe.utils.escape_html(m.name)}" style="font-size:11px;">
-					Unmap
-				</button>
-			</td>
-		</tr>`
-	).join("");
+	wrapper.html(unmapped_section);
+	render_mapped_section(wrapper, existing_mappings, "project");
 
-	const mapped_section = existing_mappings.length ? `
-		<hr style="margin:16px 0 12px;">
-		<p style="font-weight:600;margin-bottom:8px;">Mapped (<span class="mapped-count">${existing_mappings.length}</span>)</p>
-		<table class="table table-bordered table-sm">
-			<thead style="background:var(--bg-light-gray, #f8f8f8);">
-				<tr>
-					<th style="width:40%;padding:8px 10px;">Zoho Project</th>
-					<th style="width:45%;padding:8px 10px;">Project (Cubenet)</th>
-					<th style="width:15%;padding:8px 10px;"></th>
-				</tr>
-			</thead>
-			<tbody class="mapped-project-tbody">${mapped_rows}</tbody>
-		</table>` : "";
-
-	wrapper.html(unmapped_section + mapped_section);
+	wrapper.find(".zoho-row-filter").on("input", function () {
+		const q = $(this).val().trim().toLowerCase();
+		wrapper.find("tbody tr").each(function () {
+			const name = $(this).find("td:first").text().trim().toLowerCase();
+			$(this).toggle(!q || name.includes(q));
+		});
+	});
 
 	const pending_project_selections = new Set();
 
@@ -482,153 +493,250 @@ function render_project_mapping(frm, unmapped_zoho_projects, cubenet_projects, e
 									<tbody class="mapped-project-tbody">${new_row}</tbody>
 								</table>`);
 						}
-						wire_project_unmap_buttons(wrapper);
+						render_mapped_section(wrapper, [m], "project");
 						frappe.show_alert({ message: "Mapped successfully.", indicator: "green" });
 					});
 				}
 			},
 		});
 	});
-
-	wire_project_unmap_buttons(wrapper);
-}
-
-function wire_project_unmap_buttons(wrapper) {
-	wrapper.find(".unmap-project-btn").off("click").on("click", function () {
-		const mapping_name = $(this).data("mapping-name");
-		const $row = $(this).closest("tr");
-		frappe.confirm("Remove this project mapping?", () => {
-			frappe.call({
-				method: "opero.zoho_books.delete_project_mapping",
-				args: { mapping_name },
-				callback(r) {
-					if (r.message) {
-						$row.fadeOut(200, () => $row.remove());
-						frappe.show_alert({ message: "Project mapping removed.", indicator: "orange" });
-					}
-				},
-			});
-		});
-	});
 }
 
 
-function render_task_mapping(frm, cubenet_tasks, zoho_tasks) {
+function render_task_mapping(frm, data) {
 	const wrapper = frm.get_field("task_mapping_html").$wrapper;
 	wrapper.empty();
 
-	if (!cubenet_tasks.length) {
+	const { unmapped_zoho_tasks, unmapped_cubenet_tasks, existing_mappings } = data;
+
+	if (!unmapped_cubenet_tasks.length && !unmapped_zoho_tasks.length && !existing_mappings.length) {
 		wrapper.html(`<p class="text-muted">No tasks found for this project in Cubenet.</p>`);
 		return;
 	}
 
-	if (!zoho_tasks.length) {
-		wrapper.html(`<p class="text-muted">No tasks found in Zoho for this project.</p>`);
+	// When Zoho has no tasks yet, show Cubenet tasks so user knows what exists
+	if (!unmapped_zoho_tasks.length) {
+		const cubenet_rows = unmapped_cubenet_tasks.map(t => `
+			<tr>
+				<td style="padding:8px 10px;vertical-align:middle;">${frappe.utils.escape_html(t.subject || t.name)}</td>
+				<td style="padding:8px 10px;vertical-align:middle;color:var(--text-muted);">
+					<span style="font-size:12px;">Will be auto-created in Zoho on first sync</span>
+				</td>
+			</tr>`
+		).join("");
+
+		const no_zoho_section = unmapped_cubenet_tasks.length ? `
+			<p style="color:var(--text-muted);margin-bottom:8px;">No tasks in Zoho yet. The following Cubenet tasks will be auto-created in Zoho on first timesheet sync.</p>
+			<table class="table table-bordered table-sm" style="margin-top:4px;">
+				<thead style="background:var(--bg-light-gray,#f8f8f8);">
+					<tr>
+						<th style="width:45%;padding:8px 10px;">Task (Cubenet)</th>
+						<th style="width:55%;padding:8px 10px;">Zoho Status</th>
+					</tr>
+				</thead>
+				<tbody>${cubenet_rows}</tbody>
+			</table>` : "";
+
+		wrapper.html(no_zoho_section);
+		render_mapped_section(wrapper, existing_mappings, "task");
 		return;
 	}
 
-	const zoho_by_name = {};
-	zoho_tasks.forEach(t => { zoho_by_name[t.task_name.trim().toLowerCase()] = t.task_id; });
-
-	let auto_matched = 0;
-	let rows = cubenet_tasks.map(t => {
-		const task_label = t.subject || t.name;
-		let selected_id = t.zoho_task_id || zoho_by_name[task_label.trim().toLowerCase()] || "";
-		if (!t.zoho_task_id && selected_id) auto_matched++;
-
-		const is_mapped = !!t.zoho_task_id;
-		const row_style = is_mapped ? "background:#f0fff4;" : "";
-		const badge = is_mapped
-			? `<span style="color:#28a745;font-size:11px;margin-left:6px;">&#10003; mapped</span>`
-			: `<span style="color:#999;font-size:11px;margin-left:6px;">unmapped</span>`;
-
-		const options = `<option value="">-- Select Zoho Task --</option>` +
-			zoho_tasks.map(zt =>
-				`<option value="${zt.task_id}" ${zt.task_id === selected_id ? "selected" : ""}>${zt.task_name}</option>`
-			).join("");
-
-		const unmap_btn = is_mapped
-			? `<button class="btn btn-xs btn-danger unmap-task-btn" data-task="${t.name}" style="font-size:11px;margin-left:6px;">Unmap</button>`
-			: "";
-
-		return `
-			<tr style="${row_style}">
-				<td style="padding:8px 10px;vertical-align:middle;">${task_label}${badge}</td>
-				<td style="padding:6px 8px;">
-					<div style="display:flex;align-items:center;gap:6px;">
-						<select class="form-control form-control-sm" data-task="${t.name}" style="flex:1;">
-							${options}
-						</select>
-						${unmap_btn}
+	const rows = unmapped_zoho_tasks.map(t => `
+		<tr>
+			<td style="padding:8px 10px;vertical-align:middle;">${frappe.utils.escape_html(t.task_name)}</td>
+			<td style="padding:6px 8px;position:relative;">
+				<div style="display:flex;align-items:center;gap:6px;">
+					<div style="flex:1;position:relative;">
+						<input type="text" class="form-control form-control-sm task-search"
+							data-remote-id="${t.task_id}"
+							data-remote-name="${frappe.utils.escape_html(t.task_name)}"
+							placeholder="Search task..." autocomplete="off">
+						<input type="hidden" class="task-id">
+						<div class="task-dropdown" style="display:none;position:absolute;z-index:1000;
+							background:var(--card-bg,#fff);border:1px solid var(--border-color,#d1d8dd);
+							border-radius:var(--border-radius,6px);width:100%;max-height:220px;overflow-y:auto;
+							box-shadow:var(--shadow-md,0 4px 12px rgba(0,0,0,.12));margin-top:2px;"></div>
 					</div>
-				</td>
-			</tr>`;
-	}).join("");
+					<button class="btn btn-xs btn-success task-map-btn" style="display:none;white-space:nowrap;">Map</button>
+				</div>
+			</td>
+		</tr>`
+	).join("");
 
-	const summary = auto_matched > 0
-		? `<p style="color:#28a745;margin-bottom:8px;">&#10003; ${auto_matched} task(s) auto-matched by name. Review and save.</p>`
-		: `<p style="color:#666;margin-bottom:8px;">Select the matching Zoho task for each row, then click Save.</p>`;
-
-	wrapper.html(`
-		${summary}
+	const unmapped_section = `
+		<p style="color:var(--text-muted);margin-bottom:8px;">${unmapped_zoho_tasks.length} unmapped Zoho task(s). Search and select a Cubenet task to map each row.</p>
 		<table class="table table-bordered table-sm" style="margin-top:4px;">
-			<thead style="background:#f8f8f8;">
+			<thead style="background:var(--bg-light-gray,#f8f8f8);">
 				<tr>
-					<th style="width:45%;padding:8px 10px;">Cubenet Task</th>
-					<th style="width:55%;padding:8px 10px;">Zoho Task</th>
+					<th style="width:40%;padding:8px 10px;">Zoho Task</th>
+					<th style="width:60%;padding:8px 10px;">Task (Cubenet)</th>
+				</tr>
+				<tr style="background:var(--bg-light-gray,#f8f8f8);">
+					<td style="padding:4px 6px;">
+						<input type="text" class="zoho-row-filter" autocomplete="off" placeholder="Filter..."
+							style="width:100%;padding:3px 8px;border:1px solid var(--border-color,#d1d8dd);
+							border-radius:var(--border-radius,4px);font-size:var(--text-sm,12px);
+							background:var(--control-bg,#f5f7fa);color:var(--text-color,#333);outline:none;">
+					</td>
+					<td></td>
 				</tr>
 			</thead>
 			<tbody>${rows}</tbody>
-		</table>
-		<button class="btn btn-primary btn-sm" id="save_task_mappings" style="margin-top:8px;">
-			Save Task Mappings
-		</button>
-	`);
+		</table>`;
 
-	wrapper.find(".unmap-task-btn").on("click", function () {
-		const task_name = $(this).data("task");
-		const $row = $(this).closest("tr");
-		frappe.confirm("Remove this task mapping?", () => {
-			frappe.call({
-				method: "opero.zoho_books.delete_task_mapping",
-				args: { task_name },
-				callback(r) {
-					if (r.message) {
-						$row.css("background", "");
-						$row.find("select").val("");
-						$(this).remove();
-						frappe.show_alert({ message: "Task mapping removed.", indicator: "orange" });
-					}
-				},
-			});
+	wrapper.html(unmapped_section);
+	render_mapped_section(wrapper, existing_mappings, "task");
+
+	wrapper.find(".zoho-row-filter").on("input", function () {
+		const q = $(this).val().trim().toLowerCase();
+		wrapper.find("tbody tr").each(function () {
+			$(this).toggle(!q || $(this).find("td:first").text().trim().toLowerCase().includes(q));
 		});
 	});
 
-	wrapper.find("#save_task_mappings").on("click", function () {
-		const mappings = [];
-		wrapper.find("select[data-task]").each(function () {
-			const zoho_task_id = $(this).val();
-			if (zoho_task_id) {
-				mappings.push({ cubenet_task: $(this).data("task"), zoho_task_id });
-			}
+	const pending_task_selections = new Set();
+
+	function show_task_dropdown($input, $dropdown, query) {
+		const own_id = $input.siblings(".task-id").val();
+		const matches = unmapped_cubenet_tasks.filter(t =>
+			(t.name === own_id || !pending_task_selections.has(t.name)) &&
+			(!query || (t.subject || t.name).toLowerCase().includes(query) || t.name.toLowerCase().includes(query))
+		).slice(0, 20);
+
+		if (!matches.length) { $dropdown.hide(); return; }
+
+		$dropdown.html(matches.map(t => `
+			<div class="task-option" data-id="${frappe.utils.escape_html(t.name)}"
+				data-label="${frappe.utils.escape_html(t.subject || t.name)}"
+				style="padding:var(--padding-sm,6px) var(--padding-md,12px);cursor:pointer;
+					font-size:var(--text-sm,13px);color:var(--text-color,#333);
+					border-bottom:1px solid var(--border-color,#f0f0f0);">
+				${frappe.utils.escape_html(t.subject || t.name)}
+				<span style="color:var(--text-muted,#8d99a6);font-size:var(--text-xs,11px);margin-left:6px;">${frappe.utils.escape_html(t.name)}</span>
+			</div>`
+		).join("")).show();
+	}
+
+	wrapper.find(".task-search").each(function () {
+		const $input = $(this);
+		const $hidden = $input.siblings(".task-id");
+		const $dropdown = $input.siblings(".task-dropdown");
+
+		$input.on("focus click", function () {
+			show_task_dropdown($input, $dropdown, $(this).val().trim().toLowerCase());
 		});
-		if (!mappings.length) {
-			frappe.show_alert({ message: "No mappings to save.", indicator: "orange" });
-			return;
-		}
+		$input.on("input", function () {
+			$hidden.val("");
+			if (!$(this).val().trim()) {
+				const prev = $hidden.val();
+				if (prev) pending_task_selections.delete(prev);
+				$input.closest("div").siblings(".task-map-btn").hide();
+			}
+			show_task_dropdown($input, $dropdown, $(this).val().trim().toLowerCase());
+		});
+		$dropdown.on("mouseover", ".task-option", function () {
+			$(this).css("background", "var(--fg-hover-color,#f5f7fa)");
+		}).on("mouseout", ".task-option", function () {
+			$(this).css("background", "");
+		}).on("mousedown", ".task-option", function () {
+			const prev = $hidden.val();
+			if (prev) pending_task_selections.delete(prev);
+			const new_id = $(this).data("id");
+			$input.val($(this).data("label"));
+			$hidden.val(new_id);
+			pending_task_selections.add(new_id);
+			$dropdown.hide();
+			$input.closest("div").siblings(".task-map-btn").show();
+		});
+		$input.on("blur", function () {
+			setTimeout(() => $dropdown.hide(), 150);
+		});
+	});
+
+	wrapper.find(".task-map-btn").on("click", function () {
+		const $btn = $(this);
+		const $row = $btn.closest("tr");
+		const $input = $row.find(".task-search");
+		const local_name = $row.find(".task-id").val() || $input.val().trim();
+		if (!local_name) return;
+
 		frappe.call({
 			method: "opero.zoho_books.save_task_mappings",
-			args: { mappings: JSON.stringify(mappings) },
+			args: { mappings: JSON.stringify([{
+				local_name,
+				remote_id: $input.data("remote-id"),
+				remote_name: $input.data("remote-name"),
+			}]) },
 			callback(r) {
-				if (r.message) {
-					frappe.show_alert({ message: `${r.message.count} task(s) mapped and saved.`, indicator: "green" });
-					wrapper.find("select[data-task]").each(function () {
-						if ($(this).val()) {
-							$(this).closest("tr").css("background", "#f0fff4");
-						}
+				if (r.message && r.message.saved && r.message.saved.length) {
+					const m = r.message.saved[0];
+					$row.fadeOut(200, () => {
+						$row.remove();
+						render_mapped_section(wrapper, [m], "task");
+						frappe.show_alert({ message: "Task mapped successfully.", indicator: "green" });
 					});
 				}
 			},
+		});
+	});
+}
+
+
+function render_mapped_section(wrapper, mappings, type) {
+	if (!mappings || !mappings.length) return;
+
+	const is_personnel = type === "personnel";
+	const is_task = type === "task";
+	const tbody_class = is_personnel ? "mapped-personnel-tbody" : is_task ? "mapped-task-tbody" : "mapped-project-tbody";
+	const unmap_class = is_personnel ? "unmap-btn" : is_task ? "unmap-task-btn" : "unmap-project-btn";
+	const delete_method = is_personnel
+		? "opero.zoho_books.delete_personnel_mapping"
+		: is_task
+			? "opero.zoho_books.delete_task_mapping"
+			: "opero.zoho_books.delete_project_mapping";
+	const label_a = is_personnel ? "Zoho User" : is_task ? "Zoho Task" : "Zoho Project";
+	const label_b = is_personnel ? "Personnel (Cubenet)" : is_task ? "Task (Cubenet)" : "Project (Cubenet)";
+
+	const rows = mappings.map(m => `
+		<tr>
+			<td style="padding:8px 10px;vertical-align:middle;">${frappe.utils.escape_html(m.remote_name || m.remote_id)}</td>
+			<td style="padding:8px 10px;vertical-align:middle;">${frappe.utils.escape_html(m.local_name)}</td>
+			<td style="padding:6px 8px;text-align:right;">
+				<button class="btn btn-xs btn-danger ${unmap_class}"
+					data-mapping-name="${frappe.utils.escape_html(m.name)}" style="font-size:11px;">Unmap</button>
+			</td>
+		</tr>`
+	).join("");
+
+	wrapper.append(`
+		<hr style="margin:16px 0 12px;">
+		<p style="font-weight:600;margin-bottom:8px;">Mapped (<span class="mapped-count">${mappings.length}</span>)</p>
+		<table class="table table-bordered table-sm">
+			<thead style="background:var(--bg-light-gray, #f8f8f8);">
+				<tr>
+					<th style="width:40%;padding:8px 10px;">${label_a}</th>
+					<th style="width:45%;padding:8px 10px;">${label_b}</th>
+					<th style="width:15%;padding:8px 10px;"></th>
+				</tr>
+			</thead>
+			<tbody class="${tbody_class}">${rows}</tbody>
+		</table>`);
+
+	wrapper.find(`.${unmap_class}`).off("click").on("click", function () {
+		const mapping_name = $(this).data("mapping-name");
+		const $row = $(this).closest("tr");
+		frappe.confirm("Remove this mapping?", () => {
+			frappe.call({
+				method: delete_method,
+				args: { mapping_name },
+				callback(r) {
+					if (r.message) {
+						$row.fadeOut(200, () => $row.remove());
+						frappe.show_alert({ message: "Mapping removed.", indicator: "orange" });
+					}
+				},
+			});
 		});
 	});
 }
