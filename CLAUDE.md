@@ -43,6 +43,16 @@ Run `bench migrate` and `bench restart` before committing so changes can be test
 
 Stays on the `0.x.y` patch track. Bump `opero/__init__.py` (`__version__`) with each PR.
 
+After merging to `main`, tag the release:
+
+```bash
+git checkout main && git pull origin main
+git tag v<version>
+git push origin v<version>
+```
+
+Example: `git tag v0.2.15 && git push origin v0.2.15`
+
 ## Commit Style
 
 ```
