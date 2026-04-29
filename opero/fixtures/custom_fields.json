@@ -1,0 +1,42 @@
+[
+  {
+    "doctype": "Custom Field",
+    "name": "Project-zoho_project_id",
+    "dt": "Project",
+    "fieldname": "zoho_project_id",
+    "fieldtype": "Data",
+    "label": "Zoho Project ID",
+    "read_only": 1,
+    "no_copy": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Timesheet Detail-zoho_entry_id",
+    "dt": "Timesheet Detail",
+    "fieldname": "zoho_entry_id",
+    "fieldtype": "Data",
+    "label": "Zoho Entry ID",
+    "read_only": 1,
+    "no_copy": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Timesheet Detail-zoho_task_id",
+    "dt": "Timesheet Detail",
+    "fieldname": "zoho_task_id",
+    "fieldtype": "Data",
+    "label": "Zoho Task ID",
+    "read_only": 1,
+    "no_copy": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Task-zoho_task_id",
+    "dt": "Task",
+    "fieldname": "zoho_task_id",
+    "fieldtype": "Data",
+    "label": "Zoho Task ID",
+    "read_only": 1,
+    "no_copy": 1
+  }
+]
