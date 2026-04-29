@@ -226,12 +226,35 @@ def get_zoho_projects():
 # : Mapping read/write (whitelisted for UI)
 
 @frappe.whitelist()
+def get_unmapped_employees():
+	"""Return Employees not yet mapped in Integration Mapping."""
+	mapped = set(frappe.db.get_all(
+		"Integration Mapping",
+		filters={"integration": _INTEGRATION, "entity_type": "Employee"},
+		pluck="local_name",
+	) or [])
+	all_employees = frappe.db.get_all(
+		"Employee",
+		fields=["name", "employee_name"],
+		order_by="employee_name asc",
+	)
+	return [e for e in all_employees if e.name not in mapped]
+
+
+@frappe.whitelist()
 def get_personnel_mappings():
 	return frappe.db.get_all(
 		"Integration Mapping",
 		filters={"integration": _INTEGRATION, "entity_type": "Employee"},
-		fields=["local_name", "remote_id", "remote_name"],
+		fields=["name", "local_name", "remote_id", "remote_name"],
 	)
+
+
+@frappe.whitelist()
+def delete_personnel_mapping(mapping_name):
+	frappe.delete_doc("Integration Mapping", mapping_name, ignore_permissions=True)
+	frappe.db.commit()
+	return {"status": "ok"}
 
 
 @frappe.whitelist()
@@ -239,13 +262,41 @@ def save_personnel_mappings(mappings):
 	import json
 	if isinstance(mappings, str):
 		mappings = json.loads(mappings)
-	count = 0
+	saved = []
 	for m in mappings:
 		if m.get("local_name") and m.get("remote_id"):
+			existing_remote = frappe.db.get_value(
+				"Integration Mapping",
+				{"integration": _INTEGRATION, "entity_type": "Employee", "local_name": m["local_name"]},
+				"remote_id",
+			)
+			if existing_remote and existing_remote != m["remote_id"]:
+				frappe.throw(f"'{m['local_name']}' is already mapped to another Zoho user. Unmap it first.")
 			_set_mapping("Employee", m["local_name"], m["remote_id"], m.get("remote_name", ""))
-			count += 1
+			doc_name = frappe.db.get_value(
+				"Integration Mapping",
+				{"integration": _INTEGRATION, "entity_type": "Employee", "local_name": m["local_name"]},
+				"name",
+			)
+			saved.append({"name": doc_name, "local_name": m["local_name"], "remote_id": m["remote_id"], "remote_name": m.get("remote_name", "")})
 	frappe.db.commit()
-	return {"status": "ok", "count": count}
+	return {"status": "ok", "count": len(saved), "saved": saved}
+
+
+@frappe.whitelist()
+def get_unmapped_projects():
+	"""Return Projects not yet mapped in Integration Mapping."""
+	mapped = set(frappe.db.get_all(
+		"Integration Mapping",
+		filters={"integration": _INTEGRATION, "entity_type": "Project"},
+		pluck="local_name",
+	) or [])
+	all_projects = frappe.db.get_all(
+		"Project",
+		fields=["name", "project_name"],
+		order_by="project_name asc",
+	)
+	return [p for p in all_projects if p.name not in mapped]
 
 
 @frappe.whitelist()
@@ -253,8 +304,28 @@ def get_project_mappings():
 	return frappe.db.get_all(
 		"Integration Mapping",
 		filters={"integration": _INTEGRATION, "entity_type": "Project"},
-		fields=["local_name", "remote_id", "remote_name"],
+		fields=["name", "local_name", "remote_id", "remote_name"],
 	)
+
+
+@frappe.whitelist()
+def delete_project_mapping(mapping_name):
+	frappe.delete_doc("Integration Mapping", mapping_name, ignore_permissions=True)
+	frappe.db.commit()
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def delete_task_mapping(task_name):
+	name = frappe.db.get_value(
+		"Integration Mapping",
+		{"integration": _INTEGRATION, "entity_type": "Task", "local_name": task_name},
+		"name",
+	)
+	if name:
+		frappe.delete_doc("Integration Mapping", name, ignore_permissions=True)
+		frappe.db.commit()
+	return {"status": "ok"}
 
 
 @frappe.whitelist()
@@ -262,13 +333,25 @@ def save_project_mappings(mappings):
 	import json
 	if isinstance(mappings, str):
 		mappings = json.loads(mappings)
-	count = 0
+	saved = []
 	for m in mappings:
 		if m.get("local_name") and m.get("remote_id"):
+			existing_remote = frappe.db.get_value(
+				"Integration Mapping",
+				{"integration": _INTEGRATION, "entity_type": "Project", "local_name": m["local_name"]},
+				"remote_id",
+			)
+			if existing_remote and existing_remote != m["remote_id"]:
+				frappe.throw(f"'{m['local_name']}' is already mapped to another Zoho project. Unmap it first.")
 			_set_mapping("Project", m["local_name"], m["remote_id"], m.get("remote_name", ""))
-			count += 1
+			doc_name = frappe.db.get_value(
+				"Integration Mapping",
+				{"integration": _INTEGRATION, "entity_type": "Project", "local_name": m["local_name"]},
+				"name",
+			)
+			saved.append({"name": doc_name, "local_name": m["local_name"], "remote_id": m["remote_id"], "remote_name": m.get("remote_name", "")})
 	frappe.db.commit()
-	return {"status": "ok", "count": count}
+	return {"status": "ok", "count": len(saved), "saved": saved}
 
 
 @frappe.whitelist()
