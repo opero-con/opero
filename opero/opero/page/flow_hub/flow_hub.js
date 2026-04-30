@@ -30,6 +30,7 @@ opero.FlowHubPage = class FlowHubPage {
 		frappe.breadcrumbs.add("Opero");
 
 		this._inject_styles();
+		this._init_tooltip();
 		$(this.page.main).empty();
 		this.$root = $("<div class='fh'></div>").appendTo(this.page.main);
 		this.render_loading();
@@ -37,9 +38,12 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	_inject_styles() {
-		if (document.getElementById("fh-styles")) return;
-		const style = document.createElement("style");
-		style.id = "fh-styles";
+		let style = document.getElementById("fh-styles");
+		if (!style) {
+			style = document.createElement("style");
+			style.id = "fh-styles";
+			document.head.appendChild(style);
+		}
 		style.textContent = `
 			.fh {
 				padding: 0 0 1rem 0;
@@ -50,87 +54,89 @@ opero.FlowHubPage = class FlowHubPage {
 			/* ── Status bar ─────────────────────────────────────── */
 			.fh-status {
 				display: flex;
-				align-items: center;
-				flex-wrap: wrap;
-				gap: 0.45rem 0.6rem;
-				padding: 0.55rem 0.8rem;
+				align-items: stretch;
+				height: 44px;
 				border-radius: 10px;
-				background: #ffffff;
-				border: 1px solid #e2e8f0;
+				background: var(--fg-color);
+				border: 1px solid var(--border-color);
 				margin-bottom: 0.65rem;
+				overflow: hidden;
 			}
 			.fh-status__msg {
-				flex: 0 0 auto;
-				font-size: 0.88rem;
-				font-weight: var(--weight-semibold);
-				color: var(--text-color);
-			}
-			.fh-status__msg.is-clear  { color: #64748b; }
-			.fh-status__msg.is-ahead  { color: #047857; }
-			.fh-status__time {
-				flex-shrink: 0;
-				font-size: 0.72rem;
-				color: var(--text-muted);
-			}
-			.fh-status__time .frappe-timestamp { pointer-events: none; }
-			.fh-status__btn {
-				border: 1px solid var(--border-color);
-				background: var(--fg-color);
-				color: var(--text-color);
-				padding: 0.28rem 0.6rem;
-				border-radius: 7px;
-				font-size: 0.76rem;
-				font-weight: var(--weight-medium);
-				cursor: pointer;
-				transition: background 130ms;
-				white-space: nowrap;
-				flex-shrink: 0;
-			}
-			.fh-status__btn:hover { background: var(--bg-color); }
-
-			/* ── Count chips (inline in status bar) ─────────────── */
-			.fh-chips {
 				display: flex;
 				align-items: center;
-				justify-content: center;
-				gap: 0.3rem;
-				flex: 1 1 auto;
-				flex-wrap: wrap;
+				flex-shrink: 0;
+				padding: 0 0.9rem;
+				font-size: 0.82rem;
+				font-weight: var(--weight-semibold);
+				color: #64748b;
+				border-right: 1px solid var(--border-color);
+				white-space: nowrap;
+			}
+			.fh-status__msg.is-ahead { color: #047857; }
+			.fh-status__time {
+				display: flex;
+				align-items: center;
+				flex-shrink: 0;
+				padding: 0 0.9rem;
+				font-size: 0.7rem;
+				color: var(--text-muted);
+				border-left: 1px solid var(--border-color);
+				white-space: nowrap;
+			}
+			.fh-status__time .frappe-timestamp { pointer-events: none; }
+
+			/* ── Chips ───────────────────────────────────────────── */
+			.fh-chips {
+				display: flex;
+				align-items: stretch;
+				flex: 1;
 				min-width: 0;
 			}
 			.fh-chip {
 				display: flex;
 				align-items: center;
 				gap: 0.22rem;
-				padding: 0.28rem 0.45rem;
-				border-radius: 6px;
-				border: 1px solid var(--border-color);
-				background: var(--fg-color);
+				padding: 0 0.6rem;
+				border: none;
+				background: transparent;
 				cursor: pointer;
-				transition: background 130ms;
+				transition: background 120ms;
 				white-space: nowrap;
+				position: relative;
+				color: inherit;
+				flex-shrink: 0;
 			}
 			.fh-chip:hover { background: var(--bg-color); }
-			.fh-chip.is-active {
-				background: var(--bg-color);
-				box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+			.fh-chip.is-active { background: var(--bg-color); }
+			.fh-chip.is-active::before {
+				content: "";
+				position: absolute;
+				bottom: 0;
+				left: 0.35rem;
+				right: 0.35rem;
+				height: 2px;
+				background: var(--fh-accent, var(--primary));
+				border-radius: 2px 2px 0 0;
 			}
-			.fh-chip.is-active .fh-chip__icon { color: var(--fh-accent, var(--text-color)); }
 			.fh-chip__icon {
-				width: 14px;
-				height: 14px;
+				width: 13px;
+				height: 13px;
 				flex-shrink: 0;
 				color: var(--text-muted);
-				transition: color 130ms;
+				transition: color 120ms;
 			}
+			.fh-chip.is-active .fh-chip__icon { color: var(--fh-accent, var(--primary)); }
 			.fh-chip__icon.is-accented { color: var(--fh-accent, var(--text-muted)); }
 			.fh-chip__value {
-				font-size: 0.76rem;
+				font-size: 0.74rem;
 				font-weight: var(--weight-semibold);
 				line-height: 1;
 				color: var(--text-muted);
+				transition: color 120ms;
 			}
 			.fh-chip__value.is-nonzero { color: var(--fh-accent, var(--text-color)); }
+			.fh-chip.is-active .fh-chip__value { color: var(--fh-accent, var(--primary)); }
 
 			/* ── Two-column body ────────────────────────────────── */
 			.fh-body {
@@ -379,28 +385,13 @@ opero.FlowHubPage = class FlowHubPage {
 				flex-shrink: 0;
 			}
 
-			/* ── Tooltip (data-tip="…") ─────────────────────────── */
-			[data-tip] { position: relative; }
-			[data-tip]::before {
-				content: "";
-				position: absolute;
-				bottom: calc(100% + 1px);
-				left: 50%;
-				transform: translateX(-50%);
-				border: 5px solid transparent;
-				border-top-color: #1e293b;
-				pointer-events: none;
-				opacity: 0;
-				transition: opacity 0.15s ease;
-				z-index: 1001;
-			}
-			[data-tip]::after {
-				content: attr(data-tip);
-				position: absolute;
-				bottom: calc(100% + 11px);
-				left: 50%;
-				transform: translateX(-50%);
-				white-space: nowrap;
+			/* ── Kill any stale CSS pseudo-element tooltips ─────── */
+			[data-tip]::before, [data-tip]::after { display: none !important; }
+
+			/* ── Tooltip (positioned by JS, escapes overflow:hidden) */
+			.fh-tooltip {
+				position: fixed;
+				z-index: 9999;
 				background: #1e293b;
 				color: #f8fafc;
 				font-size: 0.72rem;
@@ -408,13 +399,27 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.25rem 0.55rem;
 				border-radius: 5px;
 				pointer-events: none;
+				white-space: nowrap;
+				box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 				opacity: 0;
 				transition: opacity 0.15s ease;
-				z-index: 1000;
-				box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 			}
-			[data-tip]:hover::before,
-			[data-tip]:hover::after { opacity: 1; }
+			.fh-tooltip.is-visible { opacity: 1; }
+			.fh-tooltip::after {
+				content: "";
+				position: absolute;
+				top: 100%;
+				left: var(--arrow-x, 50%);
+				transform: translateX(-50%);
+				border: 5px solid transparent;
+				border-top-color: #1e293b;
+			}
+			.fh-tooltip.is-below::after {
+				top: auto;
+				bottom: 100%;
+				border-top-color: transparent;
+				border-bottom-color: #1e293b;
+			}
 
 			.fh-empty {
 				padding: 1.2rem 0.75rem;
@@ -829,7 +834,55 @@ opero.FlowHubPage = class FlowHubPage {
 				.fh { padding: 0.5rem; }
 			}
 		`;
-		document.head.appendChild(style);
+	}
+
+	_init_tooltip() {
+		if (document.getElementById("fh-tooltip")) return;
+		const el = document.createElement("div");
+		el.id = "fh-tooltip";
+		el.className = "fh-tooltip";
+		document.body.appendChild(el);
+
+		let current = null;
+
+		const show = (target, tip) => {
+			el.textContent = tip;
+			el.style.top = "-9999px";
+			el.style.left = "0";
+			el.classList.add("is-visible");
+			requestAnimationFrame(() => {
+				const r = target.getBoundingClientRect();
+				const w = el.offsetWidth;
+				const h = el.offsetHeight;
+				const elementCenterX = r.left + r.width / 2;
+				let top = r.top - h - 8;
+				let left = elementCenterX - w / 2;
+				left = Math.max(4, Math.min(left, window.innerWidth - w - 4));
+				const isBelow = top < 4;
+				if (isBelow) top = r.bottom + 8;
+				el.classList.toggle("is-below", isBelow);
+				el.style.setProperty("--arrow-x", (elementCenterX - left) + "px");
+				el.style.top = top + "px";
+				el.style.left = left + "px";
+			});
+		};
+
+		const hide = () => {
+			el.classList.remove("is-visible");
+			current = null;
+		};
+
+		document.addEventListener("mouseover", (e) => {
+			const target = e.target.closest("[data-tip]");
+			if (target === current) return;
+			current = target || null;
+			if (!target) { hide(); return; }
+			const tip = target.getAttribute("data-tip");
+			if (!tip) { hide(); return; }
+			show(target, tip);
+		});
+
+		document.addEventListener("mouseleave", hide, true);
 	}
 
 	// ── Loading / error states ────────────────────────────────────────
@@ -990,28 +1043,32 @@ opero.FlowHubPage = class FlowHubPage {
 
 	_render_status_bar(attention, updatedAt, counts, throughput) {
 		const msgClass = attention.startsWith("Welcome") ? "is-clear" : "is-ahead";
-		const chips = (counts || [])
-			.map(c => {
-				const isActive = this._active_tab === c.key;
-				const isNonZero = c.value > 0;
-				return `<button type="button" class="fh-chip ${isActive ? "is-active" : ""}"
-					data-chip-key="${this.esc(c.key)}"
-					data-tip="${this.esc(c.label || "")}"
-					style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
-					${this._chip_icon(c.key, isNonZero)}
-					<span class="fh-chip__value ${isNonZero ? "is-nonzero" : ""}">${c.value}</span>
-				</button>`;
-			})
-			.join("");
+
+		// Auto-prune: hide zero-count chips unless they are the active tab
+		const visibleCounts = (counts || []).filter(c => c.value > 0 || this._active_tab === c.key);
+
+		const countChips = visibleCounts.map(c => {
+			const isActive = this._active_tab === c.key;
+			const isNonZero = c.value > 0;
+			return `<button type="button" class="fh-chip ${isActive ? "is-active" : ""}"
+				data-chip-key="${this.esc(c.key)}"
+				${c.label ? `data-tip="${this.esc(c.label)}"` : ""}
+				style="--fh-accent:${this.esc(c.accent || "var(--primary)")}">
+				${this._chip_icon(c.key, isNonZero)}
+				<span class="fh-chip__value ${isNonZero ? "is-nonzero" : ""}">${c.value}</span>
+			</button>`;
+		}).join("");
+
+		const isActionActive = this._active_tab === "action_queue";
 		return `
 			<div class="fh-status">
 				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
 				<div class="fh-chips">
-					${chips}
+					${countChips}
 					${this._render_health_chip(throughput)}
-					<button type="button" class="fh-chip ${this._active_tab === "action_queue" ? "is-active" : ""}"
+					<button type="button" class="fh-chip ${isActionActive ? "is-active" : ""}"
 						data-chip-key="action_queue" data-tip="${this.esc(__("Action Queue"))}" style="--fh-accent:#0ea5e9">
-						${this._chip_icon("action_queue", true)}
+						${this._chip_icon("action_queue", isActionActive)}
 					</button>
 				</div>
 				<span class="fh-status__time">${this._fmt_time(updatedAt)}</span>
