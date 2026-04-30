@@ -5,22 +5,13 @@ from collections.abc import Iterable
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint
+from frappe.permissions import AUTOMATIC_ROLES
 from frappe.utils.data import now_datetime
 from frappe.utils.data import strip_html
 from frappe.utils.html_utils import unescape_html
 
 
 USER_TOKEN_SPLIT = re.compile(r"[\n,;]+")
-
-SYNC_FIELDS = (
-	"description",
-	"custom_title",
-	"priority",
-	"date",
-	"reference_type",
-	"reference_name",
-)
 
 
 def validate_todo(doc: Document, _method: str | None = None):
@@ -31,56 +22,42 @@ def validate_todo(doc: Document, _method: str | None = None):
 	_normalize_assignees(doc)
 
 
-def sync_child_todos(doc: Document, _method: str | None = None):
-	if _should_skip_sync(doc):
-		return
+def get_permission_query_conditions(user=None):
+	if not user:
+		user = frappe.session.user
 
-	is_new = bool(doc.flags.get("in_insert"))
+	todo_roles = frappe.permissions.get_doctype_roles("ToDo")
+	todo_roles = set(todo_roles) - set(AUTOMATIC_ROLES)
 
-	group_id = _ensure_assignment_group(doc)
-	desired_secondary_assignees = _get_desired_secondary_assignees(doc)
-	existing_children = frappe.get_all(
-		"ToDo",
-		filters={"custom_parent_todo": doc.name},
-		fields=["name", "allocated_to"],
+	if any(role in todo_roles for role in frappe.get_roles(user)):
+		return None
+
+	escaped = frappe.db.escape(user)
+	return (
+		f"(`tabToDo`.allocated_to = {escaped}"
+		f" OR `tabToDo`.assigned_by = {escaped}"
+		f" OR EXISTS ("
+		f"SELECT 1 FROM `tabToDo Assignee`"
+		f" WHERE `tabToDo Assignee`.parent = `tabToDo`.name"
+		f" AND `tabToDo Assignee`.user = {escaped}"
+		f"))"
 	)
-	existing_children_by_user = {row.allocated_to: row for row in existing_children if row.allocated_to}
-
-	for user in desired_secondary_assignees:
-		existing_child = existing_children_by_user.get(user)
-		if existing_child:
-			_sync_child_values(existing_child.name, doc, group_id)
-		else:
-			_create_child_todo(doc, user, group_id)
-			_create_assignment_notification(doc, user)
-
-	desired_set = set(desired_secondary_assignees)
-	for child in existing_children:
-		if child.allocated_to not in desired_set:
-			frappe.delete_doc("ToDo", child.name, ignore_permissions=True, force=True)
-
-	# Notify primary assignee on new insert, or if primary changed on update.
-	primary = (getattr(doc, "allocated_to", None) or "").strip()
-	if primary:
-		if is_new:
-			_create_assignment_notification(doc, primary)
-		else:
-			doc_before = getattr(doc, "_doc_before_save", None)
-			old_primary = (doc_before.get("allocated_to") or "" if doc_before else "") .strip()
-			if old_primary != primary:
-				_create_assignment_notification(doc, primary)
 
 
-def delete_child_todos(doc: Document, _method: str | None = None):
-	if _should_skip_sync(doc):
-		return
+def has_permission(doc: Document, ptype: str = "read", user: str | None = None) -> bool:
+	user = user or frappe.session.user
 
-	for child_name in frappe.get_all("ToDo", filters={"custom_parent_todo": doc.name}, pluck="name"):
-		frappe.delete_doc("ToDo", child_name, ignore_permissions=True, force=True)
+	todo_roles = frappe.permissions.get_doctype_roles("ToDo", ptype)
+	todo_roles = set(todo_roles) - set(AUTOMATIC_ROLES)
 
+	if any(role in todo_roles for role in frappe.get_roles(user)):
+		return True
 
-def _should_skip_sync(doc: Document) -> bool:
-	return bool(getattr(doc.flags, "opero_skip_sync", False) or cint(getattr(doc, "custom_is_group_child", 0)))
+	if doc.allocated_to == user or doc.assigned_by == user:
+		return True
+
+	assignees = [row.user for row in (getattr(doc, "custom_assignees", None) or []) if getattr(row, "user", None)]
+	return user in assignees
 
 
 def _sync_title_and_description(doc: Document):
@@ -151,7 +128,6 @@ def _normalize_assignees(doc: Document):
 	doc.allocated_to = primary or None
 
 
-
 def _parse_assignees(raw_values) -> list[str]:
 	if not raw_values:
 		return []
@@ -216,75 +192,6 @@ def _validate_assignees_exist(users: Iterable[str]) -> list[str]:
 		)
 
 	return [user for user in users if user in existing_users]
-
-
-def _ensure_assignment_group(doc: Document) -> str:
-	group_id = (getattr(doc, "custom_assignment_group", None) or "").strip() or doc.name
-	if not group_id:
-		return ""
-
-	if getattr(doc, "custom_assignment_group", None) != group_id:
-		doc.custom_assignment_group = group_id
-		frappe.db.set_value("ToDo", doc.name, "custom_assignment_group", group_id, update_modified=False)
-
-	return group_id
-
-
-def _get_desired_secondary_assignees(doc: Document) -> list[str]:
-	assignees = _get_doc_assignees(doc)
-	if not assignees:
-		return []
-
-	primary = assignees[0]
-	return [user for user in assignees[1:] if user and user != primary]
-
-
-def _sync_child_values(child_name: str, parent_doc: Document, group_id: str):
-	updates = {field: (getattr(parent_doc, field, None) or None) for field in SYNC_FIELDS}
-	updates["custom_assignment_group"] = group_id
-	frappe.db.set_value("ToDo", child_name, updates, update_modified=False)
-
-
-def _create_child_todo(parent_doc: Document, user: str, group_id: str):
-	child_todo = frappe.new_doc("ToDo")
-	child_todo.flags.opero_skip_sync = True
-
-	for field in SYNC_FIELDS:
-		setattr(child_todo, field, getattr(parent_doc, field, None))
-
-	if not child_todo.custom_title and child_todo.description:
-		child_todo.custom_title = _extract_plain_text(child_todo.description)
-
-	child_todo.allocated_to = user
-	child_todo.assigned_by = getattr(parent_doc, "assigned_by", None) or frappe.session.user
-	_set_doc_assignees(child_todo, [user])
-	child_todo.custom_parent_todo = parent_doc.name
-	child_todo.custom_assignment_group = group_id
-	child_todo.custom_is_group_child = 1
-
-	child_todo.insert(ignore_permissions=True)
-
-
-def _create_assignment_notification(parent_doc: Document, user: str):
-	"""Create a Notification Log for a ToDo assignment so downstream apps can act on it."""
-	if not user:
-		return
-	try:
-		actor = frappe.session.user
-		title = _extract_plain_text(
-			getattr(parent_doc, "custom_title", None) or getattr(parent_doc, "description", None) or ""
-		) or parent_doc.name
-
-		notif = frappe.new_doc("Notification Log")
-		notif.for_user = user
-		notif.from_user = actor
-		notif.type = "Assignment"
-		notif.document_type = "ToDo"
-		notif.document_name = parent_doc.name
-		notif.subject = f"<strong>{actor}</strong> assigned you to <strong>{title}</strong>"
-		notif.insert(ignore_permissions=True)
-	except Exception:
-		frappe.log_error(title="ToDo Assignment Notification Error", message=frappe.get_traceback())
 
 
 def _dedupe(users: list[str]) -> list[str]:
