@@ -141,12 +141,17 @@ doctype_js = {"ToDo": "public/js/todo.js"}
 # ---------------
 # Hook on document methods and events
 
+permission_query_conditions = {
+	"ToDo": "opero.todo_enhancements.get_permission_query_conditions",
+}
+
+has_permission = {
+	"ToDo": "opero.todo_enhancements.has_permission",
+}
+
 doc_events = {
 	"ToDo": {
 		"validate": "opero.todo_enhancements.validate_todo",
-		"after_insert": "opero.todo_enhancements.sync_child_todos",
-		"on_update": "opero.todo_enhancements.sync_child_todos",
-		"on_trash": "opero.todo_enhancements.delete_child_todos",
 	},
 	"Timesheet": {
 		"on_submit": "opero.zoho_books.sync_timesheet_to_zoho",
