@@ -365,7 +365,7 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 	stale_days = max(1, cint(parsed.get("stale_days") or 7))
 	list_limit = max(3, min(20, cint(parsed.get("list_limit") or 10)))
 
-	cache_key = f"opero:flow_hub_v2:{frappe.session.user}:{window_days}:{stale_days}"
+	cache_key = f"opero:flow_hub_v3:{frappe.session.user}:{window_days}:{stale_days}"
 	if not cint(force_refresh):
 		cached = frappe.cache.get_value(cache_key)
 		if cached:
@@ -423,6 +423,17 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				"route": ["List", "ToDo", "List"],
 				"route_options": {"status": "In Progress"},
 			},
+			{
+				"key": "stale",
+				"label": _("Stale {0}d+").format(stale_days),
+				"value": counts["stale"],
+				"accent": "#7c3aed",
+				"route": ["List", "ToDo", "List"],
+				"route_options": {
+					"status": "In Progress",
+					"modified": ["<=", str(stale_cutoff)],
+				},
+			},
 		],
 		"focus_queue": _get_focus_queue(list_limit, stale_cutoff),
 		"risk": [
@@ -467,7 +478,7 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				},
 			},
 		],
-		"throughput_7d": _get_throughput_7d(),
+		"throughput_30d": _get_throughput_30d(),
 		"active_total": counts["active_total"],
 		"stale_days": stale_days,
 		"window_days": window_days,
@@ -705,11 +716,11 @@ def _get_unassigned_active_count() -> int:
 	return cint(count or 0)
 
 
-def _get_throughput_7d() -> dict:
+def _get_throughput_30d() -> dict:
 	today = getdate(nowdate())
-	period_from = getdate(add_days(today, -6))
-	prev_to = getdate(add_days(today, -7))
-	prev_from = getdate(add_days(today, -13))
+	period_from = getdate(add_days(today, -29))
+	prev_to = getdate(add_days(today, -30))
+	prev_from = getdate(add_days(today, -59))
 
 	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 	creation_expr = _date_expr("todo.creation")
