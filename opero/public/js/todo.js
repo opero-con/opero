@@ -89,7 +89,7 @@ const renderAssigneesSidebar = (frm) => {
 				<span class="form-sidebar-items">
 					<span>
 						<svg class="es-icon ml-0 icon-sm"><use href="#es-line-add-people"></use></svg>
-						<span class="ellipsis">${__("Assignees")}</span>
+						<span class="ellipsis">${__("Members")}</span>
 					</span>
 					<button class="opero-add-assignee-btn btn btn-link icon-btn">
 						<svg class="es-icon icon-sm"><use href="#es-line-add"></use></svg>
@@ -116,7 +116,7 @@ const openAssigneesDialog = (frm) => {
 	let adding = false
 
 	const dialog = new frappe.ui.Dialog({
-		title: __("Assignees"),
+		title: __("Members"),
 		size: "small",
 		no_focus: true,
 		fields: [
