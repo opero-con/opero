@@ -204,8 +204,8 @@ opero.FlowHubPage = class FlowHubPage {
 				min-width: 0;
 			}
 			.fh-item__title {
-				font-size: 0.83rem;
-				font-weight: var(--weight-semibold);
+				font-size: 0.88rem;
+				font-weight: var(--weight-regular);
 				color: var(--text-color);
 				line-height: 1.3;
 				white-space: nowrap;
@@ -345,7 +345,7 @@ opero.FlowHubPage = class FlowHubPage {
 				width: 20px;
 				flex-shrink: 0;
 				background: none;
-				font-size: 0.82rem;
+				font-size: 0.88rem;
 				font-weight: var(--weight-semibold);
 				cursor: pointer;
 				padding: 0;
@@ -400,7 +400,7 @@ opero.FlowHubPage = class FlowHubPage {
 				color: #f8fafc;
 				font-size: 0.72rem;
 				font-weight: var(--weight-medium);
-				padding: 0.25rem 0.55rem;
+				padding: 0.3rem 0.6rem;
 				border-radius: 5px;
 				pointer-events: none;
 				white-space: nowrap;
@@ -409,6 +409,16 @@ opero.FlowHubPage = class FlowHubPage {
 				transition: opacity 0.15s ease;
 			}
 			.fh-tooltip.is-visible { opacity: 1; }
+			.fh-tooltip__name {
+				font-size: 0.76rem;
+				font-weight: var(--weight-semibold);
+				line-height: 1.3;
+			}
+			.fh-tooltip__roles {
+				font-size: 0.67rem;
+				color: #94a3b8;
+				margin-top: 0.18rem;
+			}
 			.fh-tooltip::after {
 				content: "";
 				position: absolute;
@@ -849,11 +859,7 @@ opero.FlowHubPage = class FlowHubPage {
 
 		let current = null;
 
-		const show = (target, tip) => {
-			el.textContent = tip;
-			el.style.top = "-9999px";
-			el.style.left = "0";
-			el.classList.add("is-visible");
+		const position = (target) => {
 			requestAnimationFrame(() => {
 				const r = target.getBoundingClientRect();
 				const w = el.offsetWidth;
@@ -871,16 +877,47 @@ opero.FlowHubPage = class FlowHubPage {
 			});
 		};
 
+		const show = (target, tip) => {
+			el.textContent = tip;
+			el.style.top = "-9999px";
+			el.style.left = "0";
+			el.classList.add("is-visible");
+			position(target);
+		};
+
+		const showRich = (target, name, roles) => {
+			el.innerHTML = "";
+			el.style.top = "-9999px";
+			el.style.left = "0";
+			const nameEl = document.createElement("div");
+			nameEl.className = "fh-tooltip__name";
+			nameEl.textContent = name;
+			el.appendChild(nameEl);
+			if (roles) {
+				const rolesEl = document.createElement("div");
+				rolesEl.className = "fh-tooltip__roles";
+				rolesEl.textContent = roles;
+				el.appendChild(rolesEl);
+			}
+			el.classList.add("is-visible");
+			position(target);
+		};
+
 		const hide = () => {
 			el.classList.remove("is-visible");
 			current = null;
 		};
 
 		document.addEventListener("mouseover", (e) => {
-			const target = e.target.closest("[data-tip]");
+			const target = e.target.closest("[data-tip], [data-tip-name]");
 			if (target === current) return;
 			current = target || null;
 			if (!target) { hide(); return; }
+			const tipName = target.getAttribute("data-tip-name");
+			if (tipName) {
+				showRich(target, tipName, target.getAttribute("data-tip-roles") || "");
+				return;
+			}
 			const tip = target.getAttribute("data-tip");
 			if (!tip) { hide(); return; }
 			show(target, tip);
@@ -940,10 +977,17 @@ opero.FlowHubPage = class FlowHubPage {
 		const s = this.snapshot;
 		const tab = this._active_tab;
 		let body;
+		let activeQueue = [];
 		if (tab === "health") {
+			this._selected_todo = null;
 			body = this._render_health(s.throughput_30d || {}, s.risk || []);
 		} else {
 			const { queue, title } = this._queue_for_tab(s, tab);
+			activeQueue = queue;
+			// Deselect if the selected todo is no longer in the current queue
+			if (this._selected_todo && !queue.find(r => r.name === this._selected_todo.name)) {
+				this._selected_todo = null;
+			}
 			const queueHtml = this._render_focus_queue(queue, title);
 			const queuePanel = `<div class="fh-panel fh-panel--queue"><div class="fh-panel__head"><h2 class="fh-panel__title">${this.esc(title)}</h2></div>${queueHtml}</div>`;
 			body = this._selected_todo
@@ -954,7 +998,7 @@ opero.FlowHubPage = class FlowHubPage {
 			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [], s.throughput_30d || {})}
 			${body}
 		`);
-		this._bind_events(s);
+		this._bind_events(s, activeQueue);
 		if (this._selected_todo) {
 			requestAnimationFrame(() => this._apply_queue_layout_stretch());
 		}
@@ -1096,14 +1140,17 @@ opero.FlowHubPage = class FlowHubPage {
 			? queue
 					.map((row, i) => {
 						const band = row.urgency_band || "active";
-						const dueTooltip = row.due_date
+						const BAND_SHORT = { overdue: __("Overdue"), due_today: __("Due today"), due_soon: __("Due soon") };
+						const dueBandClass = band !== "active" ? `fh-due-btn--${band}` : "";
+						const shortLabel = BAND_SHORT[band] || row.due_label || "";
+						const tipDate = row.due_date
 							? new Date(row.due_date + "T00:00:00").toLocaleDateString(undefined, {
 								weekday: "short", month: "short", day: "numeric",
 							  })
 							: "";
-						const dueBandClass = band !== "active" ? `fh-due-btn--${band}` : "";
-						const dueLabel = row.due_label
-							? `<span role="button" class="fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${dueTooltip ? ` data-tip="${this.esc(dueTooltip)}"` : ""}>${this.esc(row.due_label)}</span>`
+						const tipDetail = row.due_label || "";
+						const dueLabel = shortLabel
+							? `<span role="button" class="fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${tipDate ? ` data-tip-name="${this.esc(tipDate)}"` : ""}${tipDetail ? ` data-tip-roles="${this.esc(tipDetail)}"` : ""}>${this.esc(shortLabel)}</span>`
 							: `<span role="button" class="fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(row.name)}" data-due-date="" title="${this.esc(__('Set due date'))}">📅</span>`;
 						const avatars = this._render_avatars(row.assignees, row.name);
 						const pc = this._prio_config(row.priority);
@@ -1309,9 +1356,8 @@ opero.FlowHubPage = class FlowHubPage {
 
 	// ── Event binding ─────────────────────────────────────────────────
 
-	_bind_events(s) {
+	_bind_events(s, queue = []) {
 		const counts = s.counts || [];
-		const queue = s.focus_queue || [];
 		const risk = s.risk || [];
 
 		this.$root.find("[data-chip-key]").on("click", (e) => {
@@ -1372,7 +1418,7 @@ opero.FlowHubPage = class FlowHubPage {
 		const nameAttr = `data-add-alloc="${this.esc(todoName || "")}"`;
 		if (!assignees || !assignees.length) {
 			return `<span class="fh-avatar-col">
-				<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Assignee"))}" ${nameAttr}>
+				<span role="button" tabindex="0" class="fh-add-alloc" data-tip="${this.esc(__("Add Member"))}" ${nameAttr}>
 					<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
 						<path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/>
 					</svg>
@@ -1389,10 +1435,13 @@ opero.FlowHubPage = class FlowHubPage {
 		const shown = assignees.slice(0, MAX);
 		const extra = assignees.length - MAX;
 		const chips = shown.map(a => {
+			const roles = (a.roles || []).join(" · ");
+			const tipName = `data-tip-name="${this.esc(a.full_name)}"`;
+			const tipRoles = roles ? `data-tip-roles="${this.esc(roles)}"` : "";
 			if (a.image) {
-				return `<span data-tip="${this.esc(a.full_name)}"><span class="fh-avatar"><img src="${this.esc(a.image)}" alt="${this.esc(a.initials)}"></span></span>`;
+				return `<span ${tipName} ${tipRoles}><span class="fh-avatar"><img src="${this.esc(a.image)}" alt="${this.esc(a.initials)}"></span></span>`;
 			}
-			return `<span data-tip="${this.esc(a.full_name)}"><span class="fh-avatar" style="background:${_color(a.user)}">${this.esc(a.initials)}</span></span>`;
+			return `<span ${tipName} ${tipRoles}><span class="fh-avatar" style="background:${_color(a.user)}">${this.esc(a.initials)}</span></span>`;
 		}).join("");
 		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
 		return `<span class="fh-avatar-col">
