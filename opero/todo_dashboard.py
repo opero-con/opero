@@ -587,7 +587,9 @@ def _get_focus_queue(limit: int, stale_cutoff: date) -> list[dict]:
 				todo.custom_closed_on,
 				todo.custom_cancelled_on,
 				todo.modified,
-				todo.allocated_to
+				todo.allocated_to,
+				todo.assigned_by,
+				todo.custom_created_by
 			FROM `tabToDo` todo
 			WHERE todo.status IN ('Open', 'In Progress')
 				AND {user_scope_sql}
@@ -660,18 +662,30 @@ def _serialize_focus_row(
 	assignees = []
 	if assignee_map is not None:
 		allocated_to = _to_text(_get_value(row, "allocated_to"))
+		assigned_by = _to_text(_get_value(row, "assigned_by"))
+		custom_created_by = _to_text(_get_value(row, "custom_created_by"))
 		users = assignee_map.get(name) or ([allocated_to] if allocated_to else [])
 		details = user_details or {}
-		for user_id in users:
+		for i, user_id in enumerate(users):
 			u = details.get(user_id)
 			full_name = (u.full_name if u else "") or user_id
 			initials = _get_initials(full_name)
+			roles = []
+			if user_id == custom_created_by:
+				roles.append(_("Creator"))
+			if user_id == assigned_by:
+				roles.append(_("Owner"))
+			if i == 0:
+				roles.append(_("Main Assignee"))
+			else:
+				roles.append(_("Assignee"))
 			assignees.append(
 				{
 					"user": user_id,
 					"full_name": full_name,
 					"initials": initials,
 					"image": (u.user_image if u else "") or "",
+					"roles": roles,
 				}
 			)
 
