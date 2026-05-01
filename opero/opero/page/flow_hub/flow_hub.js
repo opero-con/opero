@@ -17,6 +17,11 @@ opero.FlowHubPage = class FlowHubPage {
 		this.snapshot = {};
 		this._active_tab = null;
 		this._selected_todo = null;
+		this._saving = 0;
+		document.addEventListener("keydown", (e) => {
+			if (e.key !== "Escape") return;
+			$("#fh-prio-drop, #fh-due-pop, #fh-alloc-pop").removeClass("is-open");
+		});
 
 		this.page = frappe.ui.make_app_page({
 			parent: wrapper,
@@ -310,6 +315,10 @@ opero.FlowHubPage = class FlowHubPage {
 				border-right: none;
 				border-radius: 0;
 			}
+			.fh-band-overdue:not(.is-selected)   { border-left: 3px solid #fca5a5; }
+			.fh-band-due_today:not(.is-selected) { border-left: 3px solid #fdba74; }
+			.fh-band-due_soon:not(.is-selected)  { border-left: 3px solid #93c5fd; }
+			.fh-band-stale:not(.is-selected)     { border-left: 3px solid #c4b5fd; }
 
 			/* Urgency tag pill — keep hardcoded, these are semantic colours */
 			.fh-tag {
@@ -381,6 +390,9 @@ opero.FlowHubPage = class FlowHubPage {
 				transition: background 100ms;
 			}
 			.fh-prio-drop__opt:hover { background: #f8fafc; }
+			.fh-prio-drop__opt.is-current { background: #f0fdf4; }
+			.fh-prio-drop__check { display: none; margin-left: auto; color: #059669; font-size: 0.78rem; }
+			.fh-prio-drop__opt.is-current .fh-prio-drop__check { display: inline; }
 			.fh-prio-drop__icon {
 				font-size: 0.75rem;
 				font-weight: var(--weight-semibold);
@@ -713,6 +725,9 @@ opero.FlowHubPage = class FlowHubPage {
 				gap: 0.5rem;
 			}
 			.fh-risk-row:hover { background: #f8fafc; }
+			.fh-risk-row[data-risk-key="stale"] .fh-risk-row__value:not(.is-zero)        { color: #7c3aed; }
+			.fh-risk-row[data-risk-key="high_priority"] .fh-risk-row__value:not(.is-zero) { color: #dc2626; }
+			.fh-risk-row[data-risk-key="no_due_date"] .fh-risk-row__value:not(.is-zero)   { color: #d97706; }
 			.fh-risk-row__label {
 				flex: 1;
 				font-size: 0.79rem;
@@ -955,17 +970,20 @@ opero.FlowHubPage = class FlowHubPage {
 	refresh({ force = false } = {}) {
 		if (this.loading) return;
 		this.loading = true;
+		this.page.btn_primary?.prop("disabled", true);
 		this.render_loading();
 		frappe.call({
 			method: "opero.todo_dashboard.get_flow_hub_snapshot",
 			args: { force_refresh: force ? 1 : 0 },
 			callback: (r) => {
 				this.loading = false;
+				this.page.btn_primary?.prop("disabled", false);
 				this.snapshot = r.message || {};
 				this.render();
 			},
 			error: () => {
 				this.loading = false;
+				this.page.btn_primary?.prop("disabled", false);
 				this.render_error();
 			},
 		});
@@ -1179,7 +1197,7 @@ opero.FlowHubPage = class FlowHubPage {
 		const rows = risk
 			.map(
 				(r, i) => `
-				<div class="fh-risk-row" data-risk-index="${i}" role="button">
+				<div class="fh-risk-row" data-risk-index="${i}" data-risk-key="${this.esc(r.key || "")}" role="button">
 					<span class="fh-risk-row__label">${this.esc(r.label || "")}</span>
 					<span class="fh-risk-row__value ${r.value === 0 ? "is-zero" : ""}">${r.value}</span>
 					<span class="fh-risk-row__arrow">›</span>
@@ -1225,7 +1243,7 @@ opero.FlowHubPage = class FlowHubPage {
 
 		const riskRows = (risk || [])
 			.map((r, i) => `
-				<div class="fh-risk-row" data-risk-index="${i}" role="button">
+				<div class="fh-risk-row" data-risk-index="${i}" data-risk-key="${this.esc(r.key || "")}" role="button">
 					<span class="fh-risk-row__label">${this.esc(r.label || "")}</span>
 					<span class="fh-risk-row__value ${r.value === 0 ? "is-zero" : ""}">${r.value}</span>
 					<span class="fh-risk-row__arrow">›</span>
@@ -1443,7 +1461,8 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			return `<span ${tipName} ${tipRoles}><span class="fh-avatar" style="background:${_color(a.user)}">${this.esc(a.initials)}</span></span>`;
 		}).join("");
-		const more = extra > 0 ? `<span class="fh-avatar-more">+${extra}</span>` : "";
+		const overflowNames = assignees.slice(MAX).map(a => a.full_name || a.user).join(", ");
+		const more = extra > 0 ? `<span class="fh-avatar-more"${overflowNames ? ` data-tip="${this.esc(overflowNames)}"` : ""}>+${extra}</span>` : "";
 		return `<span class="fh-avatar-col">
 			<span role="button" tabindex="0" class="fh-avatars fh-add-alloc" ${nameAttr}>${chips}${more}</span>
 		</span>`;
@@ -1475,10 +1494,12 @@ opero.FlowHubPage = class FlowHubPage {
 				const name = $($pop.data("active-btn")).attr("data-add-alloc");
 				if (!user || !name) return;
 				$pop.removeClass("is-open");
+				this._saving++;
 				frappe.call({
 					method: "opero.todo_dashboard.add_todo_assignee",
 					args: { todo_name: name, user },
-					callback: () => this.refresh({ force: true }),
+					callback: () => this._on_save_done(),
+					error: () => { this._saving = Math.max(0, this._saving - 1); },
 				});
 			});
 
@@ -1488,10 +1509,12 @@ opero.FlowHubPage = class FlowHubPage {
 				const name = $($pop.data("active-btn")).attr("data-add-alloc");
 				if (!user || !name) return;
 				$pop.removeClass("is-open");
+				this._saving++;
 				frappe.call({
 					method: "opero.todo_dashboard.remove_todo_assignee",
 					args: { todo_name: name, user },
-					callback: () => this.refresh({ force: true }),
+					callback: () => this._on_save_done(),
+					error: () => { this._saving = Math.max(0, this._saving - 1); },
 				});
 			});
 		}
@@ -1575,6 +1598,7 @@ opero.FlowHubPage = class FlowHubPage {
 					<div class="fh-prio-drop__opt" data-prio-value="${p.value}">
 						<span class="fh-prio-drop__icon" style="color:${p.color}">${p.icon}</span>
 						<span>${p.label}</span>
+						<span class="fh-prio-drop__check">✓</span>
 					</div>
 				`).join("")}
 			</div>`).appendTo(document.body);
@@ -1586,10 +1610,12 @@ opero.FlowHubPage = class FlowHubPage {
 				$drop.removeClass("is-open");
 				if (!$btn) return;
 				const todoName = $($btn).attr("data-todo-name");
+				this._saving++;
 				frappe.call({
 					method: "frappe.client.set_value",
 					args: { doctype: "ToDo", name: todoName, fieldname: "priority", value: newPrio },
-					callback: () => this.refresh({ force: true }),
+					callback: () => this._on_save_done(),
+					error: () => { this._saving = Math.max(0, this._saving - 1); },
 				});
 			});
 		}
@@ -1598,6 +1624,13 @@ opero.FlowHubPage = class FlowHubPage {
 			$drop.removeClass("is-open");
 			return;
 		}
+
+		const todoName = $(btn).attr("data-todo-name");
+		const row = (this.snapshot.focus_queue || []).find(r => r.name === todoName);
+		const currentPrio = row?.priority || "";
+		$drop.find(".fh-prio-drop__opt").each((_, el) => {
+			$(el).toggleClass("is-current", $(el).attr("data-prio-value") === currentPrio);
+		});
 
 		const rect = btn.getBoundingClientRect();
 		$drop.css({ top: rect.bottom + 4, left: rect.left });
@@ -1741,11 +1774,21 @@ opero.FlowHubPage = class FlowHubPage {
 		</div>`;
 	}
 
+	_on_save_done() {
+		this._saving = Math.max(0, this._saving - 1);
+		if (this._saving === 0) {
+			frappe.show_alert({ message: __("Saved"), indicator: "green" }, 2);
+			this.refresh({ force: true });
+		}
+	}
+
 	_save_due_date(todoName, date) {
+		this._saving++;
 		frappe.call({
 			method: "frappe.client.set_value",
 			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || null },
-			callback: () => this.refresh({ force: true }),
+			callback: () => this._on_save_done(),
+			error: () => { this._saving = Math.max(0, this._saving - 1); },
 		});
 	}
 
@@ -1777,8 +1820,8 @@ opero.FlowHubPage = class FlowHubPage {
 
 		return `<div class="fh-detail">
 			<div class="fh-detail__bar">
-				<button type="button" class="fh-detail__close" data-close-detail title="${__("Close")}">✕</button>
 				<a class="fh-detail__open" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
+				<button type="button" class="fh-detail__close" data-close-detail title="${__("Close")}">✕</button>
 			</div>
 			<div class="fh-detail__scroll">
 				<h3 class="fh-detail__title">${this.esc(title)}</h3>
