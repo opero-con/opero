@@ -435,7 +435,7 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 				},
 			},
 		],
-		"focus_queue": _get_focus_queue(list_limit, stale_cutoff),
+		"focus_queue": _get_focus_queue(list_limit, stale_cutoff, due_soon_to),
 		"risk": [
 			{
 				"key": "stale",
@@ -571,7 +571,7 @@ def _build_attention_message(closed_today: int) -> str:
 	return _("{0} closed · keep it up").format(closed_today)
 
 
-def _get_focus_queue(limit: int, stale_cutoff: date) -> list[dict]:
+def _get_focus_queue(limit: int, stale_cutoff: date, due_soon_cutoff: date) -> list[dict]:
 	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 	today = getdate(nowdate())
 
@@ -633,20 +633,19 @@ def _get_focus_queue(limit: int, stale_cutoff: date) -> list[dict]:
 			user_details[u.name] = u
 
 	return [
-		_serialize_focus_row(row, today, stale_cutoff, assignee_map, user_details)
+		_serialize_focus_row(row, today, stale_cutoff, due_soon_cutoff, assignee_map, user_details)
 		for row in rows
 	]
 
 
 def _serialize_focus_row(
-	row, today: date, stale_cutoff: date, assignee_map: dict = None, user_details: dict = None
+	row, today: date, stale_cutoff: date, due_soon_cutoff: date, assignee_map: dict = None, user_details: dict = None
 ) -> dict:
 	name = _to_text(_get_value(row, "name"))
 	priority = _to_text(_get_value(row, "priority"))
 	status = _to_text(_get_value(row, "status"))
 	due_date = _to_date(_get_value(row, "date"))
 	modified_date = _to_date(_get_value(row, "modified"))
-	due_soon_cutoff = getdate(add_days(today, 3))
 
 	if due_date and due_date < today:
 		urgency_band = "overdue"
