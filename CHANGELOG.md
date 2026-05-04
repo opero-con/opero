@@ -1,5 +1,120 @@
 # Changelog
 
+## 0.2.24 — 2026-05-04
+
+### Fixed
+
+- Kept Flow Hub synchronized with the live ToDo document state by removing the cached snapshot path.
+- Added stale-write protection for Flow Hub edits using each ToDo row's `modified` timestamp.
+- Routed Flow Hub priority, due date, and assignee changes through server-side ToDo saves so form views and database state stay aligned.
+- Subscribed Flow Hub to Frappe realtime ToDo list updates so form-side changes refresh the hub promptly.
+
+### Changed
+
+- Shortened the Flow Hub status-bar timestamp to compact labels such as `1 min ago`.
+- Restored the two-line "Last updated" tooltip while using normal text weight for the tooltip label.
+
+---
+
+## 0.2.23 — 2026-05-01
+
+### Fixed
+
+- Polished Flow Hub split detail and queue behaviour.
+- Improved Flow Hub UI consistency around status chips, detail state, and queue refreshes.
+
+---
+
+## 0.2.22 — 2026-05-01
+
+### Changed
+
+- Shortened due-date labels in the Flow Hub queue.
+- Added rich due-date tooltips so compact labels still expose the full due context.
+- Refined the ToDo form Flow Hub navigation button.
+
+---
+
+## 0.2.21 — 2026-04-30
+
+### Changed
+
+- Redesigned the Flow Hub status bar.
+- Extended Flow Hub velocity/throughput metrics to a 30-day window.
+- Updated the velocity sparkline to match the longer reporting window.
+
+---
+
+## 0.2.20 — 2026-04-30
+
+### Fixed
+
+- Refined Flow Hub tooltip behaviour.
+- Improved Flow Hub status chip styling and interaction polish.
+
+---
+
+## 0.2.19 — 2026-04-30
+
+### Fixed
+
+- Replaced child-ToDo fan-out with permission-based multi-assignee visibility.
+- Added migration cleanup for older generated child ToDos.
+- Prevented duplicate ToDos from appearing as a side effect of multi-assignee workflows.
+
+---
+
+## 0.2.17 — 2026-04-29
+
+### Fixed
+
+- Improved Zoho sync error handling and diagnostics.
+- Added clearer sync notifications for success and failure paths.
+- Hardened token refresh handling when Zoho returns an error response.
+
+---
+
+## 0.2.16 — 2026-04-29
+
+### Changed
+
+- Overhauled the Zoho mapping user experience.
+- Fixed the Zoho tasks API key path used by the mapping workflow.
+
+---
+
+## 0.2.15 — 2026-04-29
+
+### Changed
+
+- Replaced separate Zoho personnel/project mapping tables with a shared Integration Mapping registry.
+- Added migration support to preserve existing Zoho mapping data.
+- Added inline Map/Unmap controls for personnel and project mapping.
+- Documented release tagging in the workflow docs.
+
+---
+
+## 0.2.14 — 2026-04-29
+
+### Added
+
+- Added Zoho Books timesheet sync integration.
+- Added Zoho Books settings, personnel mapping, and project mapping support.
+- Added fixtures for Zoho custom fields on Project and Timesheet Detail.
+- Added per-project task mapping UI.
+- Added ERPNext/Cubenet task auto-match and Zoho task auto-create support.
+- Added Zoho setup documentation and contributor workflow docs.
+
+### Fixed
+
+- Fixed OAuth token storage and refresh-token checks for Zoho Books settings.
+- Surfaced per-entry sync errors and success confirmations.
+- Added visible warnings when personnel mapping is missing.
+- Fixed custom field fixture import by including required `name` values.
+- Refined Flow Hub card padding, selected-card indicators, and split-view clipping.
+
+---
+
 ## 0.2.0 — 2026-04-19
 
 ### Breaking changes
