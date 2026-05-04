@@ -38,6 +38,7 @@ opero.FlowHubPage = class FlowHubPage {
 		this._init_tooltip();
 		$(this.page.main).empty();
 		this.$root = $("<div class='fh'></div>").appendTo(this.page.main);
+		this._setup_realtime_sync();
 		this.render_loading();
 		this.refresh();
 	}
@@ -423,7 +424,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-tooltip.is-visible { opacity: 1; }
 			.fh-tooltip__name {
 				font-size: 0.76rem;
-				font-weight: var(--weight-semibold);
+				font-weight: var(--weight-regular);
 				line-height: 1.3;
 			}
 			.fh-tooltip__roles {
@@ -657,11 +658,17 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid #e2e8f0;
 				border-radius: 8px;
 				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-				width: 200px;
+				width: 288px;
 				padding: 0.35rem;
 				display: none;
 			}
 			.fh-alloc-pop.is-open { display: block; }
+			.fh-alloc-pop__results {
+				margin-top: 0.25rem;
+				display: flex;
+				flex-direction: column;
+				gap: 0.15rem;
+			}
 			.fh-alloc-pop__input {
 				width: 100%;
 				border: 1px solid #e2e8f0;
@@ -672,7 +679,6 @@ opero.FlowHubPage = class FlowHubPage {
 				box-sizing: border-box;
 			}
 			.fh-alloc-pop__input:focus { border-color: #94a3b8; }
-			.fh-alloc-pop__results { margin-top: 0.25rem; }
 			.fh-alloc-pop__opt {
 				display: flex;
 				align-items: center;
@@ -688,6 +694,52 @@ opero.FlowHubPage = class FlowHubPage {
 				text-overflow: ellipsis;
 			}
 			.fh-alloc-pop__opt:hover { background: #f8fafc; }
+			.fh-alloc-pop__candidate {
+				display: flex;
+				align-items: center;
+				gap: 0.4rem;
+				padding: 0.22rem 0.1rem;
+			}
+			.fh-alloc-pop__candidate-name {
+				flex: 1;
+				min-width: 0;
+				font-size: 0.78rem;
+				color: #0f172a;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.fh-alloc-pop__candidate-actions {
+				display: flex;
+				align-items: center;
+				gap: 0.22rem;
+				flex-shrink: 0;
+			}
+			.fh-alloc-pop__assign-btn {
+				border: 1px solid #e2e8f0;
+				background: #ffffff;
+				border-radius: 5px;
+				padding: 0.22rem 0.42rem;
+				font-size: 0.68rem;
+				font-weight: var(--weight-medium);
+				color: #475569;
+				cursor: pointer;
+				transition: background 100ms, border-color 100ms, color 100ms;
+				white-space: nowrap;
+			}
+			.fh-alloc-pop__assign-btn:hover {
+				background: #f8fafc;
+				border-color: #cbd5e1;
+			}
+			.fh-alloc-pop__assign-btn--main {
+				color: #1d4ed8;
+				border-color: #bfdbfe;
+				background: #eff6ff;
+			}
+			.fh-alloc-pop__assign-btn--main:hover {
+				background: #dbeafe;
+				border-color: #93c5fd;
+			}
 			.fh-alloc-pop__empty {
 				padding: 0.4rem 0.45rem;
 				font-size: 0.75rem;
@@ -772,16 +824,11 @@ opero.FlowHubPage = class FlowHubPage {
 				height: 40px;
 				overflow: visible;
 			}
-			.fh-sparkline__day-labels {
-				display: flex;
-				justify-content: space-between;
-				margin-top: 0.15rem;
-			}
-			.fh-sparkline__day-labels span {
+			.fh-sparkline__period {
 				font-size: 0.65rem;
 				color: var(--text-muted);
-				text-align: center;
-				flex: 1;
+				text-align: right;
+				margin-top: 0.15rem;
 			}
 			.fh-trow {
 				display: flex;
@@ -858,6 +905,39 @@ opero.FlowHubPage = class FlowHubPage {
 			@media (max-width: 960px) {
 				.fh-body   { grid-template-columns: 1fr; }
 				.fh-counts { grid-template-columns: repeat(2, 1fr); }
+			}
+			@media (max-width: 1180px) {
+				.fh-status {
+					height: auto;
+					align-items: stretch;
+					flex-wrap: wrap;
+					padding: 0.35rem 0.3rem 0.25rem;
+				}
+				.fh-status__msg,
+				.fh-status__sep {
+					display: none;
+				}
+				.fh-chips {
+					order: 1;
+					flex: 1 1 100%;
+					overflow-x: auto;
+					overflow-y: hidden;
+					padding: 0 0.15rem;
+					scrollbar-width: none;
+					-ms-overflow-style: none;
+				}
+				.fh-chips::-webkit-scrollbar { display: none; }
+				.fh-status__time {
+					order: 2;
+					flex: 0 0 100%;
+					margin-left: 0;
+					padding: 0.32rem 0.45rem 0;
+					font-size: 0.68rem;
+					text-align: left;
+				}
+				.fh-chip {
+					padding: 0.28rem 0.48rem;
+				}
 			}
 			@media (max-width: 480px) {
 				.fh { padding: 0.5rem; }
@@ -966,6 +1046,21 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	// ── Data fetch ───────────────────────────────────────────────────
+
+	_setup_realtime_sync() {
+		if (!frappe.realtime) return;
+
+		frappe.realtime.doctype_subscribe("ToDo");
+		this._on_todo_list_update = (data) => {
+			if (!data || data.doctype !== "ToDo") return;
+			if (this.loading || this._saving) return;
+			clearTimeout(this._realtime_refresh_timer);
+			this._realtime_refresh_timer = setTimeout(() => {
+				this.refresh({ force: true });
+			}, 500);
+		};
+		frappe.realtime.on("list_update", this._on_todo_list_update);
+	}
 
 	refresh({ force = false } = {}) {
 		if (this.loading) return;
@@ -1176,7 +1271,7 @@ opero.FlowHubPage = class FlowHubPage {
 						const isSelected = this._selected_todo?.name === row.name;
 						return `
 						<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
-							<span role="button" class="fh-prio-btn" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}">${pc.icon}</span>
+							<span role="button" class="fh-prio-btn" aria-label="${prioTip}" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}">${pc.icon}</span>
 							<div class="fh-item__body">
 								<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
 							</div>
@@ -1286,33 +1381,28 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	_render_sparkline(dailyClosed) {
-		const days = dailyClosed || Array(7).fill(0);
+		const days = (dailyClosed && dailyClosed.length) ? dailyClosed : Array(30).fill(0);
 		const maxVal = Math.max(...days, 1);
 		const W = 200;
 		const H = 40;
-		const barW = Math.floor(W / days.length);
-		const gap = 3;
-		const innerW = barW - gap;
+		const n = days.length;
 
-		const bars = days.map((v, i) => {
-			const h = Math.max(Math.round((v / maxVal) * H), v > 0 ? 3 : 1);
-			const x = i * barW + Math.floor(gap / 2);
-			const y = H - h;
-			const opacity = v > 0 ? 1 : 0.18;
-			return `<rect x="${x}" y="${y}" width="${innerW}" height="${h}" rx="2" fill="#059669" opacity="${opacity}"/>`;
-		}).join("");
+		const pts = days.map((v, i) => {
+			const x = n > 1 ? (i / (n - 1)) * W : 0;
+			const y = H - (v / maxVal) * (H - 4);
+			return [+x.toFixed(1), +y.toFixed(1)];
+		});
 
-		const today = new Date();
-		const labels = days.map((_, i) => {
-			const d = new Date(today);
-			d.setDate(d.getDate() - (6 - i));
-			return `<span>${d.toLocaleDateString(undefined, { weekday: "narrow" })}</span>`;
-		}).join("");
+		const lineD = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x},${y}`).join(" ");
+		const areaD = `${lineD} L${W},${H} L0,${H} Z`;
 
 		return `
 			<div class="fh-sparkline-wrap">
-				<svg class="fh-sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>
-				<div class="fh-sparkline__day-labels">${labels}</div>
+				<svg class="fh-sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+					<path d="${areaD}" fill="#059669" fill-opacity="0.15"/>
+					<path d="${lineD}" fill="none" stroke="#059669" stroke-width="1.5" stroke-linejoin="round"/>
+				</svg>
+				<div class="fh-sparkline__period">30d</div>
 			</div>
 		`;
 	}
@@ -1477,7 +1567,7 @@ opero.FlowHubPage = class FlowHubPage {
 		if (!$pop.length) {
 			$pop = $(`<div id="fh-alloc-pop" class="fh-alloc-pop">
 				<div class="fh-alloc-pop__current"></div>
-				<input type="text" class="fh-alloc-pop__input" placeholder="${__("Add user…")}">
+				<input type="text" class="fh-alloc-pop__input" placeholder="${__("Add member…")}">
 				<div class="fh-alloc-pop__results"></div>
 			</div>`).appendTo(document.body);
 
@@ -1488,18 +1578,33 @@ opero.FlowHubPage = class FlowHubPage {
 				this._search_assignee_users($(e.target).val(), $pop, existing);
 			});
 
-			$pop.on("click", ".fh-alloc-pop__opt[data-user]", (e) => {
+			$pop.on("click", ".fh-alloc-pop__assign-btn[data-user]", (e) => {
 				e.stopPropagation();
 				const user = $(e.currentTarget).attr("data-user");
+				const fullName = $(e.currentTarget).attr("data-full-name") || user || "";
+				const image = $(e.currentTarget).attr("data-user-image") || "";
 				const name = $($pop.data("active-btn")).attr("data-add-alloc");
+				const addRole = $(e.currentTarget).attr("data-add-role") || "assignee";
 				if (!user || !name) return;
 				$pop.removeClass("is-open");
+				this._apply_local_assignee_update(name, {
+					user,
+					full_name: fullName,
+					image,
+					initials: this._initials(fullName || user),
+					roles: [],
+				}, addRole);
 				this._saving++;
 				frappe.call({
 					method: "opero.todo_dashboard.add_todo_assignee",
-					args: { todo_name: name, user },
+					args: {
+						todo_name: name,
+						user,
+						as_main_assignee: addRole === "main" ? 1 : 0,
+						expected_modified: this._row_modified(name),
+					},
 					callback: () => this._on_save_done(),
-					error: () => { this._saving = Math.max(0, this._saving - 1); },
+					error: () => this._on_save_error(),
 				});
 			});
 
@@ -1512,9 +1617,9 @@ opero.FlowHubPage = class FlowHubPage {
 				this._saving++;
 				frappe.call({
 					method: "opero.todo_dashboard.remove_todo_assignee",
-					args: { todo_name: name, user },
+					args: { todo_name: name, user, expected_modified: this._row_modified(name) },
 					callback: () => this._on_save_done(),
-					error: () => { this._saving = Math.max(0, this._saving - 1); },
+					error: () => this._on_save_error(),
 				});
 			});
 		}
@@ -1535,9 +1640,11 @@ opero.FlowHubPage = class FlowHubPage {
 			});
 			$curr.append(`<hr style="margin:0.25rem 0;border:none;border-top:1px solid #f1f5f9">`);
 		}
+		$pop.attr("data-has-assignees", current.length ? "1" : "0");
 
 		const rect = btn.getBoundingClientRect();
-		$pop.css({ top: rect.bottom + 4, left: Math.max(4, rect.right - 200) });
+		const popWidth = $pop.outerWidth() || 288;
+		$pop.css({ top: rect.bottom + 4, left: Math.max(4, rect.right - popWidth) });
 		$pop.data("active-btn", btn).addClass("is-open");
 		$pop.find(".fh-alloc-pop__input").val("").focus();
 		const existing = new Set(current.map(a => a.user));
@@ -1558,21 +1665,83 @@ opero.FlowHubPage = class FlowHubPage {
 					["user_type", "=", "System User"],
 					...(query ? [["full_name", "like", `%${query}%`]] : []),
 				],
-				fields: ["name", "full_name"],
+				fields: ["name", "full_name", "user_image"],
 				limit_page_length: 8,
 			},
 			callback: (r) => {
 				const users = (r.message || []).filter(u => !excludeSet.has(u.name));
 				const $results = $pop.find(".fh-alloc-pop__results").empty();
+				const hasAssignees = $pop.attr("data-has-assignees") === "1";
 				if (!users.length) {
 					$results.html(`<div class="fh-alloc-pop__empty">${__("No users found")}</div>`);
 					return;
 				}
-				users.forEach(u => {
-					$results.append(`<div class="fh-alloc-pop__opt" data-user="${this.esc(u.name)}">${this.esc(u.full_name || u.name)}</div>`);
-				});
-			},
+					users.forEach(u => {
+						const name = this.esc(u.full_name || u.name);
+						const user = this.esc(u.name);
+						const image = this.esc(u.user_image || "");
+						const assigneeBtn = hasAssignees
+							? `<button type="button" class="fh-alloc-pop__assign-btn" data-user="${user}" data-full-name="${name}" data-user-image="${image}" data-add-role="assignee">${__("Assignee")}</button>`
+							: "";
+						const mainLabel = hasAssignees ? __("Main") : __("Main Assignee");
+						$results.append(`
+							<div class="fh-alloc-pop__candidate">
+								<span class="fh-alloc-pop__candidate-name">${name}</span>
+								<span class="fh-alloc-pop__candidate-actions">
+									${assigneeBtn}
+									<button type="button" class="fh-alloc-pop__assign-btn fh-alloc-pop__assign-btn--main" data-user="${user}" data-full-name="${name}" data-user-image="${image}" data-add-role="main">${this.esc(mainLabel)}</button>
+								</span>
+							</div>
+						`);
+					});
+				},
+			});
+	}
+
+	_initials(name) {
+		const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+		if (!parts.length) return "?";
+		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+		return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+	}
+
+	_retag_assignees(assignees) {
+		const mainLabel = __("Main Assignee");
+		const assigneeLabel = __("Assignee");
+		return (assignees || []).map((a, idx) => {
+			const preserved = (a.roles || []).filter(role => role !== mainLabel && role !== assigneeLabel);
+			return {
+				...a,
+				roles: [...preserved, idx === 0 ? mainLabel : assigneeLabel],
+			};
 		});
+	}
+
+	_apply_local_assignee_update(todoName, assignee, addRole) {
+		const queue = this.snapshot.focus_queue || [];
+		const row = queue.find(item => item.name === todoName);
+		if (!row) return;
+
+		const current = Array.isArray(row.assignees) ? [...row.assignees] : [];
+		const existingIndex = current.findIndex(item => item.user === assignee.user);
+		if (existingIndex >= 0) {
+			current.splice(existingIndex, 1);
+		}
+
+		if (addRole === "main") {
+			current.unshift(assignee);
+		} else if (existingIndex === -1) {
+			current.push(assignee);
+		} else {
+			current.splice(existingIndex, 0, assignee);
+		}
+
+		const updated = this._retag_assignees(current);
+		row.assignees = updated;
+		if (this._selected_todo?.name === todoName) {
+			this._selected_todo.assignees = updated;
+		}
+		this.render();
 	}
 
 	_prio_config(priority) {
@@ -1612,10 +1781,14 @@ opero.FlowHubPage = class FlowHubPage {
 				const todoName = $($btn).attr("data-todo-name");
 				this._saving++;
 				frappe.call({
-					method: "frappe.client.set_value",
-					args: { doctype: "ToDo", name: todoName, fieldname: "priority", value: newPrio },
+					method: "opero.todo_dashboard.update_todo_from_flow_hub",
+					args: {
+						todo_name: todoName,
+						values: { priority: newPrio },
+						expected_modified: this._row_modified(todoName),
+					},
 					callback: () => this._on_save_done(),
-					error: () => { this._saving = Math.max(0, this._saving - 1); },
+					error: () => this._on_save_error(),
 				});
 			});
 		}
@@ -1782,14 +1955,28 @@ opero.FlowHubPage = class FlowHubPage {
 		}
 	}
 
+	_on_save_error() {
+		this._saving = Math.max(0, this._saving - 1);
+		this.refresh({ force: true });
+	}
+
 	_save_due_date(todoName, date) {
 		this._saving++;
 		frappe.call({
-			method: "frappe.client.set_value",
-			args: { doctype: "ToDo", name: todoName, fieldname: "date", value: date || null },
+			method: "opero.todo_dashboard.update_todo_from_flow_hub",
+			args: {
+				todo_name: todoName,
+				values: { date: date || null },
+				expected_modified: this._row_modified(todoName),
+			},
 			callback: () => this._on_save_done(),
-			error: () => { this._saving = Math.max(0, this._saving - 1); },
+			error: () => this._on_save_error(),
 		});
+	}
+
+	_row_modified(todoName) {
+		const row = (this.snapshot.focus_queue || []).find(r => r.name === todoName);
+		return row?.modified || "";
 	}
 
 	_render_detail(todo) {
@@ -1850,15 +2037,34 @@ opero.FlowHubPage = class FlowHubPage {
 	_fmt_time(value) {
 		if (!value) return "";
 		try {
-			const relative = frappe.datetime.comment_when(value);
-			const full = new Date(value).toLocaleString(undefined, {
+			const date = new Date(value);
+			const relative = this._compact_relative_time(date);
+			const full = date.toLocaleString(undefined, {
 				weekday: "short", month: "short", day: "numeric",
 				hour: "2-digit", minute: "2-digit", hour12: false,
 			});
-			return `<span data-tip="${this.esc(full)}">${__("Updated")} ${relative}</span>`;
+			return `<span data-tip-name="${this.esc(__("Last updated"))}" data-tip-roles="${this.esc(full)}">${this.esc(relative)}</span>`;
 		} catch {
 			return "";
 		}
+	}
+
+	_compact_relative_time(date) {
+		const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+		if (seconds < 45) return __("now");
+
+		const minutes = Math.round(seconds / 60);
+		if (minutes < 60) {
+			return minutes === 1 ? __("1 min ago") : __("{0} mins ago", [minutes]);
+		}
+
+		const hours = Math.round(minutes / 60);
+		if (hours < 24) {
+			return hours === 1 ? __("1 hr ago") : __("{0} hrs ago", [hours]);
+		}
+
+		const days = Math.round(hours / 24);
+		return days === 1 ? __("1 d ago") : __("{0} d ago", [days]);
 	}
 
 	esc(value) {
