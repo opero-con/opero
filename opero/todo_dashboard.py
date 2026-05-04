@@ -199,23 +199,93 @@ def get_completion_metrics(filters=None, default_days: int = 30) -> dict[str, fl
 
 
 @frappe.whitelist()
-def add_todo_assignee(todo_name: str, user: str):
+def update_todo_from_flow_hub(todo_name: str, values=None, expected_modified: str | None = None):
+	"""Update a live ToDo from Flow Hub after checking the row is still current."""
+	if isinstance(values, str):
+		values = frappe.parse_json(values) or {}
+
+	if not isinstance(values, dict):
+		frappe.throw(_("Nothing to update."))
+
+	doc = frappe.get_doc("ToDo", todo_name)
+	_assert_flow_hub_todo_is_current(doc, expected_modified)
+
+	allowed_fields = {"date", "priority", "status"}
+	unknown_fields = set(values) - allowed_fields
+	if unknown_fields:
+		frappe.throw(_("Flow Hub cannot update: {0}").format(", ".join(sorted(unknown_fields))))
+
+	if "date" in values:
+		doc.date = values.get("date") or None
+
+	if "priority" in values:
+		doc.priority = values.get("priority") or None
+
+	if "status" in values:
+		status = cstr(values.get("status")).strip()
+		if status and status not in (*ACTIVE_STATUSES, *COMPLETED_STATUSES):
+			frappe.throw(_("Unsupported ToDo status: {0}").format(status))
+		doc.status = status
+
+	doc.save(ignore_permissions=True)
+	return {"success": True, "modified": cstr(doc.modified), "status": doc.status}
+
+
+@frappe.whitelist()
+def add_todo_assignee(todo_name: str, user: str, as_main_assignee: int = 0, expected_modified: str | None = None):
 	"""Add a user to a ToDo's assignees list and save."""
 	doc = frappe.get_doc("ToDo", todo_name)
-	existing = [row.user for row in (doc.custom_assignees or [])]
-	if user not in existing:
-		doc.append("custom_assignees", {"user": user})
-		doc.save(ignore_permissions=True)
+	_assert_flow_hub_todo_is_current(doc, expected_modified)
+	existing = [row.user for row in (doc.custom_assignees or []) if row.user]
+	is_main = cint(as_main_assignee)
+
+	if user in existing:
+		if not is_main:
+			return {"success": True}
+		existing = [assignee for assignee in existing if assignee != user]
+
+	if is_main:
+		updated = [user, *existing]
+	else:
+		updated = [*existing, user]
+
+	_rebuild_todo_assignees(doc, updated)
+	doc.save(ignore_permissions=True)
 	return {"success": True}
 
 
 @frappe.whitelist()
-def remove_todo_assignee(todo_name: str, user: str):
+def remove_todo_assignee(todo_name: str, user: str, expected_modified: str | None = None):
 	"""Remove a user from a ToDo's assignees list and save."""
 	doc = frappe.get_doc("ToDo", todo_name)
-	doc.custom_assignees = [row for row in (doc.custom_assignees or []) if row.user != user]
+	_assert_flow_hub_todo_is_current(doc, expected_modified)
+	remaining = [row.user for row in (doc.custom_assignees or []) if row.user and row.user != user]
+	_rebuild_todo_assignees(doc, remaining)
 	doc.save(ignore_permissions=True)
 	return {"success": True}
+
+
+def _rebuild_todo_assignees(doc, users: list[str]):
+	seen = set()
+	ordered_users = []
+	for user in users:
+		if user and user not in seen:
+			seen.add(user)
+			ordered_users.append(user)
+
+	doc.set("custom_assignees", [])
+	for user in ordered_users:
+		doc.append("custom_assignees", {"user": user})
+
+	doc.allocated_to = ordered_users[0] if ordered_users else None
+
+
+def _assert_flow_hub_todo_is_current(doc, expected_modified: str | None = None):
+	if expected_modified and cstr(doc.modified) != cstr(expected_modified):
+		frappe.throw(_("This ToDo changed elsewhere. Refresh Flow Hub and try again."))
+
+	if doc.status not in ACTIVE_STATUSES:
+		frappe.throw(_("This ToDo is no longer active. Refresh Flow Hub."))
 
 
 @frappe.whitelist()
@@ -365,12 +435,6 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 	stale_days = max(1, cint(parsed.get("stale_days") or 7))
 	list_limit = max(3, min(20, cint(parsed.get("list_limit") or 10)))
 
-	cache_key = f"opero:flow_hub_v3:{frappe.session.user}:{window_days}:{stale_days}"
-	if not cint(force_refresh):
-		cached = frappe.cache.get_value(cache_key)
-		if cached:
-			return cached
-
 	today = getdate(nowdate())
 	due_soon_from = getdate(add_days(today, 1))
 	due_soon_to = getdate(add_days(today, window_days))
@@ -485,7 +549,6 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 		"updated_at": str(get_datetime()),
 	}
 
-	frappe.cache.set_value(cache_key, result, expires_in_sec=90)
 	return result
 
 
@@ -692,6 +755,7 @@ def _serialize_focus_row(
 		"name": name,
 		"title": get_todo_title(row) or name,
 		"status": status,
+		"modified": cstr(_get_value(row, "modified")),
 		"priority": priority,
 		"is_high_priority": priority in HIGH_PRIORITY_VALUES,
 		"due_date": str(due_date) if due_date else "",
@@ -820,7 +884,8 @@ def _get_daily_closed(from_date: date, to_date: date, user_scope_sql: str, user_
 	)
 
 	day_map = {str(_to_date(r.day_val) or ""): cint(r.total) for r in rows if r.day_val}
-	return [day_map.get(str(getdate(add_days(str(from_date), i))), 0) for i in range(7)]
+	n = (to_date - from_date).days + 1
+	return [day_map.get(str(getdate(add_days(str(from_date), i))), 0) for i in range(n)]
 
 
 def serialize_json(value) -> str:
@@ -917,5 +982,3 @@ def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 		AND ({alias}.custom_is_group_child IS NULL OR {alias}.custom_is_group_child = 0)""",
 		[current_user, current_user, current_user],
 	)
-
-
