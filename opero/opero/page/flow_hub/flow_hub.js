@@ -2037,16 +2037,45 @@ opero.FlowHubPage = class FlowHubPage {
 	_fmt_time(value) {
 		if (!value) return "";
 		try {
-			const date = new Date(value);
-			const relative = this._compact_relative_time(date);
-			const full = date.toLocaleString(undefined, {
-				weekday: "short", month: "short", day: "numeric",
-				hour: "2-digit", minute: "2-digit", hour12: false,
-			});
-			return `<span data-tip-name="${this.esc(__("Last updated"))}" data-tip-roles="${this.esc(full)}">${this.esc(relative)}</span>`;
+			const normalized = String(value)
+				.replace("T", " ")
+				.replace("Z", "")
+				.replace(/\.[0-9]+$/, "");
+
+			const parsed = this._to_user_datetime(value);
+			if (!parsed) return "";
+
+			const date = typeof parsed.toDate === "function" ? parsed.toDate() : parsed;
+			const relative = frappe.datetime && frappe.datetime.comment_when
+				? frappe.datetime.comment_when(normalized, true)
+				: this.esc(this._compact_relative_time(date));
+			const full = typeof parsed.format === "function"
+				? parsed.format("ddd, MMM D, HH:mm")
+				: date.toLocaleString(undefined, {
+					weekday: "short", month: "short", day: "numeric",
+					hour: "2-digit", minute: "2-digit", hour12: false,
+				});
+			return `<span data-tip-name="${this.esc(__("Last updated"))}" data-tip-roles="${this.esc(full)}">${relative}</span>`;
 		} catch {
 			return "";
 		}
+	}
+
+	_to_user_datetime(value) {
+		const normalized = String(value)
+			.replace("T", " ")
+			.replace("Z", "")
+			.replace(/\.[0-9]+$/, "");
+
+		if (frappe.datetime && frappe.datetime.convert_to_user_tz) {
+			const userMoment = frappe.datetime.convert_to_user_tz(normalized, false);
+			if (userMoment && typeof userMoment.isValid === "function" && userMoment.isValid()) {
+				return userMoment;
+			}
+		}
+
+		const fallback = new Date(value);
+		return Number.isNaN(fallback.getTime()) ? null : fallback;
 	}
 
 	_compact_relative_time(date) {
