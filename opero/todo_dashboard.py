@@ -104,10 +104,10 @@ def get_due_date_context(row) -> str:
 	if day_diff == 1:
 		return _("Due tomorrow")
 	if day_diff > 1:
-		return _("Due in {0} days").format(day_diff)
+		return _("Due in {0}d").format(day_diff)
 	if day_diff == -1:
-		return _("Overdue by 1 day")
-	return _("Overdue by {0} days").format(abs(day_diff))
+		return _("Overdue by 1d")
+	return _("Overdue by {0}d").format(abs(day_diff))
 
 
 def get_completion_vs_due_label(status: str, completion_date: date | None, due_date: date | None) -> str:

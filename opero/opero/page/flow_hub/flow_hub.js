@@ -18,6 +18,17 @@ opero.FlowHubPage = class FlowHubPage {
 		this._active_tab = null;
 		this._selected_todo = null;
 		this._saving = 0;
+		this._queue_layout_open_raf = null;
+		this._queue_layout_resize_raf = null;
+		this._on_window_resize = () => {
+			if (!this._selected_todo) return;
+			if (this._queue_layout_resize_raf) cancelAnimationFrame(this._queue_layout_resize_raf);
+			this._queue_layout_resize_raf = requestAnimationFrame(() => {
+				this._queue_layout_resize_raf = null;
+				this._apply_queue_layout_open_state();
+			});
+		};
+		window.addEventListener("resize", this._on_window_resize);
 		document.addEventListener("keydown", (e) => {
 			if (e.key !== "Escape") return;
 			$("#fh-prio-drop, #fh-due-pop, #fh-alloc-pop").removeClass("is-open");
@@ -50,15 +61,20 @@ opero.FlowHubPage = class FlowHubPage {
 			style.id = "fh-styles";
 			document.head.appendChild(style);
 		}
-		style.textContent = `
-			.fh {
-				padding: 0 0 1rem 0;
-				min-height: calc(100vh - 120px);
-				background: var(--bg-color);
-			}
+			style.textContent = `
+				.fh {
+					padding: 0 0 1rem 0;
+					min-height: calc(100vh - 120px);
+					background: var(--bg-color);
+				}
+				.fh,
+				.fh * {
+					font-family: var(--font-stack);
+					font-weight: var(--weight-regular) !important;
+				}
 
-			/* ── Status bar ─────────────────────────────────────── */
-			.fh-status {
+				/* ── Status bar ─────────────────────────────────────── */
+				.fh-status {
 				display: flex;
 				align-items: center;
 				height: 46px;
@@ -72,7 +88,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-status__msg {
 				flex-shrink: 0;
 				padding: 0 0.75rem;
-				font-size: 0.82rem;
+				font-size: var(--text-sm);
 				font-weight: var(--weight-semibold);
 				color: #64748b;
 				white-space: nowrap;
@@ -88,7 +104,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-status__time {
 				flex-shrink: 0;
 				padding: 0 0.75rem;
-				font-size: 0.7rem;
+				font-size: var(--text-tiny);
 				color: var(--text-muted);
 				white-space: nowrap;
 				margin-left: auto;
@@ -132,14 +148,14 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-chip.is-active .fh-chip__icon { color: var(--fh-accent, var(--primary)); }
 			.fh-chip__icon.is-accented { color: var(--fh-accent, var(--text-muted)); }
 			.fh-chip__label {
-				font-size: 0.72rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-medium);
 				color: var(--text-muted);
 				transition: color 120ms;
 			}
 			.fh-chip.is-active .fh-chip__label { color: var(--fh-accent, var(--primary)); }
 			.fh-chip__value {
-				font-size: 0.74rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-semibold);
 				line-height: 1;
 				color: var(--text-muted);
@@ -173,7 +189,7 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.65rem 0.75rem 0.35rem;
 			}
 			.fh-panel__title {
-				font-size: 0.69rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-semibold);
 				color: var(--text-muted);
 				text-transform: uppercase;
@@ -181,7 +197,7 @@ opero.FlowHubPage = class FlowHubPage {
 				margin: 0;
 			}
 			.fh-panel__sub {
-				font-size: 0.71rem;
+				font-size: var(--text-xs);
 				color: var(--text-muted);
 				margin: 0 0 0 auto;
 			}
@@ -210,7 +226,7 @@ opero.FlowHubPage = class FlowHubPage {
 				min-width: 0;
 			}
 			.fh-item__title {
-				font-size: 0.88rem;
+				font-size: var(--text-base);
 				font-weight: var(--weight-regular);
 				color: var(--text-color);
 				line-height: 1.3;
@@ -223,7 +239,7 @@ opero.FlowHubPage = class FlowHubPage {
 				width: 130px;
 				flex-shrink: 0;
 				text-align: left;
-				font-size: 0.71rem;
+				font-size: var(--text-xs);
 				color: var(--text-muted);
 			}
 
@@ -232,8 +248,10 @@ opero.FlowHubPage = class FlowHubPage {
 				display: flex;
 				gap: 0;
 				align-items: stretch;
-				transition: width 280ms ease-in-out, margin 280ms ease-in-out;
-				overflow-x: visible;
+				width: calc(100% + var(--fh-layout-extra, 0px));
+				min-width: 0;
+				transform: translateX(calc(-1 * var(--fh-layout-shift, 0px)));
+				transition: width 280ms ease-in-out, transform 280ms ease-in-out;
 			}
 			.fh-queue-layout > .fh-panel--queue {
 				flex: 1;
@@ -245,56 +263,128 @@ opero.FlowHubPage = class FlowHubPage {
 
 			/* ── Detail panel ───────────────────────────────────── */
 			.fh-detail {
-				width: 420px;
-				flex-shrink: 0;
+				flex: 0 0 clamp(300px, 34vw, 420px);
+				min-width: 260px;
+				max-width: 100%;
+				display: flex;
+				flex-direction: column;
 				background: var(--fg-color);
 				border: 1px solid var(--border-color);
 				border-radius: 0 10px 10px 0;
-				overflow-y: auto;
+				overflow: hidden;
+				box-shadow: inset -1px 0 0 var(--border-color);
+				transform: translateX(18px);
+				opacity: 0;
+				pointer-events: none;
+				transition: transform 280ms ease-in-out, opacity 190ms ease-in-out;
 			}
-			.fh-detail__bar {
+			.fh-queue-layout.is-detail-open .fh-detail {
+				transform: translateX(0);
+				opacity: 1;
+				pointer-events: auto;
+			}
+			.fh-detail__head {
+				flex: 0 0 auto;
+				padding: 0.65rem 0.75rem 0.5rem;
+				border-bottom: 1px solid #f1f5f9;
+				background: var(--fg-color);
+			}
+			.fh-detail__top {
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
-				padding: 0.45rem 0.65rem;
-				border-bottom: 1px solid #f1f5f9;
+				gap: 0.45rem;
+				margin-bottom: 0.48rem;
 			}
 			.fh-detail__close {
 				border: none;
 				background: none;
 				cursor: pointer;
-				font-size: 1rem;
+				font-size: var(--text-lg);
 				line-height: 1;
 				color: #94a3b8;
 				padding: 0.1rem 0.3rem;
 				border-radius: 4px;
+				flex-shrink: 0;
 			}
 			.fh-detail__close:hover { background: #f1f5f9; color: #475569; }
 			.fh-detail__open {
-				font-size: 0.73rem;
+				font-size: var(--text-xs);
 				color: var(--primary);
 				text-decoration: none;
+				font-weight: var(--weight-medium);
 			}
 			.fh-detail__open:hover { text-decoration: underline; }
-			.fh-detail__scroll { padding: 0.75rem; }
 			.fh-detail__title {
-				font-size: 0.88rem;
+				font-size: var(--text-lg);
 				font-weight: var(--weight-semibold);
 				color: #0f172a;
-				margin: 0 0 0.8rem;
-				line-height: 1.45;
+				margin: 0 0 0.55rem;
+				line-height: 1.4;
+			}
+			.fh-detail__meta {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.35rem;
+			}
+			.fh-detail__badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.2rem;
+				padding: 0.16rem 0.44rem;
+				border-radius: 999px;
+				font-size: var(--text-tiny);
+				font-weight: var(--weight-semibold);
+				letter-spacing: 0.01em;
+				border: 1px solid #e2e8f0;
+				background: #f8fafc;
+				color: #334155;
+			}
+			.fh-detail__badge.is-open { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+			.fh-detail__badge.is-in_progress { background: #ecfeff; color: #0f766e; border-color: #99f6e4; }
+			.fh-detail__badge.is-closed { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+			.fh-detail__badge.is-cancelled { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+			.fh-detail__badge.is-priority {
+				background: #fff7ed;
+				color: #b45309;
+				border-color: #fed7aa;
+			}
+			.fh-detail__badge.is-due {
+				border: none;
+				padding: 0;
+				background: none;
+				font-size: var(--text-tiny);
+			}
+			.fh-detail__body {
+				flex: 1 1 auto;
+				min-height: 0;
+				overflow: auto;
+				padding: 0.7rem 0.75rem;
+			}
+			.fh-detail__section {
+				margin-bottom: 0.82rem;
+			}
+			.fh-detail__section:last-child {
+				margin-bottom: 0;
+			}
+			.fh-detail__section-title {
+				font-size: var(--text-tiny);
+				font-weight: var(--weight-semibold);
+				letter-spacing: 0.06em;
+				text-transform: uppercase;
+				color: #94a3b8;
+				margin-bottom: 0.38rem;
 			}
 			.fh-detail__fields {
 				display: flex;
 				flex-direction: column;
-				gap: 0.45rem;
-				margin-bottom: 0.75rem;
+				gap: 0.38rem;
 			}
 			.fh-detail__row {
 				display: flex;
-				align-items: center;
+				align-items: flex-start;
 				gap: 0.5rem;
-				font-size: 0.76rem;
+				font-size: var(--text-xs);
 			}
 			.fh-detail__key {
 				width: 72px;
@@ -303,12 +393,68 @@ opero.FlowHubPage = class FlowHubPage {
 				font-weight: var(--weight-medium);
 			}
 			.fh-detail__val { color: #334155; }
+			.fh-detail__assignees {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.34rem;
+			}
+			.fh-detail__assignee {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.3rem;
+				padding: 0.17rem 0.34rem 0.17rem 0.2rem;
+				border-radius: 999px;
+				background: #f8fafc;
+				border: 1px solid #e2e8f0;
+				font-size: var(--text-xs);
+				color: #334155;
+			}
+			.fh-detail__desc-box {
+				border-top: 1px solid #f1f5f9;
+				padding-top: 0.58rem;
+			}
 			.fh-detail__desc {
-				font-size: 0.76rem;
+				font-size: var(--text-xs);
 				color: #475569;
 				line-height: 1.55;
+				white-space: pre-wrap;
+			}
+			.fh-detail__foot {
+				flex: 0 0 auto;
+				display: grid;
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				gap: 0.35rem;
+				padding: 0.6rem 0.75rem 0.72rem;
 				border-top: 1px solid #f1f5f9;
-				padding-top: 0.65rem;
+				background: var(--fg-color);
+			}
+			.fh-detail__act {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: 0.3rem;
+				padding: 0.34rem 0.5rem;
+				border-radius: 8px;
+				border: 1px solid #e2e8f0;
+				background: #f8fafc;
+				color: #334155;
+				font-size: var(--text-xs);
+				font-weight: var(--weight-medium);
+				cursor: pointer;
+				transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+			}
+			.fh-detail__act:hover {
+				background: #f1f5f9;
+				border-color: #cbd5e1;
+			}
+			.fh-detail__act.is-primary {
+				background: #ecfdf5;
+				color: #047857;
+				border-color: #a7f3d0;
+			}
+			.fh-detail__act.is-primary:hover {
+				background: #d1fae5;
+				border-color: #6ee7b7;
 			}
 			.fh-item.is-selected {
 				background: var(--bg-color);
@@ -325,7 +471,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-tag {
 				padding: 0.11rem 0.34rem;
 				border-radius: 4px;
-				font-size: 0.65rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-semibold);
 				text-transform: uppercase;
 				letter-spacing: 0.06em;
@@ -341,7 +487,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 4px;
 				background: #fff7ed;
 				color: #b45309;
-				font-size: 0.65rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-semibold);
 				text-transform: uppercase;
 				letter-spacing: 0.04em;
@@ -355,7 +501,7 @@ opero.FlowHubPage = class FlowHubPage {
 				width: 20px;
 				flex-shrink: 0;
 				background: none;
-				font-size: 0.88rem;
+				font-size: var(--text-base);
 				font-weight: var(--weight-semibold);
 				cursor: pointer;
 				padding: 0;
@@ -385,17 +531,17 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.35rem 0.55rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.78rem;
+				font-size: var(--text-sm);
 				font-weight: var(--weight-medium);
 				color: #0f172a;
 				transition: background 100ms;
 			}
 			.fh-prio-drop__opt:hover { background: #f8fafc; }
 			.fh-prio-drop__opt.is-current { background: #f0fdf4; }
-			.fh-prio-drop__check { display: none; margin-left: auto; color: #059669; font-size: 0.78rem; }
+			.fh-prio-drop__check { display: none; margin-left: auto; color: #059669; font-size: var(--text-sm); }
 			.fh-prio-drop__opt.is-current .fh-prio-drop__check { display: inline; }
 			.fh-prio-drop__icon {
-				font-size: 0.75rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-semibold);
 				width: 14px;
 				text-align: center;
@@ -411,7 +557,7 @@ opero.FlowHubPage = class FlowHubPage {
 				z-index: 9999;
 				background: #1e293b;
 				color: #f8fafc;
-				font-size: 0.72rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-medium);
 				padding: 0.3rem 0.6rem;
 				border-radius: 5px;
@@ -423,12 +569,12 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-tooltip.is-visible { opacity: 1; }
 			.fh-tooltip__name {
-				font-size: 0.76rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-regular);
 				line-height: 1.3;
 			}
 			.fh-tooltip__roles {
-				font-size: 0.67rem;
+				font-size: var(--text-tiny);
 				color: #94a3b8;
 				margin-top: 0.18rem;
 			}
@@ -450,7 +596,7 @@ opero.FlowHubPage = class FlowHubPage {
 
 			.fh-empty {
 				padding: 1.2rem 0.75rem;
-				font-size: 0.8rem;
+				font-size: var(--text-sm);
 				color: #94a3b8;
 				text-align: center;
 			}
@@ -479,7 +625,7 @@ opero.FlowHubPage = class FlowHubPage {
 				height: 22px;
 				border-radius: 50%;
 				border: 2px solid #ffffff;
-				font-size: 0.6rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
@@ -496,7 +642,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 50%;
 				border: 2px solid #ffffff;
 				margin-left: -6px;
-				font-size: 0.58rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
@@ -518,7 +664,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-due-btn:hover { background: #f1f5f9; }
 			.fh-due-btn--empty {
 				color: #cbd5e1;
-				font-size: 0.68rem;
+				font-size: var(--text-tiny);
 			}
 			.fh-due-btn--empty:hover { color: #94a3b8; background: #f1f5f9; }
 			.fh-due-btn--overdue   { color: #ef4444; }
@@ -553,7 +699,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: none;
 				border: none;
 				cursor: pointer;
-				font-size: 1rem;
+				font-size: var(--text-lg);
 				line-height: 1;
 				padding: 0.15rem 0.35rem;
 				border-radius: 4px;
@@ -561,7 +707,7 @@ opero.FlowHubPage = class FlowHubPage {
 				transition: background 100ms;
 			}
 			.fh-cal__nav-btn:hover { background: #f1f5f9; }
-			.fh-cal__month { font-size: 0.8rem; font-weight: var(--weight-semibold); color: #0f172a; }
+			.fh-cal__month { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: #0f172a; }
 			.fh-cal__grid {
 				display: grid;
 				grid-template-columns: repeat(7, 1fr);
@@ -569,14 +715,14 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-cal__dow {
 				text-align: center;
-				font-size: 0.62rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-semibold);
 				color: #94a3b8;
 				padding: 0.15rem 0 0.25rem;
 			}
 			.fh-cal__day {
 				text-align: center;
-				font-size: 0.75rem;
+				font-size: var(--text-xs);
 				padding: 0.22rem 0;
 				border-radius: 4px;
 				cursor: pointer;
@@ -604,14 +750,14 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.3rem 0.45rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.75rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-medium);
 				color: #0f172a;
 				transition: background 100ms;
 				white-space: nowrap;
 			}
 			.fh-due-pop__short:hover { background: #f8fafc; }
-			.fh-due-pop__short-day { color: #94a3b8; font-size: 0.68rem; margin-left: 0.25rem; }
+			.fh-due-pop__short-day { color: #94a3b8; font-size: var(--text-tiny); margin-left: 0.25rem; }
 			.fh-due-pop__clear {
 				grid-column: 1 / -1;
 				display: flex;
@@ -621,7 +767,7 @@ opero.FlowHubPage = class FlowHubPage {
 				margin-top: 0.05rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.75rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-medium);
 				color: #94a3b8;
 				transition: background 100ms;
@@ -674,7 +820,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid #e2e8f0;
 				border-radius: 5px;
 				padding: 0.3rem 0.5rem;
-				font-size: 0.78rem;
+				font-size: var(--text-sm);
 				outline: none;
 				box-sizing: border-box;
 			}
@@ -686,7 +832,7 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.32rem 0.45rem;
 				border-radius: 5px;
 				cursor: pointer;
-				font-size: 0.78rem;
+				font-size: var(--text-sm);
 				color: #0f172a;
 				transition: background 100ms;
 				white-space: nowrap;
@@ -703,7 +849,7 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-alloc-pop__candidate-name {
 				flex: 1;
 				min-width: 0;
-				font-size: 0.78rem;
+				font-size: var(--text-sm);
 				color: #0f172a;
 				white-space: nowrap;
 				overflow: hidden;
@@ -720,7 +866,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: #ffffff;
 				border-radius: 5px;
 				padding: 0.22rem 0.42rem;
-				font-size: 0.68rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-medium);
 				color: #475569;
 				cursor: pointer;
@@ -742,7 +888,7 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-alloc-pop__empty {
 				padding: 0.4rem 0.45rem;
-				font-size: 0.75rem;
+				font-size: var(--text-xs);
 				color: #94a3b8;
 				text-align: center;
 			}
@@ -751,7 +897,7 @@ opero.FlowHubPage = class FlowHubPage {
 				flex-shrink: 0;
 				padding: 0 0.2rem;
 				color: #94a3b8;
-				font-size: 0.85rem;
+				font-size: var(--text-base);
 				line-height: 1;
 				cursor: pointer;
 			}
@@ -782,18 +928,18 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-risk-row[data-risk-key="no_due_date"] .fh-risk-row__value:not(.is-zero)   { color: #d97706; }
 			.fh-risk-row__label {
 				flex: 1;
-				font-size: 0.79rem;
+				font-size: var(--text-sm);
 				color: #475569;
 			}
 			.fh-risk-row__value {
-				font-size: 0.92rem;
+				font-size: var(--text-base);
 				font-weight: var(--weight-semibold);
 				color: #0f172a;
 				min-width: 1.4rem;
 				text-align: right;
 			}
 			.fh-risk-row__value.is-zero { color: #cbd5e1; }
-			.fh-risk-row__arrow { font-size: 0.7rem; color: #cbd5e1; }
+			.fh-risk-row__arrow { font-size: var(--text-tiny); color: #cbd5e1; }
 			.fh-divider {
 				border: none;
 				border-top: 1px solid #f8fafc;
@@ -805,7 +951,7 @@ opero.FlowHubPage = class FlowHubPage {
 				margin: 0.5rem 0.6rem 0;
 			}
 			.fh-health-section-title {
-				font-size: 0.7rem;
+				font-size: var(--text-tiny);
 				font-weight: var(--weight-semibold);
 				color: var(--text-muted);
 				text-transform: uppercase;
@@ -825,7 +971,7 @@ opero.FlowHubPage = class FlowHubPage {
 				overflow: visible;
 			}
 			.fh-sparkline__period {
-				font-size: 0.65rem;
+				font-size: var(--text-tiny);
 				color: var(--text-muted);
 				text-align: right;
 				margin-top: 0.15rem;
@@ -835,7 +981,7 @@ opero.FlowHubPage = class FlowHubPage {
 				align-items: center;
 				gap: 0.5rem;
 				padding: 0.28rem 0;
-				font-size: 0.79rem;
+				font-size: var(--text-sm);
 			}
 			.fh-trow__label {
 				width: 4rem;
@@ -868,7 +1014,7 @@ opero.FlowHubPage = class FlowHubPage {
 				margin-top: 0.45rem;
 				padding: 0.32rem 0.5rem;
 				border-radius: 7px;
-				font-size: 0.76rem;
+				font-size: var(--text-xs);
 				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
@@ -876,7 +1022,7 @@ opero.FlowHubPage = class FlowHubPage {
 				gap: 0.5rem;
 			}
 			.fh-net__main { flex: 1; text-align: center; }
-			.fh-net__prev { font-size: 0.7rem; font-weight: var(--weight-medium); opacity: 0.8; white-space: nowrap; }
+			.fh-net__prev { font-size: var(--text-tiny); font-weight: var(--weight-medium); opacity: 0.8; white-space: nowrap; }
 			.fh-net.is-ahead   { background: #f0fdf4; color: #047857; }
 			.fh-net.is-behind  { background: #fff1f2; color: #be123c; }
 			.fh-net.is-neutral { background: #f8fafc; color: #64748b; }
@@ -894,7 +1040,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: #fff1f2;
 				color: #9f1239;
 				border-radius: 10px;
-				font-size: 0.82rem;
+				font-size: var(--text-sm);
 			}
 			@keyframes fh-shimmer {
 				0%   { background-position: 200% 0; }
@@ -907,6 +1053,27 @@ opero.FlowHubPage = class FlowHubPage {
 				.fh-counts { grid-template-columns: repeat(2, 1fr); }
 			}
 			@media (max-width: 1180px) {
+				.fh-queue-layout {
+					flex-direction: column;
+					width: 100%;
+					transform: none;
+					transition: none;
+				}
+				.fh-queue-layout > .fh-panel--queue {
+					border-radius: 10px 10px 0 0;
+				}
+				.fh-detail {
+					flex: 0 0 auto;
+					width: 100%;
+					min-width: 0;
+					border-top: none;
+					border-radius: 0 0 10px 10px;
+					max-height: 45vh;
+					transform: none;
+					opacity: 1;
+					pointer-events: auto;
+					transition: none;
+				}
 				.fh-status {
 					height: auto;
 					align-items: stretch;
@@ -932,7 +1099,7 @@ opero.FlowHubPage = class FlowHubPage {
 					flex: 0 0 100%;
 					margin-left: 0;
 					padding: 0.32rem 0.45rem 0;
-					font-size: 0.68rem;
+					font-size: var(--text-tiny);
 					text-align: left;
 				}
 				.fh-chip {
@@ -941,6 +1108,8 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			@media (max-width: 480px) {
 				.fh { padding: 0.5rem; }
+				.fh-detail__foot { grid-template-columns: 1fr; }
+				.fh-detail__key { width: 64px; }
 			}
 		`;
 	}
@@ -1113,33 +1282,47 @@ opero.FlowHubPage = class FlowHubPage {
 		`);
 		this._bind_events(s, activeQueue);
 		if (this._selected_todo) {
-			requestAnimationFrame(() => this._apply_queue_layout_stretch());
+			if (this._queue_layout_open_raf) cancelAnimationFrame(this._queue_layout_open_raf);
+			this._queue_layout_open_raf = requestAnimationFrame(() => {
+				this._queue_layout_open_raf = null;
+				this._apply_queue_layout_open_state();
+			});
 		}
 	}
 
-	_apply_queue_layout_stretch() {
+	_apply_queue_layout_open_state() {
 		const $layout = this.$root.find(".fh-queue-layout");
 		if (!$layout.length) return;
 		const layout = $layout[0];
+		layout.classList.add("is-detail-open");
+		if (window.matchMedia("(max-width: 1180px)").matches) {
+			layout.style.setProperty("--fh-layout-extra", "0px");
+			layout.style.setProperty("--fh-layout-shift", "0px");
+			return;
+		}
 
-		layout.style.width = "";
-		layout.style.marginLeft = "";
-		layout.style.marginRight = "";
-
+		layout.style.setProperty("--fh-layout-extra", "0px");
+		layout.style.setProperty("--fh-layout-shift", "0px");
 		const rect = layout.getBoundingClientRect();
-		const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-		const rightInset = 1;
-		const targetRight = viewportWidth - rightInset;
-		const extraLeft = Math.max(0, rect.left);
-		const extraRight = Math.max(0, targetRight - rect.right);
-		const overflowRight = Math.max(0, rect.right - targetRight);
-		const totalExtra = extraLeft + extraRight;
-		const shiftLeft = extraLeft + overflowRight;
-		if (totalExtra <= 0 && shiftLeft <= 0) return;
-
-		layout.style.width = `calc(100% + ${totalExtra}px)`;
-		layout.style.marginLeft = `${-shiftLeft}px`;
-		layout.style.marginRight = `${-extraRight}px`;
+		const mainSection = this.page.main?.closest(".layout-main-section");
+		const host = mainSection || layout.parentElement;
+		const hostRect = host?.getBoundingClientRect ? host.getBoundingClientRect() : rect;
+		const hostClientRight = host ? hostRect.left + host.clientWidth : hostRect.right;
+		const safeLeft = Math.max(0, Math.round(hostRect.left + 1));
+		const safeRight = Math.max(
+			0,
+			Math.round(
+				Math.min(
+					hostClientRight - 2,
+					(document.documentElement.clientWidth || window.innerWidth || hostRect.right) - 2
+				)
+			)
+		);
+		const spareLeft = Math.max(0, Math.round(rect.left - safeLeft));
+		const spareRight = Math.max(0, Math.round(safeRight - rect.right));
+		const overflowRight = Math.max(0, Math.round(rect.right - safeRight));
+		layout.style.setProperty("--fh-layout-extra", `${spareLeft + spareRight}px`);
+		layout.style.setProperty("--fh-layout-shift", `${spareLeft + overflowRight}px`);
 	}
 
 	_queue_for_tab(s, tab) {
@@ -1253,9 +1436,15 @@ opero.FlowHubPage = class FlowHubPage {
 			? queue
 					.map((row, i) => {
 						const band = row.urgency_band || "active";
-						const BAND_SHORT = { overdue: __("Overdue"), due_today: __("Due today"), due_soon: __("Due soon") };
+						const BAND_SHORT = { overdue: __("Overdue"), due_today: __("Today") };
 						const dueBandClass = band !== "active" ? `fh-due-btn--${band}` : "";
-						const shortLabel = BAND_SHORT[band] || row.due_label || "";
+						let shortLabel = BAND_SHORT[band] || row.due_label || "";
+						if (band === "due_soon" && row.due_date && frappe.datetime && frappe.datetime.get_diff) {
+							const daysUntil = Number(frappe.datetime.get_diff(row.due_date, frappe.datetime.get_today()));
+							if (Number.isFinite(daysUntil) && daysUntil > 0) {
+								shortLabel = __("Due in {0}d", [daysUntil]);
+							}
+						}
 						const tipDate = row.due_date
 							? new Date(row.due_date + "T00:00:00").toLocaleDateString(undefined, {
 								weekday: "short", month: "short", day: "numeric",
@@ -1263,7 +1452,7 @@ opero.FlowHubPage = class FlowHubPage {
 							: "";
 						const tipDetail = row.due_label || "";
 						const dueLabel = shortLabel
-							? `<span role="button" class="fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${tipDate ? ` data-tip-name="${this.esc(tipDate)}"` : ""}${tipDetail ? ` data-tip-roles="${this.esc(tipDetail)}"` : ""}>${this.esc(shortLabel)}</span>`
+							? `<span role="button" class="fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(row.name)}" data-due-date="${this.esc(row.due_date || '')}"${tipDetail ? ` data-tip-name="${this.esc(tipDetail)}"` : ""}${tipDate ? ` data-tip-roles="${this.esc(tipDate)}"` : ""}>${this.esc(shortLabel)}</span>`
 							: `<span role="button" class="fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(row.name)}" data-due-date="" title="${this.esc(__('Set due date'))}">📅</span>`;
 						const avatars = this._render_avatars(row.assignees, row.name);
 						const pc = this._prio_config(row.priority);
@@ -1488,9 +1677,16 @@ opero.FlowHubPage = class FlowHubPage {
 			this.render();
 		});
 
-		this.$root.find("[data-prio-index]").on("click", (e) => {
+		this.$root.find("[data-prio-index], [data-detail-prio]").on("click", (e) => {
 			e.stopPropagation();
 			this._open_prio_dropdown(e.currentTarget);
+		});
+
+		this.$root.find("[data-detail-action='done']").on("click", (e) => {
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-todo-name");
+			if (!todoName) return;
+			this._mark_todo_done(todoName);
 		});
 
 		this.$root.find("[data-add-alloc]").on("click", (e) => {
@@ -1974,6 +2170,20 @@ opero.FlowHubPage = class FlowHubPage {
 		});
 	}
 
+	_mark_todo_done(todoName) {
+		this._saving++;
+		frappe.call({
+			method: "opero.todo_dashboard.update_todo_from_flow_hub",
+			args: {
+				todo_name: todoName,
+				values: { status: "Closed" },
+				expected_modified: this._row_modified(todoName),
+			},
+			callback: () => this._on_save_done(),
+			error: () => this._on_save_error(),
+		});
+	}
+
 	_row_modified(todoName) {
 		const row = (this.snapshot.focus_queue || []).find(r => r.name === todoName);
 		return row?.modified || "";
@@ -1985,40 +2195,68 @@ opero.FlowHubPage = class FlowHubPage {
 		const status    = todo.status || "";
 		const priority  = todo.priority || "";
 		const dueLabel  = todo.due_label || "";
+		const dueDate   = todo.due_date || "";
 		const band      = todo.urgency_band || "";
 		const dueBandClass = band && band !== "active" ? `fh-due-btn--${band}` : "";
 		const desc      = (todo.description || "").trim();
 		const assignees = todo.assignees || [];
 
 		const priorityPc = this._prio_config(priority);
+		const statusClass = status ? ` is-${String(status).toLowerCase().replace(/\s+/g, "_")}` : "";
 		const assigneeList = assignees.length
 			? assignees.map(a => `<span class="fh-detail__assignee">
-					<span class="fh-avatar" style="width:18px;height:18px;font-size:0.55rem;background:${this._avatar_color(a.user)}">${this.esc(a.initials)}</span>
-					${this.esc(a.full_name || a.user)}
-				</span>`).join("")
+						<span class="fh-avatar" style="width:18px;height:18px;font-size: var(--text-tiny);background:${this._avatar_color(a.user)}">${this.esc(a.initials)}</span>
+						${this.esc(a.full_name || a.user)}
+					</span>`).join("")
 			: `<span style="color:#94a3b8">${__("Unassigned")}</span>`;
 
 		const rows = [
 			{ key: __("Status"),   val: `<span style="color:#334155">${this.esc(status)}</span>` },
 			priority ? { key: __("Priority"), val: `<span style="color:${priorityPc.color}">${priorityPc.icon} ${this.esc(priority)}</span>` } : null,
 			dueLabel ? { key: __("Due"),      val: `<span class="fh-due-btn ${dueBandClass}" style="cursor:default">${this.esc(dueLabel)}</span>` } : null,
-			{ key: __("Assigned"), val: `<span class="fh-detail__assignees">${assigneeList}</span>` },
+			{ key: __("Assigned"), val: `${assignees.length ? this.esc(String(assignees.length)) : "0"}` },
 		].filter(Boolean);
 
 		return `<div class="fh-detail">
-			<div class="fh-detail__bar">
-				<a class="fh-detail__open" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
-				<button type="button" class="fh-detail__close" data-close-detail title="${__("Close")}">✕</button>
-			</div>
-			<div class="fh-detail__scroll">
-				<h3 class="fh-detail__title">${this.esc(title)}</h3>
-				<div class="fh-detail__fields">
-					${rows.map(r => `<div class="fh-detail__row">
-						<span class="fh-detail__key">${r.key}</span>
-						<span class="fh-detail__val">${r.val}</span>
-					</div>`).join("")}
+			<div class="fh-detail__head">
+				<div class="fh-detail__top">
+					<a class="fh-detail__open" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
+					<button type="button" class="fh-detail__close" data-close-detail title="${__("Close")}">✕</button>
 				</div>
-				${desc ? `<div class="fh-detail__desc">${desc}</div>` : ""}
+				<h3 class="fh-detail__title">${this.esc(title)}</h3>
+				<div class="fh-detail__meta">
+					${status ? `<span class="fh-detail__badge${statusClass}">${this.esc(status)}</span>` : ""}
+					${priority ? `<span class="fh-detail__badge is-priority">${this.esc(priorityPc.icon)} ${this.esc(priority)}</span>` : ""}
+					${dueLabel
+						? `<span role="button" class="fh-detail__badge is-due fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${this.esc(dueLabel)}</span>`
+						: `<span role="button" class="fh-detail__badge is-due fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(name)}" data-due-date="">${__("Set due")}</span>`
+					}
+				</div>
+			</div>
+			<div class="fh-detail__body">
+				<div class="fh-detail__section">
+					<div class="fh-detail__section-title">${__("Details")}</div>
+					<div class="fh-detail__fields">
+						${rows.map(r => `<div class="fh-detail__row">
+							<span class="fh-detail__key">${r.key}</span>
+							<span class="fh-detail__val">${r.val}</span>
+						</div>`).join("")}
+					</div>
+				</div>
+				<div class="fh-detail__section">
+					<div class="fh-detail__section-title">${__("Assigned")}</div>
+					<div class="fh-detail__assignees">${assigneeList}</div>
+				</div>
+				<div class="fh-detail__section fh-detail__desc-box">
+					<div class="fh-detail__section-title">${__("Description")}</div>
+					<div class="fh-detail__desc">${this.esc(desc || __("No description yet."))}</div>
+				</div>
+			</div>
+			<div class="fh-detail__foot">
+				<button type="button" class="fh-detail__act is-primary" data-detail-action="done" data-todo-name="${this.esc(name)}">${__("Mark done")}</button>
+				<button type="button" class="fh-detail__act" data-add-alloc="${this.esc(name)}">${__("Assign")}</button>
+				<button type="button" class="fh-detail__act" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${dueDate ? __("Change due") : __("Set due")}</button>
+				<button type="button" class="fh-detail__act" data-detail-prio="1" data-todo-name="${this.esc(name)}">${__("Priority")}</button>
 			</div>
 		</div>`;
 	}

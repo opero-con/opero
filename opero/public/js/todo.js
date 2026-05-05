@@ -64,12 +64,12 @@ const getDueDateDescriptor = (doc) => {
 		return { label: __("Due tomorrow"), tone: "warning" }
 	}
 	if (dayDiff > 1) {
-		return { label: __("Due in {0} days", [dayDiff]), tone: "success" }
+		return { label: __("Due in {0}d", [dayDiff]), tone: "success" }
 	}
 	if (dayDiff === -1) {
-		return { label: __("Overdue by 1 day"), tone: "danger" }
+		return { label: __("Overdue by 1d"), tone: "danger" }
 	}
-	return { label: __("Overdue by {0} days", [Math.abs(dayDiff)]), tone: "danger" }
+	return { label: __("Overdue by {0}d", [Math.abs(dayDiff)]), tone: "danger" }
 }
 
 const setDueDateDescription = (frm) => {
