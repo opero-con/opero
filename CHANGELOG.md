@@ -1,13 +1,9 @@
 # Changelog
 
-## 0.2.24 — 2026-05-04
+## 0.2.25 — 2026-05-05
 
 ### Fixed
 
-- Kept Flow Hub synchronized with the live ToDo document state by removing the cached snapshot path.
-- Added stale-write protection for Flow Hub edits using each ToDo row's `modified` timestamp.
-- Routed Flow Hub priority, due date, and assignee changes through server-side ToDo saves so form views and database state stay aligned.
-- Subscribed Flow Hub to Frappe realtime ToDo list updates so form-side changes refresh the hub promptly.
 - Restored reliable relative-time progression in the Flow Hub status bar after the tooltip redesign by reusing Frappe's native `comment_when` timestamp rendering (`now` -> `1 min` -> `2 mins` ...).
 - Fixed a regression where "Last updated" could remain stuck at `now` instead of aging automatically.
 - Normalized server datetime parsing (`YYYY-MM-DD HH:mm:ss[.ffffff]`) before rendering relative labels to avoid browser parsing inconsistencies.
@@ -16,9 +12,23 @@
 
 ### Changed
 
+- Aligned status-bar recency behavior with core Frappe timestamp mechanics so future Flow Hub changes can depend on consistent relative-time refresh behavior.
+
+---
+
+## 0.2.24 — 2026-05-04
+
+### Fixed
+
+- Kept Flow Hub synchronized with the live ToDo document state by removing the cached snapshot path.
+- Added stale-write protection for Flow Hub edits using each ToDo row's `modified` timestamp.
+- Routed Flow Hub priority, due date, and assignee changes through server-side ToDo saves so form views and database state stay aligned.
+- Subscribed Flow Hub to Frappe realtime ToDo list updates so form-side changes refresh the hub promptly.
+
+### Changed
+
 - Shortened the Flow Hub status-bar timestamp to compact labels such as `1 min ago`.
 - Restored the two-line "Last updated" tooltip while using normal text weight for the tooltip label.
-- Aligned status-bar recency behavior with core Frappe timestamp mechanics so future Flow Hub changes can depend on consistent relative-time refresh behavior.
 
 ---
 
