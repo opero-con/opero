@@ -21,6 +21,26 @@ from frappe.utils.html_utils import unescape_html
 ACTIVE_STATUSES = ("Open", "In Progress")
 COMPLETED_STATUSES = ("Closed", "Cancelled")
 HIGH_PRIORITY_VALUES = {"High", "Urgent"}
+FLOW_HUB_EDITABLE_FIELDS = {
+	"date",
+	"priority",
+	"status",
+	"description",
+	"reference_type",
+	"reference_name",
+	"role",
+	"color",
+	"sender",
+	"assignment_rule",
+}
+FLOW_HUB_DETAIL_FIELDNAMES = (
+	"reference_type",
+	"reference_name",
+	"role",
+	"color",
+	"sender",
+	"assignment_rule",
+)
 
 
 def parse_multi_select(value) -> list[str]:
@@ -210,8 +230,7 @@ def update_todo_from_flow_hub(todo_name: str, values=None, expected_modified: st
 	doc = frappe.get_doc("ToDo", todo_name)
 	_assert_flow_hub_todo_is_current(doc, expected_modified)
 
-	allowed_fields = {"date", "priority", "status"}
-	unknown_fields = set(values) - allowed_fields
+	unknown_fields = set(values) - FLOW_HUB_EDITABLE_FIELDS
 	if unknown_fields:
 		frappe.throw(_("Flow Hub cannot update: {0}").format(", ".join(sorted(unknown_fields))))
 
@@ -226,6 +245,13 @@ def update_todo_from_flow_hub(todo_name: str, values=None, expected_modified: st
 		if status and status not in (*ACTIVE_STATUSES, *COMPLETED_STATUSES):
 			frappe.throw(_("Unsupported ToDo status: {0}").format(status))
 		doc.status = status
+
+	if "description" in values:
+		doc.description = cstr(values.get("description") or "").strip() or None
+
+	for fieldname in ("reference_type", "reference_name", "role", "color", "sender", "assignment_rule"):
+		if fieldname in values:
+			doc.set(fieldname, cstr(values.get(fieldname) or "").strip() or None)
 
 	doc.save(ignore_permissions=True)
 	return {"success": True, "modified": cstr(doc.modified), "status": doc.status}
@@ -263,6 +289,23 @@ def remove_todo_assignee(todo_name: str, user: str, expected_modified: str | Non
 	_rebuild_todo_assignees(doc, remaining)
 	doc.save(ignore_permissions=True)
 	return {"success": True}
+
+
+@frappe.whitelist()
+def get_todo_detail_context(todo_name: str):
+	"""Return full detail panel payload for a ToDo row."""
+	doc = frappe.get_doc("ToDo", todo_name)
+	doc.check_permission("read")
+
+	return {
+		"description": cstr(doc.description or ""),
+		"description_plain": extract_plain_text(doc.description),
+		"tags": _get_todo_tags([todo_name]).get(todo_name, []),
+		"attachments": _get_todo_attachments(todo_name),
+		"activity": _get_todo_activity(todo_name),
+		"field_values": _get_todo_detail_field_values(doc),
+		"modified": cstr(doc.modified),
+	}
 
 
 def _rebuild_todo_assignees(doc, users: list[str]):
@@ -762,7 +805,84 @@ def _serialize_focus_row(
 		"due_label": get_due_date_context(row),
 		"urgency_band": urgency_band,
 		"assignees": assignees,
+		"description": cstr(_get_value(row, "description") or ""),
 	}
+
+
+def _get_todo_tags(todo_names: list[str]) -> dict[str, list[str]]:
+	if not todo_names:
+		return {}
+
+	rows = frappe.get_all(
+		"Tag Link",
+		filters={"document_type": "ToDo", "document_name": ("in", todo_names)},
+		fields=["document_name", "tag"],
+		order_by="creation asc",
+		limit_page_length=0,
+	)
+
+	tag_map: dict[str, list[str]] = defaultdict(list)
+	for row in rows:
+		tag_name = cstr(row.tag).strip()
+		if tag_name and tag_name not in tag_map[row.document_name]:
+			tag_map[row.document_name].append(tag_name)
+
+	return tag_map
+
+
+def _get_todo_attachments(todo_name: str) -> list[dict]:
+	rows = frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": "ToDo", "attached_to_name": todo_name},
+		fields=["name", "file_name", "file_url", "is_private", "owner", "creation"],
+		order_by="creation desc",
+		limit_page_length=30,
+	)
+
+	return [
+		{
+			"name": cstr(row.name),
+			"file_name": cstr(row.file_name),
+			"file_url": cstr(row.file_url),
+			"is_private": cint(row.is_private),
+			"owner": cstr(row.owner),
+			"creation": cstr(row.creation),
+		}
+		for row in rows
+	]
+
+
+def _get_todo_activity(todo_name: str) -> list[dict]:
+	rows = frappe.get_all(
+		"Comment",
+		filters={"reference_doctype": "ToDo", "reference_name": todo_name},
+		fields=["name", "comment_type", "comment_by", "comment_email", "content", "owner", "creation"],
+		order_by="creation desc",
+		limit_page_length=40,
+	)
+
+	activity = []
+	for row in rows:
+		activity.append(
+			{
+				"name": cstr(row.name),
+				"type": cstr(row.comment_type or "Comment"),
+				"by": cstr(row.comment_by or row.comment_email or row.owner),
+				"content": extract_plain_text(row.content) or _("No details"),
+				"creation": cstr(row.creation),
+			}
+		)
+
+	return activity
+
+
+def _get_todo_detail_field_values(doc) -> dict[str, str]:
+	values = {}
+	for fieldname in FLOW_HUB_DETAIL_FIELDNAMES:
+		value = cstr(doc.get(fieldname) or "").strip()
+		if value:
+			values[fieldname] = value
+	return values
 
 
 def _get_initials(full_name: str) -> str:
