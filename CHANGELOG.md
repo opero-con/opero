@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.27 — 2026-05-06
+
+### Changed
+
+- Expanded Flow Hub detail interactions with in-panel editing for description, project reference, attachments, comments, and additional metadata fields.
+- Replaced the detail `Tags` section with a dedicated `Project` selector that auto-sets `reference_type = Project` when a project is chosen.
+- Refined detail actions and density by removing redundant top-bar assignment controls and detail-panel avatars.
+- Limited slide-over detail behavior to mobile widths only, while keeping tablet/desktop in split layout mode.
+- Restyled the due-date popover/calendar using Frappe CSS tokens and simplified Today/Tomorrow shortcut labels.
+
+### Fixed
+
+- Fixed activity timestamp rendering so relative times display as plain text instead of escaped HTML fragments.
+
+---
+
 ## 0.2.26 — 2026-05-06
 
 ### Changed
