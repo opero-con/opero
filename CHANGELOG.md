@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.26 — 2026-05-06
+
+### Changed
+
+- Revamped the Flow Hub detail card into a structured header/body/footer layout with in-panel actions.
+- Added direct detail actions for `Mark done`, `Assign`, `Set/Change due`, and `Priority`.
+- Refined queue/detail split behavior so the detail panel slides in while the queue shifts for better screen use.
+- Standardized Flow Hub typography to Frappe font and text tokens (`--font-stack`, `--text-*`, `--weight-*`).
+- Shortened due-date copy to compact day notation (`Xd`) in Flow Hub and ToDo due-date descriptors.
+
+### Fixed
+
+- Prevented the detail panel right border from clipping against page/container scroll edges.
+
+---
+
 ## 0.2.25 — 2026-05-05
 
 ### Fixed
