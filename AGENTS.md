@@ -81,9 +81,9 @@ After merging to `main`:
 
 ---
 
-## Post-Merge Bench Housekeeping
+## After Code Edits (Local Testing)
 
-Run these steps after every PR merge. Do not stop at code edits — always run and report the result.
+After editing code and before committing, apply changes to the local site so you can verify them. Do not stop at code edits — always run and report the result.
 
 ### Site selection
 - Do not hardcode a site name in commands.
@@ -106,12 +106,24 @@ Run these steps after every PR merge. Do not stop at code edits — always run a
    bench build --app opero
    ```
 
-4. **Restart**— always run:
+4. **Restart** — always run:
    ```bash
    bench restart
    ```
 
-> Also run `bench migrate` and `bench restart` before committing to verify changes locally first.
-
 ### Completion rule
 In the final response, explicitly confirm each command was run and whether it succeeded or failed. If any command fails, include the failing command and the exact error summary.
+
+---
+
+## Post-Merge Deployment
+
+After a PR merges to `main`, deploy to the target site:
+
+```bash
+bench --site <site> migrate
+bench --site <site> clear-cache
+bench restart
+```
+
+Then follow the **Versioning** steps above (bump, tag, GitHub release).
