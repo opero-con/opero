@@ -21,6 +21,7 @@ opero.FlowHubPage = class FlowHubPage {
 		this._detail_context = {};
 		this._detail_loading = new Set();
 		this._description_draft = null;
+		this._extra_fields_expanded = false;
 		this._queue_layout_open_raf = null;
 		this._queue_layout_resize_raf = null;
 		this._on_window_resize = () => {
@@ -661,15 +662,71 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 
 			.fh-detail__desc-text {
-				font-size: var(--text-lg);
-				line-height: 1.45;
-				white-space: pre-wrap;
-			}
-			.fh-detail__desc-empty {
-				color: var(--text-muted);
+				font-size: var(--text-base);
+				line-height: 1.55;
 			}
 			.fh-detail__desc-editor {
 				padding: 0.12rem 0 0.5rem;
+			}
+
+			/* ── Attachment chips ────────────────────────────────── */
+			.fh-attachment-chip {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.2rem;
+				border: 1px solid var(--border-color);
+				border-radius: 999px;
+				padding: 0.2rem 0.3rem 0.2rem 0.45rem;
+				font-size: var(--text-sm);
+				background: var(--bg-color);
+				max-width: 160px;
+			}
+			.fh-attachment-chip__link {
+				color: var(--text-color);
+				text-decoration: none;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				flex: 1;
+				min-width: 0;
+			}
+			.fh-attachment-chip__link:hover { color: var(--primary); }
+			.fh-attachment-chip:hover .fh-member-chip__remove { color: var(--text-color); }
+
+			/* ── Extra fields ────────────────────────────────────── */
+			.fh-extra-fields__grid {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 0 0.5rem;
+			}
+			.fh-extra-fields__grid .fh-field-outlined {
+				margin: 0.55rem 0;
+			}
+			.fh-extra-fields__toggle {
+				border: none;
+				background: transparent;
+				font-size: var(--text-xs);
+				color: var(--text-muted);
+				cursor: pointer;
+				padding: 0.2rem 0;
+				display: block;
+				width: 100%;
+				text-align: left;
+			}
+			.fh-extra-fields__toggle:hover { color: var(--primary); }
+			.fh-field-outlined.is-disabled {
+				opacity: 0.45;
+				pointer-events: none;
+			}
+			.fh-field-outlined__text-input {
+				flex: 1;
+				min-width: 0;
+				border: none;
+				outline: none;
+				background: transparent;
+				font-size: var(--text-base);
+				color: var(--text-color);
+				padding: 0;
 			}
 			.fh-detail__textarea {
 				width: 100%;
@@ -1630,6 +1687,7 @@ opero.FlowHubPage = class FlowHubPage {
 				this._detail_context = {};
 				this._detail_loading.clear();
 				this._description_draft = null;
+				this._extra_fields_expanded = false;
 				this.render();
 			},
 			error: () => {
@@ -2073,7 +2131,7 @@ opero.FlowHubPage = class FlowHubPage {
 			const todoName = $el.attr("data-detail-open-beneficiary");
 			const current  = $el.attr("data-current-beneficiary") || "";
 			if (todoName) this._open_link_combobox(todoName, $el, current, "User", (val) => {
-				this._save_field(todoName, { custom_owner: val });
+				this._save_field(todoName, { assigned_by: val });
 			});
 		});
 
@@ -2081,7 +2139,7 @@ opero.FlowHubPage = class FlowHubPage {
 			e.preventDefault();
 			e.stopPropagation();
 			const todoName = $(e.currentTarget).attr("data-todo-name");
-			if (todoName) this._save_field(todoName, { custom_owner: "" });
+			if (todoName) this._save_field(todoName, { assigned_by: "" });
 		});
 
 		this.$root.find("[data-detail-add-assignee]").on("click", (e) => {
@@ -2183,13 +2241,69 @@ opero.FlowHubPage = class FlowHubPage {
 			if (todoName && fileId) this._remove_todo_attachment(todoName, fileId);
 		});
 
-		this.$root.find("[data-detail-edit-field]").on("click", (e) => {
+		this.$root.find("[data-extra-toggle]").on("click", (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			const todoName = $(e.currentTarget).attr("data-detail-edit-field");
-			if (!todoName) return;
-			const detail = this._detail_context[todoName] || {};
-			this._open_custom_field_dialog(todoName, detail.field_values || {});
+			this._extra_fields_expanded = !this._extra_fields_expanded;
+			this.render();
+		});
+
+		this.$root.find("[data-extra-link]").on("click", (e) => {
+			if ($(e.target).closest("[data-extra-clear]").length) return;
+			e.preventDefault();
+			e.stopPropagation();
+			const $el      = $(e.currentTarget);
+			const todoName = $el.attr("data-extra-link");
+			const fieldname = $el.attr("data-extra-field");
+			const doctype  = $el.attr("data-extra-doctype");
+			const current  = $el.attr("data-extra-current") || "";
+			if (!todoName || !doctype) return;
+			this._open_link_combobox(todoName, $el, current, doctype, (val) => {
+				this._save_field(todoName, { [fieldname]: val });
+			});
+		});
+
+		this.$root.find("[data-extra-text]").on("click", (e) => {
+			if ($(e.target).is("input")) return;
+			e.preventDefault();
+			e.stopPropagation();
+			const $el       = $(e.currentTarget);
+			const todoName  = $el.attr("data-extra-text");
+			const fieldname = $el.attr("data-extra-field");
+			const $val      = $el.find(".fh-field-outlined__value");
+			const current   = $val.text().trim();
+			const $input    = $(`<input class="fh-field-outlined__text-input" type="text" value="${this.esc(current)}">`);
+			$el.addClass("is-open");
+			$val.replaceWith($input);
+			$input.focus().select();
+			let saved = false;
+			const _save = () => {
+				if (saved) return; saved = true;
+				const val = $input.val().trim();
+				$el.removeClass("is-open");
+				this._save_field(todoName, { [fieldname]: val });
+			};
+			const _cancel = () => {
+				if (saved) return; saved = true;
+				$el.removeClass("is-open");
+				this.render();
+			};
+			$input.on("blur", _save);
+			$input.on("keydown", (ev) => {
+				if (ev.key === "Enter")  { $input.off("blur"); _save(); }
+				if (ev.key === "Escape") { $input.off("blur"); _cancel(); }
+			});
+		});
+
+		this.$root.find("[data-extra-clear]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName  = $(e.currentTarget).attr("data-extra-clear");
+			const fieldname = $(e.currentTarget).attr("data-extra-field");
+			if (!todoName || !fieldname) return;
+			const clearValues = { [fieldname]: "" };
+			if (fieldname === "reference_type") clearValues.reference_name = "";
+			this._save_field(todoName, clearValues);
 		});
 
 		this.$root.find("[data-detail-comment-input]").on("keydown", (e) => {
@@ -2869,6 +2983,63 @@ opero.FlowHubPage = class FlowHubPage {
 		});
 	}
 
+	_render_extra_fields(todoName, fieldValues) {
+		const defs = [
+			{ fieldname: "reference_type",   label: __("Reference Type"),   fieldtype: "Link",        options: "DocType"          },
+			{ fieldname: "reference_name",   label: __("Reference Name"),   fieldtype: "DynamicLink", options: "reference_type"   },
+			{ fieldname: "role",             label: __("Role"),             fieldtype: "Link",        options: "Role"             },
+			{ fieldname: "assignment_rule",  label: __("Assignment Rule"),  fieldtype: "Link",        options: "Assignment Rule"  },
+			{ fieldname: "color",            label: __("Color"),            fieldtype: "Data"                                     },
+			{ fieldname: "sender",           label: __("Sender"),           fieldtype: "Data"                                     },
+		];
+
+		const refType = String(fieldValues.reference_type || "").trim();
+
+		const _field = (def) => {
+			const value       = String(fieldValues[def.fieldname] || "").trim();
+			const isEmpty     = !value;
+			const isLink      = def.fieldtype === "Link" || def.fieldtype === "DynamicLink";
+			const isDisabled  = def.fieldtype === "DynamicLink" && !refType;
+			const doctype     = def.fieldtype === "DynamicLink" ? refType : (def.options || "");
+			const clickable   = isLink && !isDisabled;
+
+			return `<div class="fh-field-outlined ${clickable ? "fh-field-outlined--clickable" : ""} ${isDisabled ? "is-disabled" : ""}"
+					${clickable ? `data-extra-link="${this.esc(todoName)}" data-extra-field="${this.esc(def.fieldname)}" data-extra-doctype="${this.esc(doctype)}" data-extra-current="${this.esc(value)}"` : ""}
+					${def.fieldtype === "Data" ? `data-extra-text="${this.esc(todoName)}" data-extra-field="${this.esc(def.fieldname)}"` : ""}>
+				<span class="fh-field-outlined__label">${this.esc(def.label)}</span>
+				<div class="fh-field-outlined__body">
+					<span class="fh-field-outlined__value ${isEmpty ? "is-empty" : ""}">${this.esc(value)}</span>
+					${value ? `<button type="button" class="fh-field-outlined__clear"
+						data-extra-clear="${this.esc(todoName)}"
+						data-extra-field="${this.esc(def.fieldname)}"
+						title="${__("Clear")}">×</button>` : ""}
+				</div>
+			</div>`;
+		};
+
+		const populated = defs.filter(d => fieldValues[d.fieldname]);
+		const empty     = defs.filter(d => !fieldValues[d.fieldname]);
+		const expanded  = this._extra_fields_expanded;
+		const visible   = expanded ? defs : populated;
+
+		const pairs = [];
+		for (let i = 0; i < visible.length; i += 2) {
+			pairs.push([visible[i], visible[i + 1]]);
+		}
+
+		const gridHtml = pairs.map(([a, b]) =>
+			`<div class="fh-extra-fields__grid">${_field(a)}${b ? _field(b) : "<div></div>"}</div>`
+		).join("");
+
+		const toggleHtml = empty.length && !expanded
+			? `<button type="button" class="fh-extra-fields__toggle" data-extra-toggle="1">+ ${empty.length} ${__("more field(s)")}</button>`
+			: expanded && empty.length
+				? `<button type="button" class="fh-extra-fields__toggle" data-extra-toggle="1">− ${__("fewer fields")}</button>`
+				: "";
+
+		return gridHtml + toggleHtml;
+	}
+
 	_editable_todo_fields() {
 		return [
 			{ fieldname: "reference_type", label: __("Reference Type") },
@@ -3199,47 +3370,42 @@ opero.FlowHubPage = class FlowHubPage {
 				</div>
 
 				<div class="fh-detail__section">
-					${isEditingDesc
-						? `<div class="fh-detail__desc-editor">
-							<textarea class="fh-detail__textarea" data-detail-desc-input="${this.esc(name)}">${this.esc(descValue || "")}</textarea>
-							<div class="fh-detail__editor-actions">
-								<button type="button" class="fh-detail__btn is-primary" data-detail-desc-save="${this.esc(name)}">${__("Save")}</button>
-								<button type="button" class="fh-detail__btn" data-detail-desc-cancel="1">${__("Cancel")}</button>
-							</div>
-						</div>`
-						: `<button type="button" class="fh-detail__line" data-detail-edit-desc="${this.esc(name)}">
-							<span class="fh-detail__line-icon">≡</span>
-							<span class="fh-detail__line-content">
-								<span class="fh-detail__line-title">${hasDesc ? this.esc(__("Edit description")) : this.esc(__("Add description"))}</span>
-								<span class="fh-detail__desc-text ${hasDesc ? "" : "fh-detail__desc-empty"}">${hasDesc ? descValue : this.esc(__("No description yet"))}</span>
-							</span>
-						</button>`
-					}
+					<div class="fh-field-outlined fh-field-outlined--clickable ${isEditingDesc ? "is-open" : ""}"
+						${isEditingDesc ? "" : `data-detail-edit-desc="${this.esc(name)}"`}>
+						<span class="fh-field-outlined__label">${this.esc(__("Description"))}</span>
+						${isEditingDesc
+							? `<div class="fh-detail__desc-editor">
+								<textarea class="fh-detail__textarea" data-detail-desc-input="${this.esc(name)}">${this.esc(descValue || "")}</textarea>
+								<div class="fh-detail__editor-actions">
+									<button type="button" class="fh-detail__btn is-primary" data-detail-desc-save="${this.esc(name)}">${__("Save")}</button>
+									<button type="button" class="fh-detail__btn" data-detail-desc-cancel="1">${__("Cancel")}</button>
+								</div>
+							</div>`
+							: `<div class="fh-detail__desc-text ${hasDesc ? "" : "fh-detail__desc-empty"}">${hasDesc ? descValue : this.esc(__("Add a description…"))}</div>`
+						}
+					</div>
 				</div>
 
 				<div class="fh-detail__section">
-					<button type="button" class="fh-detail__line" data-detail-add-attachment="${this.esc(name)}">
-						<span class="fh-detail__line-icon">+</span>
-						<span class="fh-detail__line-content">
-							<span class="fh-detail__line-title">${__("Add attachment")}</span>
-							<span class="fh-detail__line-sub">${this.esc(__("Attach files directly to this ToDo"))}</span>
-						</span>
-					</button>
-					<div class="fh-detail__attachment-list">${attachmentList}</div>
+					<div class="fh-field-outlined">
+						<span class="fh-field-outlined__label">${this.esc(__("Attachment(s)"))}</span>
+						<div class="fh-members__chips">
+							${attachments.map(file => `
+								<span class="fh-attachment-chip">
+									<a class="fh-attachment-chip__link" href="${this.esc(file.file_url || "#")}" target="_blank" rel="noopener"
+										title="${this.esc(file.file_name || file.name || "")}">${this.esc(file.file_name || file.name || __("Attachment"))}</a>
+									<button type="button" class="fh-member-chip__remove"
+										data-detail-remove-attachment="${this.esc(file.name)}"
+										data-todo-name="${this.esc(name)}"
+										title="${__("Remove")}">×</button>
+								</span>`).join("")}
+							<button type="button" class="fh-members__add-btn" data-detail-add-attachment="${this.esc(name)}">+ ${__("Add")}</button>
+						</div>
+					</div>
 				</div>
 
 				<div class="fh-detail__section">
-					<button type="button" class="fh-detail__line" data-detail-edit-field="${this.esc(name)}">
-						<span class="fh-detail__line-icon">+</span>
-						<span class="fh-detail__line-content">
-							<span class="fh-detail__line-title">${__("Add or edit field")}</span>
-							${fieldSummary
-								? `<span class="fh-detail__line-tags">${fieldSummary}</span>`
-								: `<span class="fh-detail__line-sub">${this.esc(__("No extra fields yet"))}</span>`
-							}
-						</span>
-					</button>
-				</div>
+					${this._render_extra_fields(name, fieldValues)}</div>
 
 				<div class="fh-detail__section">
 					<div class="fh-detail__section-head">

@@ -32,7 +32,7 @@ FLOW_HUB_EDITABLE_FIELDS = {
 	"color",
 	"sender",
 	"assignment_rule",
-	"custom_owner",
+	"assigned_by",
 }
 FLOW_HUB_DETAIL_FIELDNAMES = (
 	"reference_type",
@@ -299,7 +299,7 @@ def get_todo_detail_context(todo_name: str):
 	doc.check_permission("read")
 
 	creator_user = cstr(doc.custom_created_by or "")
-	beneficiary_user = cstr(doc.custom_owner or "")
+	beneficiary_user = cstr(doc.assigned_by or "")
 
 	user_names = {}
 	users_to_fetch = [u for u in [creator_user, beneficiary_user] if u]
