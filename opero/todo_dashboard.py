@@ -32,6 +32,7 @@ FLOW_HUB_EDITABLE_FIELDS = {
 	"color",
 	"sender",
 	"assignment_rule",
+	"custom_owner",
 }
 FLOW_HUB_DETAIL_FIELDNAMES = (
 	"reference_type",
@@ -297,6 +298,21 @@ def get_todo_detail_context(todo_name: str):
 	doc = frappe.get_doc("ToDo", todo_name)
 	doc.check_permission("read")
 
+	creator_user = cstr(doc.custom_created_by or "")
+	beneficiary_user = cstr(doc.custom_owner or "")
+
+	user_names = {}
+	users_to_fetch = [u for u in [creator_user, beneficiary_user] if u]
+	if users_to_fetch:
+		user_names = {
+			r.name: _user_display_name(r) or r.name
+			for r in frappe.get_all(
+				"User",
+				filters=[["name", "in", users_to_fetch]],
+				fields=_user_fields(include_image=False),
+			)
+		}
+
 	return {
 		"description": cstr(doc.description or ""),
 		"description_plain": extract_plain_text(doc.description),
@@ -305,6 +321,10 @@ def get_todo_detail_context(todo_name: str):
 		"activity": _get_todo_activity(todo_name),
 		"field_values": _get_todo_detail_field_values(doc),
 		"modified": cstr(doc.modified),
+		"creator_user": creator_user,
+		"creator_name": user_names.get(creator_user, creator_user),
+		"beneficiary_user": beneficiary_user,
+		"beneficiary_name": user_names.get(beneficiary_user, beneficiary_user),
 	}
 
 
@@ -733,7 +753,7 @@ def _get_focus_queue(limit: int, stale_cutoff: date, due_soon_cutoff: date) -> l
 		for u in frappe.get_all(
 			"User",
 			filters={"name": ("in", list(all_users))},
-			fields=["name", "full_name", "user_image"],
+			fields=_user_fields(include_image=True),
 			limit_page_length=0,
 		):
 			user_details[u.name] = u
@@ -773,7 +793,7 @@ def _serialize_focus_row(
 		details = user_details or {}
 		for i, user_id in enumerate(users):
 			u = details.get(user_id)
-			full_name = (u.full_name if u else "") or user_id
+			full_name = _user_display_name(u) or user_id
 			initials = _get_initials(full_name)
 			roles = []
 			if user_id == custom_created_by:
@@ -883,6 +903,26 @@ def _get_todo_detail_field_values(doc) -> dict[str, str]:
 		if value:
 			values[fieldname] = value
 	return values
+
+
+def _user_display_name(user_record) -> str:
+	"""Return custom_short_name when available, falling back to full_name."""
+	if not user_record:
+		return ""
+	short = cstr(getattr(user_record, "custom_short_name", "") or "")
+	if short:
+		return short
+	return cstr(user_record.full_name or user_record.name or "")
+
+
+def _user_fields(include_image: bool = True) -> list:
+	"""User fields to fetch; adds custom_short_name when reyal_core is installed."""
+	fields = ["name", "full_name"]
+	if include_image:
+		fields.append("user_image")
+	if "reyal_core" in frappe.get_installed_apps():
+		fields.append("custom_short_name")
+	return fields
 
 
 def _get_initials(full_name: str) -> str:
