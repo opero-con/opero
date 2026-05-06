@@ -18,6 +18,9 @@ opero.FlowHubPage = class FlowHubPage {
 		this._active_tab = null;
 		this._selected_todo = null;
 		this._saving = 0;
+		this._detail_context = {};
+		this._detail_loading = new Set();
+		this._description_draft = null;
 		this._queue_layout_open_raf = null;
 		this._queue_layout_resize_raf = null;
 		this._on_window_resize = () => {
@@ -245,216 +248,396 @@ opero.FlowHubPage = class FlowHubPage {
 
 			/* ── Queue + detail split ───────────────────────────── */
 			.fh-queue-layout {
-				display: flex;
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) clamp(360px, 36vw, 480px);
 				gap: 0;
-				align-items: stretch;
-				width: calc(100% + var(--fh-layout-extra, 0px));
+				width: 100%;
 				min-width: 0;
-				transform: translateX(calc(-1 * var(--fh-layout-shift, 0px)));
-				transition: width 280ms ease-in-out, transform 280ms ease-in-out;
+				align-items: stretch;
+				overflow: visible;
 			}
 			.fh-queue-layout > .fh-panel--queue {
-				flex: 1;
 				min-width: 0;
 				border-right: none;
 				border-radius: 10px 0 0 10px;
 				overflow-y: auto;
+				overflow-x: hidden;
 			}
 
 			/* ── Detail panel ───────────────────────────────────── */
 			.fh-detail {
-				flex: 0 0 clamp(300px, 34vw, 420px);
-				min-width: 260px;
-				max-width: 100%;
 				display: flex;
 				flex-direction: column;
+				min-width: 0;
+				min-height: 0;
 				background: var(--fg-color);
 				border: 1px solid var(--border-color);
+				border-left: none;
 				border-radius: 0 10px 10px 0;
-				overflow: hidden;
-				box-shadow: inset -1px 0 0 var(--border-color);
 				transform: translateX(18px);
 				opacity: 0;
 				pointer-events: none;
 				transition: transform 280ms ease-in-out, opacity 190ms ease-in-out;
+			}
+			.fh-detail__scrim {
+				display: none;
 			}
 			.fh-queue-layout.is-detail-open .fh-detail {
 				transform: translateX(0);
 				opacity: 1;
 				pointer-events: auto;
 			}
-			.fh-detail__head {
+			.fh-detail__actions {
 				flex: 0 0 auto;
-				padding: 0.65rem 0.75rem 0.5rem;
-				border-bottom: 1px solid #f1f5f9;
+				display: flex;
+				align-items: center;
+				gap: 0.22rem;
+				padding: 0.45rem 0.55rem;
+				border-bottom: 1px solid var(--border-color);
 				background: var(--fg-color);
 			}
-			.fh-detail__top {
+			.fh-detail__action-btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.24rem;
+				border: 1px solid var(--border-color);
+				border-radius: 6px;
+				background: var(--fg-color);
+				color: var(--text-color);
+				font-size: var(--text-xs);
+				padding: 0.24rem 0.42rem;
+				cursor: pointer;
+				transition: background 120ms ease;
+			}
+			.fh-detail__action-btn:hover { background: var(--bg-color); }
+			.fh-detail__action-btn.is-quiet {
+				border: none;
+				padding: 0.24rem 0.3rem;
+				color: var(--text-muted);
+			}
+			.fh-detail__action-btn.is-quiet:hover { color: var(--text-color); }
+			.fh-detail__action-btn.is-link {
+				border: none;
+				color: var(--primary);
+				padding: 0.24rem 0.3rem;
+				text-decoration: none;
+			}
+			.fh-detail__action-btn.is-link:hover { background: var(--bg-color); text-decoration: none; }
+			.fh-detail__action-btn.is-primary {
+				border-color: #bbf7d0;
+				background: #f0fdf4;
+				color: #15803d;
+			}
+			.fh-detail__action-btn.is-primary:hover {
+				background: #dcfce7;
+			}
+			.fh-detail__action-spacer {
+				flex: 1;
+				min-width: 0;
+			}
+			.fh-detail__content {
+				flex: 1 1 auto;
+				min-height: 0;
+				overflow: auto;
+				padding: 0.8rem 0.85rem 0.9rem;
+			}
+			.fh-detail__title-wrap {
+				display: flex;
+				align-items: flex-start;
+				gap: 0.55rem;
+				margin-bottom: 0.7rem;
+			}
+			.fh-detail__checkbox {
+				width: 24px;
+				height: 24px;
+				border-radius: 50%;
+				border: 2px solid #cbd5e1;
+				background: transparent;
+				flex-shrink: 0;
+				line-height: 1;
+				cursor: pointer;
+				color: #cbd5e1;
+			}
+			.fh-detail__checkbox:hover { border-color: #94a3b8; color: #94a3b8; }
+			.fh-detail__title {
+				font-size: var(--text-3xl, 2rem);
+				line-height: 1.22;
+				margin: 0;
+				color: var(--text-color);
+			}
+			.fh-detail__meta {
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				gap: 0.45rem 0.62rem;
+				margin-bottom: 0.72rem;
+			}
+			.fh-detail__meta-chip {
+				display: inline-flex;
+				align-items: center;
+				font-size: var(--text-xs);
+				color: var(--text-color);
+				gap: 0.3rem;
+			}
+			.fh-detail__meta-chip.is-quiet { color: var(--text-muted); }
+			.fh-detail__meta-chip.is-due {
+				border: none;
+				background: transparent;
+				padding: 0;
+			}
+			.fh-detail__meta-chip.is-assignee {
+				border: none;
+				background: transparent;
+				padding: 0;
+				cursor: pointer;
+			}
+			.fh-detail__meta-chip.is-assignee:hover {
+				color: var(--primary);
+			}
+			.fh-detail__meta-text {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.18rem;
+				min-width: 0;
+			}
+			.fh-detail__divider {
+				border: none;
+				border-top: 1px solid var(--border-color);
+				margin: 0.35rem 0 0;
+			}
+			.fh-detail__section {
+				padding: 0.2rem 0;
+				border-bottom: 1px solid var(--border-color);
+			}
+			.fh-detail__section:last-child {
+				border-bottom: none;
+			}
+			.fh-detail__line {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				width: 100%;
+				border: none;
+				background: transparent;
+				padding: 0.46rem 0;
+				font-size: var(--text-lg);
+				color: var(--text-color);
+				text-align: left;
+				cursor: pointer;
+			}
+			.fh-detail__line:hover { color: var(--primary); }
+			.fh-detail__line.is-static {
+				cursor: default;
+				color: var(--text-muted);
+			}
+			.fh-detail__line.is-static:hover { color: var(--text-muted); }
+			.fh-detail__line-icon {
+				font-size: var(--text-xl);
+				width: 22px;
+				text-align: center;
+				flex-shrink: 0;
+				color: var(--text-muted);
+			}
+			.fh-detail__line-content {
+				flex: 1;
+				min-width: 0;
+			}
+			.fh-detail__line-tail {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.3rem;
+				flex-shrink: 0;
+			}
+			.fh-detail__line-title {
+				font-size: var(--text-lg);
+				color: var(--text-color);
+				line-height: 1.4;
+			}
+			.fh-detail__line-sub {
+				font-size: var(--text-sm);
+				color: var(--text-muted);
+				margin-top: 0.08rem;
+				line-height: 1.35;
+			}
+			.fh-detail__line-tags {
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				gap: 0.25rem;
+				margin-top: 0.25rem;
+			}
+			.fh-detail__tag {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.2rem;
+				border: 1px solid var(--border-color);
+				border-radius: 999px;
+				padding: 0.14rem 0.44rem;
+				font-size: var(--text-tiny);
+				color: var(--text-color);
+				background: var(--fg-color);
+			}
+			.fh-detail__tag-remove {
+				border: none;
+				background: transparent;
+				padding: 0;
+				color: var(--text-muted);
+				cursor: pointer;
+				line-height: 1;
+			}
+			.fh-detail__tag-remove:hover { color: #dc2626; }
+			.fh-detail__desc-text {
+				font-size: var(--text-lg);
+				line-height: 1.45;
+				white-space: pre-wrap;
+			}
+			.fh-detail__desc-empty {
+				color: var(--text-muted);
+			}
+			.fh-detail__desc-editor {
+				padding: 0.12rem 0 0.5rem;
+			}
+			.fh-detail__textarea {
+				width: 100%;
+				min-height: 102px;
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				background: var(--fg-color);
+				color: var(--text-color);
+				font-size: var(--text-base);
+				padding: 0.56rem 0.62rem;
+				resize: vertical;
+			}
+			.fh-detail__editor-actions {
+				display: flex;
+				gap: 0.34rem;
+				margin-top: 0.35rem;
+			}
+			.fh-detail__btn {
+				border: 1px solid var(--border-color);
+				border-radius: 7px;
+				padding: 0.22rem 0.52rem;
+				font-size: var(--text-xs);
+				background: var(--fg-color);
+				color: var(--text-color);
+				cursor: pointer;
+			}
+			.fh-detail__btn:hover { background: var(--bg-color); }
+			.fh-detail__btn.is-primary {
+				border-color: #bfdbfe;
+				background: #eff6ff;
+				color: #1d4ed8;
+			}
+			.fh-detail__btn.is-primary:hover { background: #dbeafe; }
+			.fh-detail__attachment-list {
+				display: flex;
+				flex-direction: column;
+				gap: 0.25rem;
+				margin-top: 0.28rem;
+			}
+			.fh-detail__attachment {
+				display: flex;
+				align-items: center;
+				gap: 0.3rem;
+				font-size: var(--text-sm);
+				color: var(--text-muted);
+			}
+			.fh-detail__attachment-link {
+				color: var(--text-muted);
+				text-decoration: none;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				max-width: 100%;
+			}
+			.fh-detail__attachment-link:hover { color: var(--primary); }
+			.fh-detail__attachment-remove {
+				border: none;
+				background: transparent;
+				color: var(--text-muted);
+				cursor: pointer;
+				padding: 0;
+				line-height: 1;
+			}
+			.fh-detail__attachment-remove:hover { color: #dc2626; }
+			.fh-detail__section-head {
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
 				gap: 0.45rem;
-				margin-bottom: 0.48rem;
-			}
-			.fh-detail__close {
-				border: none;
-				background: none;
-				cursor: pointer;
-				font-size: var(--text-lg);
-				line-height: 1;
-				color: #94a3b8;
-				padding: 0.1rem 0.3rem;
-				border-radius: 4px;
-				flex-shrink: 0;
-			}
-			.fh-detail__close:hover { background: #f1f5f9; color: #475569; }
-			.fh-detail__open {
-				font-size: var(--text-xs);
-				color: var(--primary);
-				text-decoration: none;
-				font-weight: var(--weight-medium);
-			}
-			.fh-detail__open:hover { text-decoration: underline; }
-			.fh-detail__title {
-				font-size: var(--text-lg);
-				font-weight: var(--weight-semibold);
-				color: #0f172a;
-				margin: 0 0 0.55rem;
-				line-height: 1.4;
-			}
-			.fh-detail__meta {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 0.35rem;
-			}
-			.fh-detail__badge {
-				display: inline-flex;
-				align-items: center;
-				gap: 0.2rem;
-				padding: 0.16rem 0.44rem;
-				border-radius: 999px;
-				font-size: var(--text-tiny);
-				font-weight: var(--weight-semibold);
-				letter-spacing: 0.01em;
-				border: 1px solid #e2e8f0;
-				background: #f8fafc;
-				color: #334155;
-			}
-			.fh-detail__badge.is-open { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-			.fh-detail__badge.is-in_progress { background: #ecfeff; color: #0f766e; border-color: #99f6e4; }
-			.fh-detail__badge.is-closed { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
-			.fh-detail__badge.is-cancelled { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
-			.fh-detail__badge.is-priority {
-				background: #fff7ed;
-				color: #b45309;
-				border-color: #fed7aa;
-			}
-			.fh-detail__badge.is-due {
-				border: none;
-				padding: 0;
-				background: none;
-				font-size: var(--text-tiny);
-			}
-			.fh-detail__body {
-				flex: 1 1 auto;
-				min-height: 0;
-				overflow: auto;
-				padding: 0.7rem 0.75rem;
-			}
-			.fh-detail__section {
-				margin-bottom: 0.82rem;
-			}
-			.fh-detail__section:last-child {
-				margin-bottom: 0;
+				padding: 0.56rem 0 0.34rem;
 			}
 			.fh-detail__section-title {
-				font-size: var(--text-tiny);
-				font-weight: var(--weight-semibold);
-				letter-spacing: 0.06em;
-				text-transform: uppercase;
-				color: #94a3b8;
-				margin-bottom: 0.38rem;
+				font-size: var(--text-sm);
+				color: var(--text-muted);
 			}
-			.fh-detail__fields {
+			.fh-detail__activity {
 				display: flex;
 				flex-direction: column;
-				gap: 0.38rem;
+				gap: 0.48rem;
+				padding: 0.1rem 0 0.55rem;
 			}
-			.fh-detail__row {
+			.fh-detail__activity-item {
+				border-left: 2px solid var(--border-color);
+				padding-left: 0.5rem;
+				min-width: 0;
+			}
+			.fh-detail__activity-head {
 				display: flex;
-				align-items: flex-start;
-				gap: 0.5rem;
-				font-size: var(--text-xs);
-			}
-			.fh-detail__key {
-				width: 72px;
-				flex-shrink: 0;
-				color: #94a3b8;
-				font-weight: var(--weight-medium);
-			}
-			.fh-detail__val { color: #334155; }
-			.fh-detail__assignees {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 0.34rem;
-			}
-			.fh-detail__assignee {
-				display: inline-flex;
 				align-items: center;
-				gap: 0.3rem;
-				padding: 0.17rem 0.34rem 0.17rem 0.2rem;
-				border-radius: 999px;
-				background: #f8fafc;
-				border: 1px solid #e2e8f0;
+				flex-wrap: wrap;
+				gap: 0.28rem;
 				font-size: var(--text-xs);
-				color: #334155;
+				color: var(--text-muted);
 			}
-			.fh-detail__desc-box {
-				border-top: 1px solid #f1f5f9;
-				padding-top: 0.58rem;
+			.fh-detail__activity-type {
+				color: var(--text-color);
 			}
-			.fh-detail__desc {
-				font-size: var(--text-xs);
-				color: #475569;
-				line-height: 1.55;
+			.fh-detail__activity-content {
+				font-size: var(--text-sm);
+				color: var(--text-color);
+				line-height: 1.4;
+				margin-top: 0.14rem;
 				white-space: pre-wrap;
 			}
-			.fh-detail__foot {
+			.fh-detail__activity-empty {
+				font-size: var(--text-sm);
+				color: var(--text-muted);
+				padding: 0.2rem 0 0.55rem;
+			}
+			.fh-detail__composer {
 				flex: 0 0 auto;
-				display: grid;
-				grid-template-columns: repeat(2, minmax(0, 1fr));
-				gap: 0.35rem;
-				padding: 0.6rem 0.75rem 0.72rem;
-				border-top: 1px solid #f1f5f9;
+				display: flex;
+				align-items: center;
+				gap: 0.45rem;
+				padding: 0.55rem 0.7rem;
+				border-top: 1px solid var(--border-color);
 				background: var(--fg-color);
 			}
-			.fh-detail__act {
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-				gap: 0.3rem;
+			.fh-detail__composer-input {
+				flex: 1;
+				min-width: 0;
+				border: 1px solid var(--border-color);
+				border-radius: 7px;
+				background: var(--fg-color);
+				color: var(--text-color);
 				padding: 0.34rem 0.5rem;
-				border-radius: 8px;
-				border: 1px solid #e2e8f0;
-				background: #f8fafc;
-				color: #334155;
+				font-size: var(--text-sm);
+			}
+			.fh-detail__composer-send {
+				border: 1px solid var(--border-color);
+				border-radius: 7px;
+				padding: 0.28rem 0.5rem;
+				background: var(--fg-color);
 				font-size: var(--text-xs);
-				font-weight: var(--weight-medium);
+				color: var(--text-color);
 				cursor: pointer;
-				transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 			}
-			.fh-detail__act:hover {
-				background: #f1f5f9;
-				border-color: #cbd5e1;
-			}
-			.fh-detail__act.is-primary {
-				background: #ecfdf5;
-				color: #047857;
-				border-color: #a7f3d0;
-			}
-			.fh-detail__act.is-primary:hover {
-				background: #d1fae5;
-				border-color: #6ee7b7;
+			.fh-detail__composer-send:hover { background: var(--bg-color); }
+			.fh-detail__loading {
+				font-size: var(--text-sm);
+				color: var(--text-muted);
+				padding: 0.4rem 0;
 			}
 			.fh-item.is-selected {
 				background: var(--bg-color);
@@ -676,10 +859,10 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-due-pop {
 				position: fixed;
 				z-index: 2000;
-				background: #ffffff;
-				border: 1px solid #e2e8f0;
+				background: var(--fg-color);
+				border: 1px solid var(--border-color);
 				border-radius: 8px;
-				box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+				box-shadow: var(--shadow-sm, 0 4px 16px rgba(0,0,0,0.12));
 				width: 232px;
 				padding: 0;
 				overflow: hidden;
@@ -703,11 +886,11 @@ opero.FlowHubPage = class FlowHubPage {
 				line-height: 1;
 				padding: 0.15rem 0.35rem;
 				border-radius: 4px;
-				color: #475569;
+				color: var(--text-muted);
 				transition: background 100ms;
 			}
-			.fh-cal__nav-btn:hover { background: #f1f5f9; }
-			.fh-cal__month { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: #0f172a; }
+			.fh-cal__nav-btn:hover { background: var(--bg-color); color: var(--text-color); }
+			.fh-cal__month { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-color); }
 			.fh-cal__grid {
 				display: grid;
 				grid-template-columns: repeat(7, 1fr);
@@ -716,8 +899,8 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-cal__dow {
 				text-align: center;
 				font-size: var(--text-tiny);
-				font-weight: var(--weight-semibold);
-				color: #94a3b8;
+				font-weight: var(--weight-regular);
+				color: var(--text-muted);
 				padding: 0.15rem 0 0.25rem;
 			}
 			.fh-cal__day {
@@ -726,18 +909,18 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.22rem 0;
 				border-radius: 4px;
 				cursor: pointer;
-				color: #0f172a;
+				color: var(--text-color);
 				transition: background 100ms;
 			}
-			.fh-cal__day:hover { background: #f1f5f9; }
-			.fh-cal__day.is-other { color: #cbd5e1; cursor: default; }
+			.fh-cal__day:hover { background: var(--bg-color); }
+			.fh-cal__day.is-other { color: var(--text-muted); opacity: 0.45; cursor: default; }
 			.fh-cal__day.is-other:hover { background: none; }
-			.fh-cal__day.is-today { font-weight: var(--weight-bold); color: #2563eb; }
-			.fh-cal__day.is-selected { background: #2563eb !important; color: #fff !important; font-weight: var(--weight-semibold); }
+			.fh-cal__day.is-today { font-weight: var(--weight-medium); color: var(--primary); }
+			.fh-cal__day.is-selected { background: var(--primary) !important; color: #fff !important; font-weight: var(--weight-medium); }
 
 			/* Shortcuts strip */
 			.fh-due-pop__shortcuts {
-				border-top: 1px solid #f1f5f9;
+				border-top: 1px solid var(--border-color);
 				padding: 0.25rem;
 				display: grid;
 				grid-template-columns: 1fr 1fr;
@@ -752,12 +935,12 @@ opero.FlowHubPage = class FlowHubPage {
 				cursor: pointer;
 				font-size: var(--text-xs);
 				font-weight: var(--weight-medium);
-				color: #0f172a;
+				color: var(--text-color);
 				transition: background 100ms;
 				white-space: nowrap;
 			}
-			.fh-due-pop__short:hover { background: #f8fafc; }
-			.fh-due-pop__short-day { color: #94a3b8; font-size: var(--text-tiny); margin-left: 0.25rem; }
+			.fh-due-pop__short:hover { background: var(--bg-color); }
+			.fh-due-pop__short-day { color: var(--text-muted); font-size: var(--text-tiny); margin-left: 0.25rem; }
 			.fh-due-pop__clear {
 				grid-column: 1 / -1;
 				display: flex;
@@ -769,10 +952,10 @@ opero.FlowHubPage = class FlowHubPage {
 				cursor: pointer;
 				font-size: var(--text-xs);
 				font-weight: var(--weight-medium);
-				color: #94a3b8;
+				color: var(--text-muted);
 				transition: background 100ms;
 			}
-			.fh-due-pop__clear:hover { background: #fff1f2; color: #ef4444; }
+			.fh-due-pop__clear:hover { background: var(--bg-color); color: #dc2626; }
 
 			/* ── Add assignee button ──────────────────────────── */
 			.fh-add-alloc {
@@ -1053,27 +1236,6 @@ opero.FlowHubPage = class FlowHubPage {
 				.fh-counts { grid-template-columns: repeat(2, 1fr); }
 			}
 			@media (max-width: 1180px) {
-				.fh-queue-layout {
-					flex-direction: column;
-					width: 100%;
-					transform: none;
-					transition: none;
-				}
-				.fh-queue-layout > .fh-panel--queue {
-					border-radius: 10px 10px 0 0;
-				}
-				.fh-detail {
-					flex: 0 0 auto;
-					width: 100%;
-					min-width: 0;
-					border-top: none;
-					border-radius: 0 0 10px 10px;
-					max-height: 45vh;
-					transform: none;
-					opacity: 1;
-					pointer-events: auto;
-					transition: none;
-				}
 				.fh-status {
 					height: auto;
 					align-items: stretch;
@@ -1106,10 +1268,58 @@ opero.FlowHubPage = class FlowHubPage {
 					padding: 0.28rem 0.48rem;
 				}
 			}
+			@media (max-width: 767px) {
+				.fh-queue-layout { display: block; }
+				.fh-queue-layout > .fh-panel--queue { border-radius: 10px; }
+				.fh-detail__scrim {
+					position: fixed;
+					inset: 0;
+					z-index: 1700;
+					display: none;
+					border: none;
+					margin: 0;
+					padding: 0;
+					background: rgba(15, 23, 42, 0.2);
+				}
+				.fh-queue-layout.is-detail-open .fh-detail__scrim { display: block; }
+				.fh-detail {
+					position: fixed;
+					top: 0;
+					right: 0;
+					bottom: 0;
+					width: 100vw;
+					max-width: 100vw;
+					border-radius: 0;
+					border: none;
+					border-left: 1px solid var(--border-color);
+					transform: translateX(100%);
+					opacity: 1;
+					pointer-events: auto;
+					z-index: 1800;
+					transition: transform 260ms ease-in-out;
+				}
+				.fh-queue-layout.is-detail-open .fh-detail {
+					transform: translateX(0);
+				}
+				.fh-detail__title {
+					font-size: var(--text-2xl, 1.65rem);
+				}
+				.fh-detail__content {
+					padding: 0.72rem 0.7rem 0.82rem;
+				}
+				.fh-detail__line,
+				.fh-detail__line-title {
+					font-size: var(--text-base);
+				}
+			}
 			@media (max-width: 480px) {
 				.fh { padding: 0.5rem; }
-				.fh-detail__foot { grid-template-columns: 1fr; }
-				.fh-detail__key { width: 64px; }
+				.fh-detail__actions {
+					padding: 0.4rem 0.45rem;
+				}
+				.fh-detail__composer {
+					padding: 0.45rem 0.5rem;
+				}
 			}
 		`;
 	}
@@ -1243,6 +1453,9 @@ opero.FlowHubPage = class FlowHubPage {
 				this.loading = false;
 				this.page.btn_primary?.prop("disabled", false);
 				this.snapshot = r.message || {};
+				this._detail_context = {};
+				this._detail_loading.clear();
+				this._description_draft = null;
 				this.render();
 			},
 			error: () => {
@@ -1267,13 +1480,18 @@ opero.FlowHubPage = class FlowHubPage {
 			const { queue, title } = this._queue_for_tab(s, tab);
 			activeQueue = queue;
 			// Deselect if the selected todo is no longer in the current queue
-			if (this._selected_todo && !queue.find(r => r.name === this._selected_todo.name)) {
-				this._selected_todo = null;
+			if (this._selected_todo) {
+				const refreshed = queue.find(r => r.name === this._selected_todo.name);
+				if (refreshed) {
+					this._selected_todo = refreshed;
+				} else {
+					this._selected_todo = null;
+				}
 			}
 			const queueHtml = this._render_focus_queue(queue, title);
 			const queuePanel = `<div class="fh-panel fh-panel--queue"><div class="fh-panel__head"><h2 class="fh-panel__title">${this.esc(title)}</h2></div>${queueHtml}</div>`;
 			body = this._selected_todo
-				? `<div class="fh-queue-layout">${queuePanel}${this._render_detail(this._selected_todo)}</div>`
+				? `<div class="fh-queue-layout">${queuePanel}<button type="button" class="fh-detail__scrim" data-close-detail></button>${this._render_detail(this._selected_todo)}</div>`
 				: queuePanel;
 		}
 		this.$root.html(`
@@ -1282,6 +1500,7 @@ opero.FlowHubPage = class FlowHubPage {
 		`);
 		this._bind_events(s, activeQueue);
 		if (this._selected_todo) {
+			this._ensure_detail_context(this._selected_todo.name);
 			if (this._queue_layout_open_raf) cancelAnimationFrame(this._queue_layout_open_raf);
 			this._queue_layout_open_raf = requestAnimationFrame(() => {
 				this._queue_layout_open_raf = null;
@@ -1293,36 +1512,7 @@ opero.FlowHubPage = class FlowHubPage {
 	_apply_queue_layout_open_state() {
 		const $layout = this.$root.find(".fh-queue-layout");
 		if (!$layout.length) return;
-		const layout = $layout[0];
-		layout.classList.add("is-detail-open");
-		if (window.matchMedia("(max-width: 1180px)").matches) {
-			layout.style.setProperty("--fh-layout-extra", "0px");
-			layout.style.setProperty("--fh-layout-shift", "0px");
-			return;
-		}
-
-		layout.style.setProperty("--fh-layout-extra", "0px");
-		layout.style.setProperty("--fh-layout-shift", "0px");
-		const rect = layout.getBoundingClientRect();
-		const mainSection = this.page.main?.closest(".layout-main-section");
-		const host = mainSection || layout.parentElement;
-		const hostRect = host?.getBoundingClientRect ? host.getBoundingClientRect() : rect;
-		const hostClientRight = host ? hostRect.left + host.clientWidth : hostRect.right;
-		const safeLeft = Math.max(0, Math.round(hostRect.left + 1));
-		const safeRight = Math.max(
-			0,
-			Math.round(
-				Math.min(
-					hostClientRight - 2,
-					(document.documentElement.clientWidth || window.innerWidth || hostRect.right) - 2
-				)
-			)
-		);
-		const spareLeft = Math.max(0, Math.round(rect.left - safeLeft));
-		const spareRight = Math.max(0, Math.round(safeRight - rect.right));
-		const overflowRight = Math.max(0, Math.round(rect.right - safeRight));
-		layout.style.setProperty("--fh-layout-extra", `${spareLeft + spareRight}px`);
-		layout.style.setProperty("--fh-layout-shift", `${spareLeft + overflowRight}px`);
+		$layout[0].classList.add("is-detail-open");
 	}
 
 	_queue_for_tab(s, tab) {
@@ -1668,12 +1858,17 @@ opero.FlowHubPage = class FlowHubPage {
 			const row = queue[parseInt($(el).attr("data-queue-index"), 10)];
 			if (row?.name) $(el).on("click", () => {
 				this._selected_todo = (this._selected_todo?.name === row.name) ? null : row;
+				if (!this._selected_todo) this._description_draft = null;
 				this.render();
+				if (this._selected_todo?.name) {
+					this._ensure_detail_context(this._selected_todo.name);
+				}
 			});
 		});
 
 		this.$root.find("[data-close-detail]").on("click", () => {
 			this._selected_todo = null;
+			this._description_draft = null;
 			this.render();
 		});
 
@@ -1697,6 +1892,87 @@ opero.FlowHubPage = class FlowHubPage {
 		this.$root.find("[data-due-todo]").on("click", (e) => {
 			e.stopPropagation();
 			this._open_due_date_popover(e.currentTarget);
+		});
+
+		this.$root.find("[data-detail-set-project]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-detail-set-project");
+			const currentProject = $(e.currentTarget).attr("data-current-project") || "";
+			if (todoName) this._open_project_prompt(todoName, currentProject);
+		});
+
+		this.$root.find("[data-detail-clear-project]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-todo-name");
+			if (todoName) this._save_project_reference(todoName, "");
+		});
+
+		this.$root.find("[data-detail-edit-desc]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-detail-edit-desc");
+			if (todoName) this._start_description_edit(todoName);
+		});
+
+		this.$root.find("[data-detail-desc-cancel]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this._description_draft = null;
+			this.render();
+		});
+
+		this.$root.find("[data-detail-desc-save]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-detail-desc-save");
+			if (todoName) this._save_description_edit(todoName);
+		});
+
+		this.$root.find("[data-detail-desc-input]").on("input", (e) => {
+			if (!this._description_draft) return;
+			this._description_draft.value = $(e.currentTarget).val();
+		});
+
+		this.$root.find("[data-detail-add-attachment]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-detail-add-attachment");
+			if (todoName) this._upload_todo_attachment(todoName);
+		});
+
+		this.$root.find("[data-detail-remove-attachment]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-todo-name");
+			const fileId = $(e.currentTarget).attr("data-detail-remove-attachment");
+			if (todoName && fileId) this._remove_todo_attachment(todoName, fileId);
+		});
+
+		this.$root.find("[data-detail-edit-field]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-detail-edit-field");
+			if (!todoName) return;
+			const detail = this._detail_context[todoName] || {};
+			this._open_custom_field_dialog(todoName, detail.field_values || {});
+		});
+
+		this.$root.find("[data-detail-comment-input]").on("keydown", (e) => {
+			if (e.key !== "Enter" || e.shiftKey) return;
+			e.preventDefault();
+			const todoName = $(e.currentTarget).attr("data-detail-comment-input");
+			if (todoName) this._post_detail_comment(todoName, $(e.currentTarget));
+		});
+
+		this.$root.find("[data-detail-comment-send]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-detail-comment-send");
+			if (!todoName) return;
+			const $input = this.$root.find(`[data-detail-comment-input="${todoName}"]`).first();
+			this._post_detail_comment(todoName, $input);
 		});
 
 		this.$root.find("[data-risk-index]").each((_, el) => {
@@ -2080,10 +2356,8 @@ opero.FlowHubPage = class FlowHubPage {
 		// Build shortcuts
 		const $sc = $pop.find(".fh-due-pop__shortcuts").empty();
 		SHORTCUTS.forEach(s => {
-			const d = frappe.datetime.add_days(today, s.days);
-			const dayName = new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
 			$sc.append(`<div class="fh-due-pop__short" data-due-days="${s.days}">
-				${this.esc(s.label)}<span class="fh-due-pop__short-day">${this.esc(dayName)}</span>
+				${this.esc(s.label)}
 			</div>`);
 		});
 		if (currentDate) {
@@ -2098,6 +2372,220 @@ opero.FlowHubPage = class FlowHubPage {
 		setTimeout(() => {
 			$(document).one("click.fh-due", () => $pop.removeClass("is-open"));
 		}, 0);
+	}
+
+	_ensure_detail_context(todoName, { force = false } = {}) {
+		if (!todoName) return;
+		if (!force && this._detail_context[todoName]) return;
+		if (this._detail_loading.has(todoName)) return;
+
+		this._detail_loading.add(todoName);
+		if (this._selected_todo?.name === todoName) {
+			this.render();
+		}
+		frappe.call({
+			method: "opero.todo_dashboard.get_todo_detail_context",
+			args: { todo_name: todoName },
+			callback: (r) => {
+				this._detail_loading.delete(todoName);
+				this._detail_context[todoName] = r.message || {};
+				if (this._selected_todo?.name === todoName) {
+					this.render();
+				}
+			},
+			error: () => {
+				this._detail_loading.delete(todoName);
+				if (this._selected_todo?.name === todoName) {
+					this.render();
+				}
+			},
+		});
+	}
+
+	_start_description_edit(todoName) {
+		const detail = this._detail_context[todoName] || {};
+		const fallback = (this._selected_todo?.description || "").trim();
+		this._description_draft = {
+			todoName,
+			value: String(detail.description || fallback || ""),
+		};
+		this.render();
+	}
+
+	_save_description_edit(todoName) {
+		if (!this._description_draft || this._description_draft.todoName !== todoName) return;
+		const nextValue = String(this._description_draft.value || "").trim();
+		this._description_draft = null;
+		this._saving++;
+		frappe.call({
+			method: "opero.todo_dashboard.update_todo_from_flow_hub",
+			args: {
+				todo_name: todoName,
+				values: { description: nextValue || null },
+				expected_modified: this._row_modified(todoName),
+			},
+			callback: () => this._on_save_done(),
+			error: () => this._on_save_error(),
+		});
+	}
+
+	_open_project_prompt(todoName, currentProject = "") {
+		frappe.prompt(
+			[
+				{
+					fieldname: "project",
+					fieldtype: "Link",
+					options: "Project",
+					label: __("Project"),
+					reqd: 1,
+					default: currentProject || "",
+				},
+			],
+			(values) => {
+				const projectName = String(values.project || "").trim();
+				if (!projectName) return;
+				this._save_project_reference(todoName, projectName);
+			},
+			__("Set Project"),
+			__("Save")
+		);
+	}
+
+	_save_project_reference(todoName, projectName) {
+		const cleanProject = String(projectName || "").trim();
+		const values = cleanProject
+			? { reference_type: "Project", reference_name: cleanProject }
+			: { reference_type: null, reference_name: null };
+		this._saving++;
+		frappe.call({
+			method: "opero.todo_dashboard.update_todo_from_flow_hub",
+			args: {
+				todo_name: todoName,
+				values,
+				expected_modified: this._row_modified(todoName),
+			},
+			callback: () => this._on_save_done(),
+			error: () => this._on_save_error(),
+		});
+	}
+
+	_upload_todo_attachment(todoName) {
+		new frappe.ui.FileUploader({
+			doctype: "ToDo",
+			docname: todoName,
+			folder: "Home/Attachments",
+			on_success: () => {
+				frappe.show_alert({ message: __("Attachment added"), indicator: "green" }, 2);
+				this._ensure_detail_context(todoName, { force: true });
+			},
+		});
+	}
+
+	_remove_todo_attachment(todoName, fileId) {
+		frappe.call({
+			method: "frappe.desk.form.utils.remove_attach",
+			type: "DELETE",
+			args: {
+				fid: fileId,
+				dt: "ToDo",
+				dn: todoName,
+			},
+			callback: () => {
+				frappe.show_alert({ message: __("Attachment removed"), indicator: "green" }, 2);
+				this._ensure_detail_context(todoName, { force: true });
+			},
+		});
+	}
+
+	_editable_todo_fields() {
+		return [
+			{ fieldname: "reference_type", label: __("Reference Type") },
+			{ fieldname: "reference_name", label: __("Reference Name") },
+			{ fieldname: "role", label: __("Role") },
+			{ fieldname: "color", label: __("Color") },
+			{ fieldname: "sender", label: __("Sender") },
+			{ fieldname: "assignment_rule", label: __("Assignment Rule") },
+		];
+	}
+
+	_open_custom_field_dialog(todoName, fieldValues = {}) {
+		const defs = this._editable_todo_fields();
+		const options = defs.map(def => `${def.label} (${def.fieldname})`);
+		const first = defs[0];
+		const dialog = new frappe.ui.Dialog({
+			title: __("Add or Edit Field"),
+			fields: [
+				{
+					fieldtype: "Select",
+					fieldname: "field_option",
+					label: __("Field"),
+					reqd: 1,
+					options: options.join("\n"),
+					default: `${first.label} (${first.fieldname})`,
+				},
+				{
+					fieldtype: "Data",
+					fieldname: "field_value",
+					label: __("Value"),
+				},
+				{
+					fieldtype: "Check",
+					fieldname: "clear_value",
+					label: __("Clear value"),
+					default: 0,
+				},
+			],
+			primary_action_label: __("Save"),
+			primary_action: (values) => {
+				const def = defs.find(d => `${d.label} (${d.fieldname})` === values.field_option);
+				if (!def) return;
+				const value = values.clear_value ? null : values.field_value;
+				dialog.hide();
+				this._saving++;
+				frappe.call({
+					method: "opero.todo_dashboard.update_todo_from_flow_hub",
+					args: {
+						todo_name: todoName,
+						values: { [def.fieldname]: value },
+						expected_modified: this._row_modified(todoName),
+					},
+					callback: () => this._on_save_done(),
+					error: () => this._on_save_error(),
+				});
+			},
+		});
+
+		const syncValue = () => {
+			const selected = dialog.get_value("field_option");
+			const def = defs.find(d => `${d.label} (${d.fieldname})` === selected) || first;
+			dialog.set_value("field_value", fieldValues[def.fieldname] || "");
+			dialog.set_value("clear_value", 0);
+		};
+
+		dialog.show();
+		dialog.fields_dict.field_option.$input.on("change", syncValue);
+		syncValue();
+	}
+
+	_post_detail_comment(todoName, $input) {
+		if (!$input || !$input.length) return;
+		const content = String($input.val() || "").trim();
+		if (!content) return;
+		frappe.call({
+			method: "frappe.desk.form.utils.add_comment",
+			args: {
+				reference_doctype: "ToDo",
+				reference_name: todoName,
+				content,
+				comment_email: frappe.session.user_email || frappe.session.user,
+				comment_by: frappe.session.user_fullname || frappe.session.user,
+			},
+			callback: () => {
+				$input.val("");
+				frappe.show_alert({ message: __("Comment added"), indicator: "green" }, 2);
+				this._ensure_detail_context(todoName, { force: true });
+			},
+		});
 	}
 
 	_cal_html(year, month, selectedDate) {
@@ -2198,65 +2686,153 @@ opero.FlowHubPage = class FlowHubPage {
 		const dueDate   = todo.due_date || "";
 		const band      = todo.urgency_band || "";
 		const dueBandClass = band && band !== "active" ? `fh-due-btn--${band}` : "";
-		const desc      = (todo.description || "").trim();
 		const assignees = todo.assignees || [];
-
+		const detail = this._detail_context[name] || {};
+		const isLoading = this._detail_loading.has(name);
+		const attachments = Array.isArray(detail.attachments) ? detail.attachments : [];
+		const activity = Array.isArray(detail.activity) ? detail.activity : [];
+		const fieldValues = detail.field_values || {};
+		const referenceType = String(fieldValues.reference_type || "").trim();
+		const referenceName = String(fieldValues.reference_name || "").trim();
+		const projectName = referenceType === "Project" ? referenceName : "";
 		const priorityPc = this._prio_config(priority);
-		const statusClass = status ? ` is-${String(status).toLowerCase().replace(/\s+/g, "_")}` : "";
-		const assigneeList = assignees.length
-			? assignees.map(a => `<span class="fh-detail__assignee">
-						<span class="fh-avatar" style="width:18px;height:18px;font-size: var(--text-tiny);background:${this._avatar_color(a.user)}">${this.esc(a.initials)}</span>
-						${this.esc(a.full_name || a.user)}
-					</span>`).join("")
-			: `<span style="color:#94a3b8">${__("Unassigned")}</span>`;
 
-		const rows = [
-			{ key: __("Status"),   val: `<span style="color:#334155">${this.esc(status)}</span>` },
-			priority ? { key: __("Priority"), val: `<span style="color:${priorityPc.color}">${priorityPc.icon} ${this.esc(priority)}</span>` } : null,
-			dueLabel ? { key: __("Due"),      val: `<span class="fh-due-btn ${dueBandClass}" style="cursor:default">${this.esc(dueLabel)}</span>` } : null,
-			{ key: __("Assigned"), val: `${assignees.length ? this.esc(String(assignees.length)) : "0"}` },
-		].filter(Boolean);
+		const isEditingDesc = this._description_draft?.todoName === name;
+		const descValue = isEditingDesc
+			? this._description_draft.value
+			: String(detail.description || todo.description || "").trim();
+		const hasDesc = Boolean(String(descValue || "").trim());
+
+		const mainAssignee = assignees[0] || null;
+		const assigneeText = mainAssignee
+			? `${mainAssignee.full_name || mainAssignee.user}${assignees.length > 1 ? ` +${assignees.length - 1}` : ""}`
+			: __("Unassigned");
+
+		const attachmentList = attachments.length
+			? attachments.map(file => `
+				<div class="fh-detail__attachment">
+					<a class="fh-detail__attachment-link" href="${this.esc(file.file_url || "#")}" target="_blank" rel="noopener">${this.esc(file.file_name || file.name || __("Attachment"))}</a>
+					<button type="button" class="fh-detail__attachment-remove" data-detail-remove-attachment="${this.esc(file.name)}" data-todo-name="${this.esc(name)}" title="${__("Remove")}">×</button>
+				</div>
+			`).join("")
+			: `<div class="fh-detail__line-sub">${this.esc(__("No attachments"))}</div>`;
+
+		const fieldDefs = this._editable_todo_fields();
+		const fieldSummary = Object.entries(fieldValues)
+			.filter(([fieldname]) => !["reference_type", "reference_name"].includes(fieldname))
+			.map(([fieldname, value]) => {
+				const def = fieldDefs.find(item => item.fieldname === fieldname);
+				const label = def ? def.label : fieldname;
+				return `<span class="fh-detail__tag">${this.esc(label)}: ${this.esc(String(value || ""))}</span>`;
+			})
+			.join("");
+
+		const activityHtml = activity.length
+			? activity.map(entry => `
+				<div class="fh-detail__activity-item">
+					<div class="fh-detail__activity-head">
+						<span class="fh-detail__activity-type">${this.esc(entry.type || __("Comment"))}</span>
+						<span>${this.esc(entry.by || __("Unknown"))}</span>
+						<span>·</span>
+						<span>${this.esc(this._fmt_time_text(entry.creation) || "")}</span>
+					</div>
+					<div class="fh-detail__activity-content">${this.esc(entry.content || "")}</div>
+				</div>
+			`).join("")
+			: `<div class="fh-detail__activity-empty">${this.esc(__("No activity yet"))}</div>`;
 
 		return `<div class="fh-detail">
-			<div class="fh-detail__head">
-				<div class="fh-detail__top">
-					<a class="fh-detail__open" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
-					<button type="button" class="fh-detail__close" data-close-detail title="${__("Close")}">✕</button>
-				</div>
-				<h3 class="fh-detail__title">${this.esc(title)}</h3>
-				<div class="fh-detail__meta">
-					${status ? `<span class="fh-detail__badge${statusClass}">${this.esc(status)}</span>` : ""}
-					${priority ? `<span class="fh-detail__badge is-priority">${this.esc(priorityPc.icon)} ${this.esc(priority)}</span>` : ""}
-					${dueLabel
-						? `<span role="button" class="fh-detail__badge is-due fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${this.esc(dueLabel)}</span>`
-						: `<span role="button" class="fh-detail__badge is-due fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(name)}" data-due-date="">${__("Set due")}</span>`
-					}
-				</div>
+			<div class="fh-detail__actions">
+				<a class="fh-detail__action-btn is-link" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
+				<span class="fh-detail__action-spacer"></span>
+				<button type="button" class="fh-detail__action-btn" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${dueDate ? __("Due") : __("Set due")}</button>
+				<button type="button" class="fh-detail__action-btn" data-detail-prio="1" data-todo-name="${this.esc(name)}">${this.esc(priorityPc.icon)} ${this.esc(priority || __("Priority"))}</button>
+				<button type="button" class="fh-detail__action-btn is-primary" data-detail-action="done" data-todo-name="${this.esc(name)}">${__("Mark done")}</button>
+				<button type="button" class="fh-detail__action-btn is-quiet" data-close-detail title="${__("Close")}">✕</button>
 			</div>
-			<div class="fh-detail__body">
+			<div class="fh-detail__content">
+				<div class="fh-detail__title-wrap">
+					<button type="button" class="fh-detail__checkbox" data-detail-action="done" data-todo-name="${this.esc(name)}" title="${__("Mark done")}">○</button>
+					<h3 class="fh-detail__title">${this.esc(title)}</h3>
+				</div>
+				<div class="fh-detail__meta">
+					<button type="button" class="fh-detail__meta-chip is-assignee" data-add-alloc="${this.esc(name)}"><span class="fh-detail__meta-text">${this.esc(assigneeText)}</span></button>
+					${dueLabel
+						? `<button type="button" class="fh-detail__meta-chip is-due fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${this.esc(dueLabel)}</button>`
+						: `<button type="button" class="fh-detail__meta-chip is-due fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(name)}" data-due-date="">${__("Set due")}</button>`
+					}
+					<span class="fh-detail__meta-chip is-quiet">${this.esc(status || __("Open"))}</span>
+					<span class="fh-detail__meta-chip is-quiet">${this.esc(priority || __("No priority"))}</span>
+				</div>
+				<hr class="fh-detail__divider">
+
 				<div class="fh-detail__section">
-					<div class="fh-detail__section-title">${__("Details")}</div>
-					<div class="fh-detail__fields">
-						${rows.map(r => `<div class="fh-detail__row">
-							<span class="fh-detail__key">${r.key}</span>
-							<span class="fh-detail__val">${r.val}</span>
-						</div>`).join("")}
+					<div class="fh-detail__line is-static">
+						<span class="fh-detail__line-icon">P</span>
+						<span class="fh-detail__line-content">
+							<span class="fh-detail__line-title">${this.esc(__("Project"))}</span>
+							<span class="fh-detail__line-sub">${this.esc(projectName || __("No project selected"))}</span>
+						</span>
+						<span class="fh-detail__line-tail">
+							<button type="button" class="fh-detail__btn" data-detail-set-project="${this.esc(name)}" data-current-project="${this.esc(projectName)}">${projectName ? __("Change") : __("Select project")}</button>
+							${projectName ? `<button type="button" class="fh-detail__btn" data-detail-clear-project="1" data-todo-name="${this.esc(name)}">${__("Clear")}</button>` : ""}
+						</span>
 					</div>
 				</div>
+
 				<div class="fh-detail__section">
-					<div class="fh-detail__section-title">${__("Assigned")}</div>
-					<div class="fh-detail__assignees">${assigneeList}</div>
+					${isEditingDesc
+						? `<div class="fh-detail__desc-editor">
+							<textarea class="fh-detail__textarea" data-detail-desc-input="${this.esc(name)}">${this.esc(descValue || "")}</textarea>
+							<div class="fh-detail__editor-actions">
+								<button type="button" class="fh-detail__btn is-primary" data-detail-desc-save="${this.esc(name)}">${__("Save")}</button>
+								<button type="button" class="fh-detail__btn" data-detail-desc-cancel="1">${__("Cancel")}</button>
+							</div>
+						</div>`
+						: `<button type="button" class="fh-detail__line" data-detail-edit-desc="${this.esc(name)}">
+							<span class="fh-detail__line-icon">≡</span>
+							<span class="fh-detail__line-content">
+								<span class="fh-detail__line-title">${hasDesc ? this.esc(__("Edit description")) : this.esc(__("Add description"))}</span>
+								<span class="fh-detail__desc-text ${hasDesc ? "" : "fh-detail__desc-empty"}">${this.esc(hasDesc ? descValue : __("No description yet"))}</span>
+							</span>
+						</button>`
+					}
 				</div>
-				<div class="fh-detail__section fh-detail__desc-box">
-					<div class="fh-detail__section-title">${__("Description")}</div>
-					<div class="fh-detail__desc">${this.esc(desc || __("No description yet."))}</div>
+
+				<div class="fh-detail__section">
+					<button type="button" class="fh-detail__line" data-detail-add-attachment="${this.esc(name)}">
+						<span class="fh-detail__line-icon">+</span>
+						<span class="fh-detail__line-content">
+							<span class="fh-detail__line-title">${__("Add attachment")}</span>
+							<span class="fh-detail__line-sub">${this.esc(__("Attach files directly to this ToDo"))}</span>
+						</span>
+					</button>
+					<div class="fh-detail__attachment-list">${attachmentList}</div>
+				</div>
+
+				<div class="fh-detail__section">
+					<button type="button" class="fh-detail__line" data-detail-edit-field="${this.esc(name)}">
+						<span class="fh-detail__line-icon">+</span>
+						<span class="fh-detail__line-content">
+							<span class="fh-detail__line-title">${__("Add or edit field")}</span>
+							${fieldSummary
+								? `<span class="fh-detail__line-tags">${fieldSummary}</span>`
+								: `<span class="fh-detail__line-sub">${this.esc(__("No extra fields yet"))}</span>`
+							}
+						</span>
+					</button>
+				</div>
+
+				<div class="fh-detail__section">
+					<div class="fh-detail__section-head">
+						<div class="fh-detail__section-title">${__("Activity")}</div>
+					</div>
+					${isLoading && !activity.length ? `<div class="fh-detail__loading">${this.esc(__("Loading details…"))}</div>` : `<div class="fh-detail__activity">${activityHtml}</div>`}
 				</div>
 			</div>
-			<div class="fh-detail__foot">
-				<button type="button" class="fh-detail__act is-primary" data-detail-action="done" data-todo-name="${this.esc(name)}">${__("Mark done")}</button>
-				<button type="button" class="fh-detail__act" data-add-alloc="${this.esc(name)}">${__("Assign")}</button>
-				<button type="button" class="fh-detail__act" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${dueDate ? __("Change due") : __("Set due")}</button>
-				<button type="button" class="fh-detail__act" data-detail-prio="1" data-todo-name="${this.esc(name)}">${__("Priority")}</button>
+			<div class="fh-detail__composer">
+				<input type="text" class="fh-detail__composer-input" data-detail-comment-input="${this.esc(name)}" placeholder="${this.esc(__("Add comment"))}">
+				<button type="button" class="fh-detail__composer-send" data-detail-comment-send="${this.esc(name)}">${__("Send")}</button>
 			</div>
 		</div>`;
 	}
@@ -2294,6 +2870,18 @@ opero.FlowHubPage = class FlowHubPage {
 					hour: "2-digit", minute: "2-digit", hour12: false,
 				});
 			return `<span data-tip-name="${this.esc(__("Last updated"))}" data-tip-roles="${this.esc(full)}">${relative}</span>`;
+		} catch {
+			return "";
+		}
+	}
+
+	_fmt_time_text(value) {
+		if (!value) return "";
+		try {
+			const parsed = this._to_user_datetime(value);
+			if (!parsed) return "";
+			const date = typeof parsed.toDate === "function" ? parsed.toDate() : parsed;
+			return this._compact_relative_time(date);
 		} catch {
 			return "";
 		}
