@@ -1,5 +1,10 @@
 # Opero Codex Working Rules
 
+## Pull Request Naming
+
+- Do not include `codex`, `ai`, `assistant`, or any AI-assistant name in pull request titles.
+- Use product/feature-focused PR titles only.
+
 ## Mandatory Bench Housekeeping After Code Changes
 
 When a change is made in this app, do not stop at code edits. Always run the post-change steps and report the result.
