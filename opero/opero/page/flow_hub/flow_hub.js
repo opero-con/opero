@@ -21,7 +21,14 @@ opero.FlowHubPage = class FlowHubPage {
 		this._detail_context = {};
 		this._detail_loading = new Set();
 		this._description_draft = null;
+		this._title_draft = null;
+		this._quill_instance = null;
+		this._mention_state = null;
+		this._mention_timer = null;
+		this._mentions_map = {};
+		this._detail_collapsed = {};
 		this._extra_fields_expanded = false;
+		this._rendered_todo_name = null;
 		this._queue_layout_open_raf = null;
 		this._queue_layout_resize_raf = null;
 		this._on_window_resize = () => {
@@ -35,7 +42,13 @@ opero.FlowHubPage = class FlowHubPage {
 		window.addEventListener("resize", this._on_window_resize);
 		document.addEventListener("keydown", (e) => {
 			if (e.key !== "Escape") return;
-			$("#fh-prio-drop, #fh-due-pop, #fh-alloc-pop").removeClass("is-open");
+			$("#fh-prio-drop, #fh-due-pop, #fh-alloc-pop, #fh-status-drop").removeClass("is-open");
+			if (this._description_draft || this._title_draft) {
+				this._description_draft = null;
+				this._title_draft = null;
+				this._quill_instance = null;
+				this.render();
+			}
 		});
 
 		this.page = frappe.ui.make_app_page({
@@ -70,11 +83,12 @@ opero.FlowHubPage = class FlowHubPage {
 					padding: 0 0 1rem 0;
 					min-height: calc(100vh - 120px);
 					background: var(--bg-color);
+					-webkit-font-smoothing: antialiased;
+					-moz-osx-font-smoothing: grayscale;
+					text-rendering: optimizeLegibility;
 				}
-				.fh,
 				.fh * {
 					font-family: var(--font-stack);
-					font-weight: var(--weight-regular) !important;
 				}
 
 				/* ── Status bar ─────────────────────────────────────── */
@@ -242,7 +256,7 @@ opero.FlowHubPage = class FlowHubPage {
 				width: 130px;
 				flex-shrink: 0;
 				text-align: left;
-				font-size: var(--text-xs);
+				font-size: var(--text-sm);
 				color: var(--text-muted);
 			}
 
@@ -274,10 +288,11 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid var(--border-color);
 				border-left: none;
 				border-radius: 0 10px 10px 0;
-				transform: translateX(18px);
+				transform: translateX(10px);
 				opacity: 0;
 				pointer-events: none;
-				transition: transform 280ms ease-in-out, opacity 190ms ease-in-out;
+				will-change: transform, opacity;
+				transition: transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 160ms ease-out;
 			}
 			.fh-detail__scrim {
 				display: none;
@@ -304,7 +319,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 6px;
 				background: var(--fg-color);
 				color: var(--text-color);
-				font-size: var(--text-xs);
+				font-size: var(--text-sm);
 				padding: 0.24rem 0.42rem;
 				cursor: pointer;
 				transition: background 120ms ease;
@@ -340,30 +355,52 @@ opero.FlowHubPage = class FlowHubPage {
 				min-height: 0;
 				overflow: auto;
 				padding: 0.8rem 0.85rem 0.9rem;
+				font-size: var(--text-base);
+				animation: fh-content-appear 180ms ease-out;
+			}
+			@keyframes fh-content-appear {
+				from { opacity: 0.4; transform: translateY(4px); }
+				to   { opacity: 1;   transform: translateY(0);   }
 			}
 			.fh-detail__title-wrap {
-				display: flex;
-				align-items: flex-start;
-				gap: 0.55rem;
-				margin-bottom: 0.7rem;
+				margin-bottom: 0.5rem;
 			}
 			.fh-detail__checkbox {
-				width: 24px;
-				height: 24px;
+				width: 18px;
+				height: 18px;
 				border-radius: 50%;
-				border: 2px solid #cbd5e1;
+				border: 1.5px solid #cbd5e1;
 				background: transparent;
 				flex-shrink: 0;
 				line-height: 1;
 				cursor: pointer;
 				color: #cbd5e1;
+				font-size: 0;
+				padding: 0;
+				transition: border-color 120ms, background 120ms;
 			}
-			.fh-detail__checkbox:hover { border-color: #94a3b8; color: #94a3b8; }
+			.fh-detail__checkbox:hover { border-color: #15803d; background: #f0fdf4; }
 			.fh-detail__title {
 				font-size: var(--text-3xl, 2rem);
+				font-weight: var(--weight-regular);
 				line-height: 1.22;
 				margin: 0;
 				color: var(--text-color);
+				cursor: text;
+			}
+			.fh-detail__title-input {
+				display: block;
+				width: 100%;
+				border: none;
+				outline: none;
+				background: transparent;
+				color: var(--text-color);
+				font-size: var(--text-3xl, 2rem);
+				font-weight: var(--weight-regular);
+				line-height: 1.22;
+				font-family: var(--font-stack);
+				padding: 0;
+				margin: 0;
 			}
 			.fh-detail__meta {
 				display: flex;
@@ -500,7 +537,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid var(--border-color);
 				border-radius: 999px;
 				padding: 0.2rem 0.45rem 0.2rem 0.3rem;
-				font-size: var(--text-sm);
+				font-size: var(--text-base);
 				color: var(--text-color);
 				background: var(--bg-color);
 			}
@@ -550,7 +587,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border-radius: 999px;
 				background: transparent;
 				padding: 0.2rem 0.55rem;
-				font-size: var(--text-sm);
+				font-size: var(--text-base);
 				color: var(--text-muted);
 				cursor: pointer;
 				white-space: nowrap;
@@ -731,12 +768,13 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-detail__textarea {
 				width: 100%;
 				min-height: 102px;
-				border: 1px solid var(--border-color);
-				border-radius: 8px;
-				background: var(--fg-color);
+				border: none;
+				outline: none;
+				background: transparent;
 				color: var(--text-color);
 				font-size: var(--text-base);
-				padding: 0.56rem 0.62rem;
+				line-height: 1.55;
+				padding: 0 0 0.25rem;
 				resize: vertical;
 			}
 			.fh-detail__editor-actions {
@@ -748,7 +786,7 @@ opero.FlowHubPage = class FlowHubPage {
 				border: 1px solid var(--border-color);
 				border-radius: 7px;
 				padding: 0.22rem 0.52rem;
-				font-size: var(--text-xs);
+				font-size: var(--text-sm);
 				background: var(--fg-color);
 				color: var(--text-color);
 				cursor: pointer;
@@ -805,31 +843,21 @@ opero.FlowHubPage = class FlowHubPage {
 			.fh-detail__activity {
 				display: flex;
 				flex-direction: column;
-				gap: 0.48rem;
+				gap: 0.22rem;
 				padding: 0.1rem 0 0.55rem;
 			}
 			.fh-detail__activity-item {
-				border-left: 2px solid var(--border-color);
-				padding-left: 0.5rem;
-				min-width: 0;
-			}
-			.fh-detail__activity-head {
-				display: flex;
-				align-items: center;
-				flex-wrap: wrap;
-				gap: 0.28rem;
-				font-size: var(--text-xs);
-				color: var(--text-muted);
-			}
-			.fh-detail__activity-type {
-				color: var(--text-color);
-			}
-			.fh-detail__activity-content {
 				font-size: var(--text-sm);
 				color: var(--text-color);
-				line-height: 1.4;
-				margin-top: 0.14rem;
-				white-space: pre-wrap;
+				line-height: 1.5;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				min-width: 0;
+			}
+			.fh-detail__activity-time {
+				color: var(--text-muted);
+				margin-left: 0.15rem;
 			}
 			.fh-detail__activity-empty {
 				font-size: var(--text-sm);
@@ -853,14 +881,45 @@ opero.FlowHubPage = class FlowHubPage {
 				background: var(--fg-color);
 				color: var(--text-color);
 				padding: 0.34rem 0.5rem;
-				font-size: var(--text-sm);
+				font-size: var(--text-base);
+				font-family: var(--font-stack);
+				resize: none;
+				overflow: hidden;
+				line-height: 1.5;
 			}
+			.fh-mention-drop {
+				position: fixed;
+				z-index: 2100;
+				background: var(--fg-color);
+				border: 1px solid var(--border-color);
+				border-radius: 7px;
+				box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+				list-style: none;
+				margin: 0;
+				padding: 0.2rem 0;
+				max-height: 200px;
+				overflow-y: auto;
+				display: none;
+				min-width: 180px;
+			}
+			.fh-mention-drop.is-open { display: block; }
+			.fh-mention-drop__item {
+				padding: 0.38rem 0.75rem;
+				cursor: pointer;
+				font-size: var(--text-sm);
+				color: var(--text-color);
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.fh-mention-drop__item:hover,
+			.fh-mention-drop__item.is-focused { background: var(--bg-color); color: var(--primary); }
 			.fh-detail__composer-send {
 				border: 1px solid var(--border-color);
 				border-radius: 7px;
 				padding: 0.28rem 0.5rem;
 				background: var(--fg-color);
-				font-size: var(--text-xs);
+				font-size: var(--text-sm);
 				color: var(--text-color);
 				cursor: pointer;
 			}
@@ -871,10 +930,17 @@ opero.FlowHubPage = class FlowHubPage {
 				padding: 0.4rem 0;
 			}
 			.fh-item.is-selected {
-				background: var(--bg-color);
+				background: #eff6ff;
 				border-left: 3px solid var(--primary);
+				border-bottom-color: #dbeafe;
 				border-right: none;
 				border-radius: 0;
+			}
+			.fh-item.is-selected .fh-item__title {
+				color: #1d4ed8;
+			}
+			.fh-item.is-selected .fh-item__due {
+				color: #3b82f6;
 			}
 			.fh-band-overdue:not(.is-selected)   { border-left: 3px solid #fca5a5; }
 			.fh-band-due_today:not(.is-selected) { border-left: 3px solid #fdba74; }
@@ -1021,7 +1087,7 @@ opero.FlowHubPage = class FlowHubPage {
 				display: flex;
 				align-items: center;
 				justify-content: flex-end;
-				width: 68px;
+				min-width: 68px;
 				flex-shrink: 0;
 			}
 			.fh-avatars {
@@ -1029,17 +1095,19 @@ opero.FlowHubPage = class FlowHubPage {
 				align-items: center;
 				flex-shrink: 0;
 			}
-			.fh-avatars [data-tip] {
+			.fh-avatars > span {
 				display: inline-flex;
 				margin-left: -6px;
+				transition: margin-left 180ms ease;
 			}
-			.fh-avatars [data-tip]:first-child { margin-left: 0; }
+			.fh-avatars > span:first-child { margin-left: 0; }
+			.fh-avatars:hover > span { margin-left: 3px; }
+			.fh-avatars:hover > span:first-child { margin-left: 0; }
 			.fh-avatar {
-				width: 22px;
-				height: 22px;
+				width: 25px;
+				height: 25px;
 				border-radius: 50%;
-				border: 2px solid #ffffff;
-				font-size: var(--text-tiny);
+				font-size: var(--text-xs);
 				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
@@ -1051,12 +1119,11 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-avatar img { width: 100%; height: 100%; object-fit: cover; }
 			.fh-avatar-more {
-				width: 22px;
-				height: 22px;
+				width: 25px;
+				height: 25px;
 				border-radius: 50%;
-				border: 2px solid #ffffff;
 				margin-left: -6px;
-				font-size: var(--text-tiny);
+				font-size: var(--text-xs);
 				font-weight: var(--weight-semibold);
 				display: flex;
 				align-items: center;
@@ -1064,27 +1131,34 @@ opero.FlowHubPage = class FlowHubPage {
 				background: #e2e8f0;
 				color: #475569;
 				flex-shrink: 0;
+				transition: margin-left 180ms ease;
 			}
+			.fh-avatars:hover .fh-avatar-more { margin-left: 3px; }
 
 			/* ── Due date button ────────────────────────────────── */
 			.fh-due-btn {
 				cursor: pointer;
-				border-radius: 3px;
-				padding: 0.05rem 0.15rem;
-				margin: -0.05rem -0.15rem;
+				border: none;
+				background: transparent;
+				border-radius: 4px;
+				padding: 0.1rem 0.35rem;
 				transition: background 120ms;
 				white-space: nowrap;
 			}
-			.fh-due-btn:hover { background: #f1f5f9; }
+			.fh-due-btn:hover { background: var(--bg-color); }
 			.fh-due-btn--empty {
-				color: #cbd5e1;
-				font-size: var(--text-tiny);
+				color: var(--text-muted);
+				font-size: var(--text-sm);
 			}
-			.fh-due-btn--empty:hover { color: #94a3b8; background: #f1f5f9; }
-			.fh-due-btn--overdue   { color: #ef4444; }
-			.fh-due-btn--due_today { color: #f97316; }
-			.fh-due-btn--due_soon  { color: #2563eb; }
-			.fh-due-btn--stale     { color: #7c3aed; }
+			.fh-due-btn--empty:hover { color: var(--text-color); background: var(--bg-color); }
+			.fh-due-btn--overdue   { color: #ef4444; background: #fff1f2; }
+			.fh-due-btn--overdue:hover { background: #ffe4e6; }
+			.fh-due-btn--due_today { color: #c2410c; background: #fff7ed; }
+			.fh-due-btn--due_today:hover { background: #ffedd5; }
+			.fh-due-btn--due_soon  { color: #1d4ed8; background: #eff6ff; }
+			.fh-due-btn--due_soon:hover  { background: #dbeafe; }
+			.fh-due-btn--stale     { color: #6d28d9; background: #f5f3ff; }
+			.fh-due-btn--stale:hover     { background: #ede9fe; }
 
 			/* Due date popover */
 			.fh-due-pop {
@@ -1552,6 +1626,249 @@ opero.FlowHubPage = class FlowHubPage {
 					padding: 0.45rem 0.5rem;
 				}
 			}
+
+			/* ── Detail panel: Linear-style property-row redesign ───── */
+
+			/* Override outlined-fieldsets to flat property rows inside .fh-detail */
+			.fh-detail .fh-field-outlined {
+				border: none;
+				border-radius: 0;
+				padding: 0.18rem 0;
+				margin: 0;
+				display: flex;
+				align-items: flex-start;
+				gap: 0.75rem;
+				min-height: 1.6rem;
+				transition: none;
+			}
+			.fh-detail .fh-field-outlined__label {
+				position: static;
+				top: auto;
+				left: auto;
+				flex: 0 0 96px;
+				background: transparent;
+				padding: 0;
+				font-size: var(--text-sm);
+				color: var(--text-muted);
+				line-height: 1.75;
+				letter-spacing: 0;
+				font-weight: var(--weight-regular);
+				pointer-events: none;
+				white-space: nowrap;
+			}
+			.fh-detail .fh-field-outlined__body {
+				flex: 1;
+				min-width: 0;
+				display: flex;
+				align-items: center;
+				gap: 0.3rem;
+				flex-wrap: wrap;
+				justify-content: flex-start;
+			}
+			.fh-detail .fh-field-outlined__value {
+				font-size: var(--text-base);
+				line-height: 1.6;
+			}
+			.fh-detail .fh-field-outlined--clickable {
+				cursor: pointer;
+				border-color: transparent;
+				transition: none;
+				border-radius: 4px;
+			}
+			.fh-detail .fh-field-outlined--clickable:hover { border-color: transparent; }
+			.fh-detail .fh-field-outlined--clickable:hover .fh-field-outlined__value:not(.is-empty) { color: var(--primary); }
+			.fh-detail .fh-field-outlined--clickable.is-open { border-color: transparent; }
+			.fh-detail .fh-members__grid {
+				display: flex;
+				flex-direction: column;
+				gap: 0;
+			}
+			.fh-detail .fh-detail__section {
+				padding: 0.05rem 0 0.5rem;
+				border-bottom: none;
+			}
+
+			/* Assignee flat rows */
+			.fh-assignees-list {
+				flex: 1;
+				min-width: 0;
+				display: flex;
+				flex-direction: column;
+				gap: 0;
+			}
+			.fh-assignee-row {
+				display: flex;
+				align-items: center;
+				width: 100%;
+				min-height: 1.6rem;
+				padding: 0.08rem 0;
+			}
+			.fh-assignee-row__name {
+				flex: 1;
+				min-width: 0;
+				font-size: var(--text-base);
+				color: var(--text-color);
+				line-height: 1.6;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.fh-assignee-row__actions {
+				display: flex;
+				align-items: center;
+				gap: 0.3rem;
+				flex-shrink: 0;
+				opacity: 0;
+				transition: opacity 140ms;
+			}
+			.fh-assignee-row:hover .fh-assignee-row__actions { opacity: 1; }
+			.fh-assignee-row__star {
+				font-size: 0.62rem;
+				color: #f59e0b;
+				flex-shrink: 0;
+				line-height: 1;
+				pointer-events: none;
+			}
+			.fh-assignee-row__promote {
+				border: none;
+				background: transparent;
+				padding: 0;
+				cursor: pointer;
+				font-size: 0.62rem;
+				color: var(--text-muted);
+				line-height: 1;
+				transition: color 120ms;
+			}
+			.fh-assignee-row__promote:hover { color: var(--primary); }
+			.fh-assignee-row__remove {
+				border: none;
+				background: transparent;
+				padding: 0 0.1rem;
+				cursor: pointer;
+				color: var(--text-muted);
+				font-size: var(--text-sm);
+				line-height: 1;
+				transition: color 120ms;
+			}
+			.fh-assignee-row__remove:hover { color: #dc2626; }
+
+			/* Meta row chips */
+			.fh-detail__meta { gap: 0.3rem; }
+			.fh-meta-chip {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.2rem;
+				border: none;
+				border-radius: 4px;
+				padding: 0.1rem 0.4rem;
+				font-size: var(--text-sm);
+				cursor: pointer;
+				transition: background 120ms;
+				white-space: nowrap;
+				line-height: 1.5;
+			}
+			/* Status */
+			.fh-status-chip--open        { color: var(--text-muted); background: var(--bg-color); }
+			.fh-status-chip--open:hover  { background: #f1f5f9; }
+			.fh-status-chip--in_progress { color: #1d4ed8; background: #eff6ff; }
+			.fh-status-chip--in_progress:hover { background: #dbeafe; }
+			.fh-status-chip--closed      { color: #15803d; background: #f0fdf4; }
+			.fh-status-chip--closed:hover { background: #dcfce7; }
+			.fh-status-chip--cancelled   { color: var(--text-muted); background: var(--bg-color); }
+			.fh-status-chip--cancelled:hover { background: #f1f5f9; }
+			/* Priority */
+			.fh-prio-chip--high   { color: #d97706; background: #fffbeb; }
+			.fh-prio-chip--high:hover   { background: #fef3c7; }
+			.fh-prio-chip--medium { color: #64748b; background: var(--bg-color); }
+			.fh-prio-chip--medium:hover { background: #f1f5f9; }
+			.fh-prio-chip--low    { color: #3b82f6; background: #eff6ff; }
+			.fh-prio-chip--low:hover    { background: #dbeafe; }
+			.fh-prio-chip--none   { color: var(--text-muted); background: transparent; }
+			.fh-prio-chip--none:hover   { background: var(--bg-color); }
+
+			/* Collapsible section header */
+			.fh-section-hdr {
+				display: flex;
+				align-items: center;
+				gap: 0.35rem;
+				padding: 0.6rem 0 0.3rem;
+				font-size: var(--text-sm);
+				font-weight: var(--weight-semibold);
+				color: var(--text-muted);
+				cursor: pointer;
+				user-select: none;
+				border: none;
+				background: transparent;
+				width: 100%;
+				text-align: left;
+				transition: color 120ms;
+				line-height: 1;
+			}
+			.fh-section-hdr:hover { color: var(--text-color); }
+			.fh-section-hdr__arrow {
+				font-size: 9px;
+				transition: transform 160ms;
+				color: var(--text-muted);
+				display: inline-block;
+				flex-shrink: 0;
+			}
+			.fh-section-hdr.is-open .fh-section-hdr__arrow { transform: rotate(90deg); }
+			.fh-section-hdr__count {
+				margin-left: 0.4rem;
+				font-size: var(--text-xs);
+				font-weight: var(--weight-semibold);
+				color: var(--text-muted);
+				background: var(--bg-color);
+				border: 1px solid var(--border-color);
+				border-radius: 999px;
+				padding: 0.05rem 0.42rem;
+				line-height: 1.5;
+			}
+			.fh-section-body { overflow: hidden; }
+			.fh-section-body.is-hidden { display: none; }
+
+			/* Non-collapsible section label */
+			.fh-section-label {
+				font-size: var(--text-sm);
+				font-weight: var(--weight-semibold);
+				color: var(--text-muted);
+				padding: 0.6rem 0 0.3rem;
+				line-height: 1;
+			}
+
+			/* Description read mode */
+			.fh-detail__desc-body {
+				font-size: var(--text-base);
+				line-height: 1.6;
+				color: var(--text-color);
+				cursor: text;
+				padding: 0.1rem 0 0.35rem;
+				min-height: 1.8rem;
+				word-break: break-word;
+				white-space: pre-wrap;
+			}
+			.fh-detail__desc-body:hover { opacity: 0.8; }
+			.fh-detail__desc-body.is-empty {
+				color: var(--text-muted);
+				font-style: italic;
+				white-space: normal;
+			}
+
+			/* Description textarea (edit mode) */
+			.fh-detail__desc-ta {
+				display: block;
+				width: 100%;
+				border: none;
+				outline: none;
+				background: transparent;
+				color: var(--text-color);
+				font-size: var(--text-base);
+				font-family: var(--font-stack);
+				line-height: 1.6;
+				resize: none;
+				overflow: hidden;
+				padding: 0.1rem 0 0.35rem;
+			}
 		`;
 	}
 
@@ -1687,6 +2004,7 @@ opero.FlowHubPage = class FlowHubPage {
 				this._detail_context = {};
 				this._detail_loading.clear();
 				this._description_draft = null;
+				this._title_draft = null;
 				this._extra_fields_expanded = false;
 				this.render();
 			},
@@ -1705,6 +2023,19 @@ opero.FlowHubPage = class FlowHubPage {
 		const tab = this._active_tab;
 		let body;
 		let activeQueue = [];
+
+		// Snapshot pre-render state so we can restore it after the DOM swap
+		const wasDetailOpen = !!this.$root.find(".fh-queue-layout.is-detail-open").length;
+		const sameTodo = wasDetailOpen && this._selected_todo?.name === this._rendered_todo_name;
+
+		// Reset section states when switching to a different todo
+		if (this._selected_todo?.name && this._selected_todo.name !== this._rendered_todo_name) {
+			this._detail_collapsed = { attachments: true };
+		}
+		const prevScrollTop = sameTodo
+			? (this.$root.find(".fh-detail__content")[0]?.scrollTop || 0)
+			: 0;
+
 		if (tab === "health") {
 			this._selected_todo = null;
 			body = this._render_health(s.throughput_30d || {}, s.risk || []);
@@ -1731,13 +2062,26 @@ opero.FlowHubPage = class FlowHubPage {
 			${body}
 		`);
 		this._bind_events(s, activeQueue);
+		this._rendered_todo_name = this._selected_todo?.name || null;
+
 		if (this._selected_todo) {
 			this._ensure_detail_context(this._selected_todo.name);
-			if (this._queue_layout_open_raf) cancelAnimationFrame(this._queue_layout_open_raf);
-			this._queue_layout_open_raf = requestAnimationFrame(() => {
-				this._queue_layout_open_raf = null;
-				this._apply_queue_layout_open_state();
-			});
+			if (wasDetailOpen) {
+				// Panel already open — apply class synchronously to skip the slide-in animation
+				// and preserve scroll position so saves don't jump the view
+				this.$root.find(".fh-queue-layout")[0]?.classList.add("is-detail-open");
+				if (prevScrollTop > 0) {
+					const $c = this.$root.find(".fh-detail__content");
+					if ($c.length) $c[0].scrollTop = prevScrollTop;
+				}
+			} else {
+				// First open — trigger the slide-in transition via rAF
+				if (this._queue_layout_open_raf) cancelAnimationFrame(this._queue_layout_open_raf);
+				this._queue_layout_open_raf = requestAnimationFrame(() => {
+					this._queue_layout_open_raf = null;
+					this._apply_queue_layout_open_state();
+				});
+			}
 		}
 	}
 
@@ -2087,7 +2431,7 @@ opero.FlowHubPage = class FlowHubPage {
 			const row = queue[parseInt($(el).attr("data-queue-index"), 10)];
 			if (row?.name) $(el).on("click", () => {
 				this._selected_todo = (this._selected_todo?.name === row.name) ? null : row;
-				if (!this._selected_todo) this._description_draft = null;
+				if (!this._selected_todo) { this._description_draft = null; this._title_draft = null; }
 				this.render();
 				if (this._selected_todo?.name) {
 					this._ensure_detail_context(this._selected_todo.name);
@@ -2098,12 +2442,18 @@ opero.FlowHubPage = class FlowHubPage {
 		this.$root.find("[data-close-detail]").on("click", () => {
 			this._selected_todo = null;
 			this._description_draft = null;
+			this._title_draft = null;
 			this.render();
 		});
 
 		this.$root.find("[data-prio-index], [data-detail-prio]").on("click", (e) => {
 			e.stopPropagation();
 			this._open_prio_dropdown(e.currentTarget);
+		});
+
+		this.$root.find("[data-detail-status]").on("click", (e) => {
+			e.stopPropagation();
+			this._open_status_dropdown(e.currentTarget);
 		});
 
 		this.$root.find("[data-detail-action='done']").on("click", (e) => {
@@ -2200,6 +2550,26 @@ opero.FlowHubPage = class FlowHubPage {
 			if (todoName) this._save_project_reference(todoName, "");
 		});
 
+		this.$root.find("[data-detail-edit-title]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-detail-edit-title");
+			if (todoName) this._start_title_edit(todoName);
+		});
+
+		this.$root.find("[data-detail-title-input]").on("blur", (e) => {
+			const todoName = $(e.currentTarget).attr("data-detail-title-input");
+			if (todoName) this._save_title_edit(todoName);
+		});
+
+		this.$root.find("[data-detail-title-input]").on("keydown", (e) => {
+			if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+		});
+
+		this.$root.find("[data-detail-title-input]").on("input", (e) => {
+			if (this._title_draft) this._title_draft.value = $(e.currentTarget).val();
+		});
+
 		this.$root.find("[data-detail-edit-desc]").on("click", (e) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -2211,7 +2581,19 @@ opero.FlowHubPage = class FlowHubPage {
 			e.preventDefault();
 			e.stopPropagation();
 			this._description_draft = null;
+			this._quill_instance = null;
 			this.render();
+		});
+
+		this.$root.find("[data-section-toggle]").on("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const key = $(e.currentTarget).attr("data-section-toggle");
+			if (!key) return;
+			this._detail_collapsed[key] = !this._detail_collapsed[key];
+			const isOpen = !this._detail_collapsed[key];
+			$(e.currentTarget).toggleClass("is-open", isOpen);
+			$(e.currentTarget).next(".fh-section-body").toggleClass("is-hidden", !isOpen);
 		});
 
 		this.$root.find("[data-detail-desc-save]").on("click", (e) => {
@@ -2224,6 +2606,14 @@ opero.FlowHubPage = class FlowHubPage {
 		this.$root.find("[data-detail-desc-input]").on("input", (e) => {
 			if (!this._description_draft) return;
 			this._description_draft.value = $(e.currentTarget).val();
+			const ta = e.currentTarget;
+			ta.style.height = "auto";
+			ta.style.height = ta.scrollHeight + "px";
+		});
+
+		this.$root.find("[data-detail-desc-input]").on("blur", (e) => {
+			const todoName = $(e.currentTarget).attr("data-detail-desc-input");
+			if (todoName) this._save_description_edit(todoName);
 		});
 
 		this.$root.find("[data-detail-add-attachment]").on("click", (e) => {
@@ -2241,76 +2631,30 @@ opero.FlowHubPage = class FlowHubPage {
 			if (todoName && fileId) this._remove_todo_attachment(todoName, fileId);
 		});
 
-		this.$root.find("[data-extra-toggle]").on("click", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			this._extra_fields_expanded = !this._extra_fields_expanded;
-			this.render();
+
+		this.$root.find("[data-detail-comment-input]").on("input", (e) => {
+			const ta = e.currentTarget;
+			ta.style.height = "auto";
+			ta.style.height = ta.scrollHeight + "px";
+			this._check_mention_trigger(ta);
 		});
 
-		this.$root.find("[data-extra-link]").on("click", (e) => {
-			if ($(e.target).closest("[data-extra-clear]").length) return;
-			e.preventDefault();
-			e.stopPropagation();
-			const $el      = $(e.currentTarget);
-			const todoName = $el.attr("data-extra-link");
-			const fieldname = $el.attr("data-extra-field");
-			const doctype  = $el.attr("data-extra-doctype");
-			const current  = $el.attr("data-extra-current") || "";
-			if (!todoName || !doctype) return;
-			this._open_link_combobox(todoName, $el, current, doctype, (val) => {
-				this._save_field(todoName, { [fieldname]: val });
-			});
-		});
-
-		this.$root.find("[data-extra-text]").on("click", (e) => {
-			if ($(e.target).is("input")) return;
-			e.preventDefault();
-			e.stopPropagation();
-			const $el       = $(e.currentTarget);
-			const todoName  = $el.attr("data-extra-text");
-			const fieldname = $el.attr("data-extra-field");
-			const $val      = $el.find(".fh-field-outlined__value");
-			const current   = $val.text().trim();
-			const $input    = $(`<input class="fh-field-outlined__text-input" type="text" value="${this.esc(current)}">`);
-			$el.addClass("is-open");
-			$val.replaceWith($input);
-			$input.focus().select();
-			let saved = false;
-			const _save = () => {
-				if (saved) return; saved = true;
-				const val = $input.val().trim();
-				$el.removeClass("is-open");
-				this._save_field(todoName, { [fieldname]: val });
-			};
-			const _cancel = () => {
-				if (saved) return; saved = true;
-				$el.removeClass("is-open");
-				this.render();
-			};
-			$input.on("blur", _save);
-			$input.on("keydown", (ev) => {
-				if (ev.key === "Enter")  { $input.off("blur"); _save(); }
-				if (ev.key === "Escape") { $input.off("blur"); _cancel(); }
-			});
-		});
-
-		this.$root.find("[data-extra-clear]").on("click", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			const todoName  = $(e.currentTarget).attr("data-extra-clear");
-			const fieldname = $(e.currentTarget).attr("data-extra-field");
-			if (!todoName || !fieldname) return;
-			const clearValues = { [fieldname]: "" };
-			if (fieldname === "reference_type") clearValues.reference_name = "";
-			this._save_field(todoName, clearValues);
+		this.$root.find("[data-detail-comment-input]").on("blur", () => {
+			setTimeout(() => this._close_mention_drop(), 150);
 		});
 
 		this.$root.find("[data-detail-comment-input]").on("keydown", (e) => {
-			if (e.key !== "Enter" || e.shiftKey) return;
-			e.preventDefault();
-			const todoName = $(e.currentTarget).attr("data-detail-comment-input");
-			if (todoName) this._post_detail_comment(todoName, $(e.currentTarget));
+			if (e.key === "Escape") { this._close_mention_drop(); return; }
+			if (this._mention_state) {
+				if (e.key === "ArrowDown")  { e.preventDefault(); this._mention_nav(1);  return; }
+				if (e.key === "ArrowUp")    { e.preventDefault(); this._mention_nav(-1); return; }
+				if (e.key === "Enter")      { e.preventDefault(); this._mention_select_focused(); return; }
+			}
+			if (e.key === "Enter" && !e.shiftKey) {
+				e.preventDefault();
+				const todoName = $(e.currentTarget).attr("data-detail-comment-input");
+				if (todoName) this._post_detail_comment(todoName, $(e.currentTarget));
+			}
 		});
 
 		this.$root.find("[data-detail-comment-send]").on("click", (e) => {
@@ -2633,6 +2977,67 @@ opero.FlowHubPage = class FlowHubPage {
 		}, 0);
 	}
 
+	_open_status_dropdown(btn) {
+		const STATUSES = [
+			{ value: "Open",        label: __("Open"),        color: "#64748b" },
+			{ value: "In Progress", label: __("In Progress"), color: "#1d4ed8" },
+			{ value: "Closed",      label: __("Closed"),      color: "#15803d" },
+			{ value: "Cancelled",   label: __("Cancelled"),   color: "#94a3b8" },
+		];
+
+		let $drop = $("#fh-status-drop");
+		if (!$drop.length) {
+			$drop = $(`<div id="fh-status-drop" class="fh-prio-drop">
+				${STATUSES.map(s => `
+					<div class="fh-prio-drop__opt" data-status-value="${s.value}">
+						<span class="fh-prio-drop__icon" style="color:${s.color}">●</span>
+						<span>${s.label}</span>
+						<span class="fh-prio-drop__check">✓</span>
+					</div>
+				`).join("")}
+			</div>`).appendTo(document.body);
+
+			$drop.on("click", ".fh-prio-drop__opt", (e) => {
+				e.stopPropagation();
+				const newStatus = $(e.currentTarget).attr("data-status-value");
+				const todoName  = $($drop.data("active-btn")).attr("data-todo-name");
+				if (!newStatus || !todoName) return;
+				$drop.removeClass("is-open");
+				this._saving++;
+				frappe.call({
+					method: "opero.todo_dashboard.update_todo_from_flow_hub",
+					args: {
+						todo_name: todoName,
+						values: { status: newStatus },
+						expected_modified: this._row_modified(todoName),
+					},
+					callback: () => this._on_save_done(),
+					error:    () => this._on_save_error(),
+				});
+			});
+		}
+
+		const todoName = $(btn).attr("data-todo-name");
+		const current  = (this.snapshot.focus_queue || []).find(r => r.name === todoName)?.status || "";
+		$drop.find(".fh-prio-drop__opt").removeClass("is-current");
+		$drop.find(`[data-status-value="${current}"]`).addClass("is-current");
+		$drop.data("active-btn", btn);
+
+		if ($drop.hasClass("is-open") && $drop.data("active-btn-id") === todoName) {
+			$drop.removeClass("is-open");
+			return;
+		}
+		$drop.data("active-btn-id", todoName);
+
+		const rect = btn.getBoundingClientRect();
+		const left = Math.min(Math.max(4, rect.left), window.innerWidth - 160);
+		$drop.css({ top: rect.bottom + 4, left }).addClass("is-open");
+
+		setTimeout(() => {
+			$(document).one("click.fh-status", () => $drop.removeClass("is-open"));
+		}, 0);
+	}
+
 	_open_due_date_popover(btn) {
 		const todoName = $(btn).attr("data-due-todo");
 		const currentDate = $(btn).attr("data-due-date") || "";
@@ -2749,20 +3154,70 @@ opero.FlowHubPage = class FlowHubPage {
 		});
 	}
 
+	_unwrap_quill_html(html) {
+		if (!html) return "";
+		const tmp = document.createElement("div");
+		tmp.innerHTML = html;
+		const ql = tmp.querySelector(".ql-editor");
+		return ql ? ql.innerHTML : html;
+	}
+
+	_start_title_edit(todoName) {
+		const current = String(this._selected_todo?.title || "").trim();
+		this._title_draft = { todoName, value: current, original: current };
+		this.render();
+		const input = this.$root.find("[data-detail-title-input]")[0];
+		if (input) { input.focus(); input.select(); }
+	}
+
+	_save_title_edit(todoName) {
+		if (!this._title_draft || this._title_draft.todoName !== todoName) return;
+		const nextValue = String(this._title_draft.value || "").trim();
+		const original  = String(this._title_draft.original || "").trim();
+		this._title_draft = null;
+		if (nextValue === original || !nextValue) { this.render(); return; }
+		this._saving++;
+		frappe.call({
+			method: "opero.todo_dashboard.update_todo_from_flow_hub",
+			args: {
+				todo_name: todoName,
+				values: { custom_title: nextValue },
+				expected_modified: this._row_modified(todoName),
+			},
+			callback: () => this._on_save_done(),
+			error:    () => this._on_save_error(),
+		});
+	}
+
 	_start_description_edit(todoName) {
 		const detail = this._detail_context[todoName] || {};
 		const fallback = (this._selected_todo?.description || "").trim();
-		this._description_draft = {
-			todoName,
-			value: String(detail.description || fallback || ""),
-		};
+		const raw = String(detail.description || fallback || "");
+		const tmp = document.createElement("div");
+		tmp.innerHTML = this._unwrap_quill_html(raw);
+		const plain = (tmp.textContent || tmp.innerText || "").trim();
+		this._description_draft = { todoName, value: plain, original: plain };
 		this.render();
+		const ta = this.$root.find("[data-detail-desc-input]")[0];
+		if (ta) {
+			ta.style.minHeight = "0";
+			ta.style.height = "auto";
+			ta.style.height = ta.scrollHeight + "px";
+			ta.focus();
+			ta.setSelectionRange(ta.value.length, ta.value.length);
+		}
 	}
 
 	_save_description_edit(todoName) {
 		if (!this._description_draft || this._description_draft.todoName !== todoName) return;
 		const nextValue = String(this._description_draft.value || "").trim();
+		const original  = String(this._description_draft.original || "").trim();
 		this._description_draft = null;
+		this._quill_instance = null;
+		if (nextValue === original) {
+			this.render();
+			return;
+		}
 		this._saving++;
 		frappe.call({
 			method: "opero.todo_dashboard.update_todo_from_flow_hub",
@@ -2983,148 +3438,131 @@ opero.FlowHubPage = class FlowHubPage {
 		});
 	}
 
-	_render_extra_fields(todoName, fieldValues) {
-		const defs = [
-			{ fieldname: "reference_type",   label: __("Reference Type"),   fieldtype: "Link",        options: "DocType"          },
-			{ fieldname: "reference_name",   label: __("Reference Name"),   fieldtype: "DynamicLink", options: "reference_type"   },
-			{ fieldname: "role",             label: __("Role"),             fieldtype: "Link",        options: "Role"             },
-			{ fieldname: "assignment_rule",  label: __("Assignment Rule"),  fieldtype: "Link",        options: "Assignment Rule"  },
-			{ fieldname: "color",            label: __("Color"),            fieldtype: "Data"                                     },
-			{ fieldname: "sender",           label: __("Sender"),           fieldtype: "Data"                                     },
-		];
 
-		const refType = String(fieldValues.reference_type || "").trim();
+	_check_mention_trigger(ta) {
+		const before = ta.value.slice(0, ta.selectionStart);
+		const match  = before.match(/@([^\s@]*)$/);
+		if (!match) { this._close_mention_drop(); return; }
+		this._mention_state = { ta, atStart: ta.selectionStart - match[0].length, query: match[1] };
+		clearTimeout(this._mention_timer);
+		this._mention_timer = setTimeout(() => {
+			if (!this._mention_state) return;
+			const q = this._mention_state.query;
+			frappe.call({
+				method: "frappe.client.get_list",
+				args: {
+					doctype: "User",
+					filters: [
+						["enabled", "=", 1],
+						["user_type", "=", "System User"],
+						...(q ? [["OR", [["full_name", "like", `%${q}%`], ["custom_short_name", "like", `%${q}%`]]]] : []),
+					],
+					fields: ["name", "full_name", "custom_short_name"],
+					limit_page_length: 8,
+					order_by: "full_name asc",
+				},
+				callback: (r) => {
+					if (this._mention_state) this._render_mention_drop(r.message || []);
+				},
+			});
+		}, 160);
+	}
 
-		const _field = (def) => {
-			const value       = String(fieldValues[def.fieldname] || "").trim();
-			const isEmpty     = !value;
-			const isLink      = def.fieldtype === "Link" || def.fieldtype === "DynamicLink";
-			const isDisabled  = def.fieldtype === "DynamicLink" && !refType;
-			const doctype     = def.fieldtype === "DynamicLink" ? refType : (def.options || "");
-			const clickable   = isLink && !isDisabled;
-
-			return `<div class="fh-field-outlined ${clickable ? "fh-field-outlined--clickable" : ""} ${isDisabled ? "is-disabled" : ""}"
-					${clickable ? `data-extra-link="${this.esc(todoName)}" data-extra-field="${this.esc(def.fieldname)}" data-extra-doctype="${this.esc(doctype)}" data-extra-current="${this.esc(value)}"` : ""}
-					${def.fieldtype === "Data" ? `data-extra-text="${this.esc(todoName)}" data-extra-field="${this.esc(def.fieldname)}"` : ""}>
-				<span class="fh-field-outlined__label">${this.esc(def.label)}</span>
-				<div class="fh-field-outlined__body">
-					<span class="fh-field-outlined__value ${isEmpty ? "is-empty" : ""}">${this.esc(value)}</span>
-					${value ? `<button type="button" class="fh-field-outlined__clear"
-						data-extra-clear="${this.esc(todoName)}"
-						data-extra-field="${this.esc(def.fieldname)}"
-						title="${__("Clear")}">×</button>` : ""}
-				</div>
-			</div>`;
-		};
-
-		const populated = defs.filter(d => fieldValues[d.fieldname]);
-		const empty     = defs.filter(d => !fieldValues[d.fieldname]);
-		const expanded  = this._extra_fields_expanded;
-		const visible   = expanded ? defs : populated;
-
-		const pairs = [];
-		for (let i = 0; i < visible.length; i += 2) {
-			pairs.push([visible[i], visible[i + 1]]);
+	_render_mention_drop(users) {
+		if (!users.length) { this._close_mention_drop(); return; }
+		let $drop = $("#fh-mention-drop");
+		if (!$drop.length) {
+			$drop = $(`<ul id="fh-mention-drop" class="fh-mention-drop"></ul>`).appendTo(document.body);
+			$drop.on("mousedown", "li[data-user]", (e) => {
+				e.preventDefault();
+				this._insert_mention($(e.currentTarget).attr("data-user"), $(e.currentTarget).attr("data-name"));
+			});
 		}
-
-		const gridHtml = pairs.map(([a, b]) =>
-			`<div class="fh-extra-fields__grid">${_field(a)}${b ? _field(b) : "<div></div>"}</div>`
-		).join("");
-
-		const toggleHtml = empty.length && !expanded
-			? `<button type="button" class="fh-extra-fields__toggle" data-extra-toggle="1">+ ${empty.length} ${__("more field(s)")}</button>`
-			: expanded && empty.length
-				? `<button type="button" class="fh-extra-fields__toggle" data-extra-toggle="1">− ${__("fewer fields")}</button>`
-				: "";
-
-		return gridHtml + toggleHtml;
-	}
-
-	_editable_todo_fields() {
-		return [
-			{ fieldname: "reference_type", label: __("Reference Type") },
-			{ fieldname: "reference_name", label: __("Reference Name") },
-			{ fieldname: "role", label: __("Role") },
-			{ fieldname: "color", label: __("Color") },
-			{ fieldname: "sender", label: __("Sender") },
-			{ fieldname: "assignment_rule", label: __("Assignment Rule") },
-		];
-	}
-
-	_open_custom_field_dialog(todoName, fieldValues = {}) {
-		const defs = this._editable_todo_fields();
-		const options = defs.map(def => `${def.label} (${def.fieldname})`);
-		const first = defs[0];
-		const dialog = new frappe.ui.Dialog({
-			title: __("Add or Edit Field"),
-			fields: [
-				{
-					fieldtype: "Select",
-					fieldname: "field_option",
-					label: __("Field"),
-					reqd: 1,
-					options: options.join("\n"),
-					default: `${first.label} (${first.fieldname})`,
-				},
-				{
-					fieldtype: "Data",
-					fieldname: "field_value",
-					label: __("Value"),
-				},
-				{
-					fieldtype: "Check",
-					fieldname: "clear_value",
-					label: __("Clear value"),
-					default: 0,
-				},
-			],
-			primary_action_label: __("Save"),
-			primary_action: (values) => {
-				const def = defs.find(d => `${d.label} (${d.fieldname})` === values.field_option);
-				if (!def) return;
-				const value = values.clear_value ? null : values.field_value;
-				dialog.hide();
-				this._saving++;
-				frappe.call({
-					method: "opero.todo_dashboard.update_todo_from_flow_hub",
-					args: {
-						todo_name: todoName,
-						values: { [def.fieldname]: value },
-						expected_modified: this._row_modified(todoName),
-					},
-					callback: () => this._on_save_done(),
-					error: () => this._on_save_error(),
-				});
-			},
+		$drop.empty();
+		users.forEach((u, i) => {
+			const display = String(u.custom_short_name || u.full_name || u.name).trim();
+			$drop.append(`<li class="fh-mention-drop__item${i === 0 ? " is-focused" : ""}" data-user="${this.esc(u.name)}" data-name="${this.esc(display)}">${this.esc(display)}</li>`);
 		});
+		const ta   = this._mention_state?.ta;
+		const rect = ta ? ta.getBoundingClientRect() : null;
+		if (rect) {
+			$drop.css({ bottom: window.innerHeight - rect.top + 4, top: "auto", left: rect.left, minWidth: Math.min(200, rect.width) });
+		}
+		$drop.addClass("is-open");
+	}
 
-		const syncValue = () => {
-			const selected = dialog.get_value("field_option");
-			const def = defs.find(d => `${d.label} (${d.fieldname})` === selected) || first;
-			dialog.set_value("field_value", fieldValues[def.fieldname] || "");
-			dialog.set_value("clear_value", 0);
-		};
+	_close_mention_drop() {
+		this._mention_state = null;
+		clearTimeout(this._mention_timer);
+		$("#fh-mention-drop").removeClass("is-open").empty();
+	}
 
-		dialog.show();
-		dialog.fields_dict.field_option.$input.on("change", syncValue);
-		syncValue();
+	_insert_mention(email, fullName) {
+		if (!this._mention_state) return;
+		const { ta, atStart } = this._mention_state;
+		const pos     = ta.selectionStart;
+		const insert  = `@${fullName} `;
+		ta.value = ta.value.slice(0, atStart) + insert + ta.value.slice(pos);
+		const newPos  = atStart + insert.length;
+		ta.setSelectionRange(newPos, newPos);
+		this._mentions_map[fullName] = email;
+		this._close_mention_drop();
+		ta.focus();
+		ta.style.height = "auto";
+		ta.style.height = ta.scrollHeight + "px";
+	}
+
+	_mention_nav(dir) {
+		const $items = $("#fh-mention-drop li");
+		const idx    = $items.index($items.filter(".is-focused"));
+		$items.removeClass("is-focused").eq(Math.max(0, Math.min($items.length - 1, idx + dir))).addClass("is-focused");
+	}
+
+	_mention_select_focused() {
+		const $f = $("#fh-mention-drop li.is-focused");
+		if ($f.length) this._insert_mention($f.attr("data-user"), $f.attr("data-name"));
 	}
 
 	_post_detail_comment(todoName, $input) {
 		if (!$input || !$input.length) return;
-		const content = String($input.val() || "").trim();
-		if (!content) return;
+		const raw = String($input.val() || "").trim();
+		if (!raw) return;
+
+		// Convert plain text to HTML, resolving @mentions into Frappe mention spans
+		const mentionMap = Object.assign({}, this._mentions_map);
+		this._mentions_map = {};
+		const htmlContent = raw.split("\n").map(line => {
+			if (!line.trim()) return "<p><br></p>";
+			let parts = [line];
+			Object.entries(mentionMap).forEach(([fullName, email]) => {
+				parts = parts.flatMap(p => {
+					if (typeof p !== "string") return [p];
+					const tokens = p.split(`@${fullName}`);
+					return tokens.flatMap((tok, i) =>
+						i === 0 ? [tok] : [{ fullName, email }, tok]
+					);
+				});
+			});
+			const inner = parts.map(p =>
+				typeof p === "string"
+					? this.esc(p)
+					: `<span class="mention" data-id="${this.esc(p.email)}" data-value="${this.esc(p.fullName)}" data-denotation-char="@"><span>@${this.esc(p.fullName)}</span></span>`
+			).join("");
+			return `<p>${inner}</p>`;
+		}).join("");
+
 		frappe.call({
 			method: "frappe.desk.form.utils.add_comment",
 			args: {
 				reference_doctype: "ToDo",
 				reference_name: todoName,
-				content,
+				content: htmlContent,
 				comment_email: frappe.session.user_email || frappe.session.user,
 				comment_by: frappe.session.user_fullname || frappe.session.user,
 			},
 			callback: () => {
 				$input.val("");
+				$input[0].style.height = "auto";
 				frappe.show_alert({ message: __("Comment added"), indicator: "green" }, 2);
 				this._ensure_detail_context(todoName, { force: true });
 			},
@@ -3240,11 +3678,13 @@ opero.FlowHubPage = class FlowHubPage {
 		const projectName = referenceType === "Project" ? referenceName : "";
 		const priorityPc = this._prio_config(priority);
 
-		const isEditingDesc = this._description_draft?.todoName === name;
-		const descValue = isEditingDesc
-			? this._description_draft.value
-			: String(detail.description || todo.description || "").trim();
-		const hasDesc = Boolean(String(descValue || "").trim());
+		const isEditingTitle = this._title_draft?.todoName === name;
+		const isEditingDesc  = this._description_draft?.todoName === name;
+		const rawDesc = String(detail.description || todo.description || "").trim();
+		const _descTmp = document.createElement("div");
+		_descTmp.innerHTML = this._unwrap_quill_html(rawDesc);
+		const descPlain = (_descTmp.textContent || _descTmp.innerText || "").trim();
+		const hasDesc = Boolean(descPlain);
 
 		const mainAssignee = assignees.find(a => Array.isArray(a.roles) && a.roles.includes(__("Main Assignee"))) || assignees[0] || null;
 
@@ -3252,170 +3692,157 @@ opero.FlowHubPage = class FlowHubPage {
 		const beneficiaryUser = String(detail.beneficiary_user || "").trim();
 		const beneficiaryName = String(detail.beneficiary_name || "").trim();
 
+		const propsOpen      = !this._detail_collapsed.props;
+		const attachOpen     = !this._detail_collapsed.attachments;
+
 		const assigneeChipsHtml = assignees.map(a => {
 			const isMain = a === mainAssignee;
-			return `<span class="fh-member-chip ${isMain ? "is-main" : ""}">
-				<button type="button" class="fh-member-chip__promote"
-					data-promote-assignee="${this.esc(a.user)}"
-					data-todo-name="${this.esc(name)}"
-					title="${isMain ? __("Main assignee") : __("Set as main")}">
-					${isMain ? "◆" : "◇"}
-				</button>
-				<span class="fh-member-chip__name">${this.esc(a.full_name || a.user)}</span>
-				<button type="button" class="fh-member-chip__remove"
-					data-remove-assignee="${this.esc(a.user)}"
-					data-todo-name="${this.esc(name)}"
-					title="${__("Remove")}">×</button>
-			</span>`;
+			return `<div class="fh-assignee-row">
+				<span class="fh-assignee-row__name">${this.esc(a.full_name || a.user)}${isMain ? ` <span class="fh-assignee-row__star" title="${__("Main assignee")}">★</span>` : ""}</span>
+				<span class="fh-assignee-row__actions">
+					<button type="button" class="fh-assignee-row__promote"
+						data-promote-assignee="${this.esc(a.user)}"
+						data-todo-name="${this.esc(name)}"
+						title="${isMain ? __("Main assignee") : __("Set as main")}">◆</button>
+					<button type="button" class="fh-assignee-row__remove"
+						data-remove-assignee="${this.esc(a.user)}"
+						data-todo-name="${this.esc(name)}"
+						title="${__("Remove")}">×</button>
+				</span>
+			</div>`;
 		}).join("");
 
-		const attachmentList = attachments.length
-			? attachments.map(file => `
-				<div class="fh-detail__attachment">
-					<a class="fh-detail__attachment-link" href="${this.esc(file.file_url || "#")}" target="_blank" rel="noopener">${this.esc(file.file_name || file.name || __("Attachment"))}</a>
-					<button type="button" class="fh-detail__attachment-remove" data-detail-remove-attachment="${this.esc(file.name)}" data-todo-name="${this.esc(name)}" title="${__("Remove")}">×</button>
-				</div>
-			`).join("")
-			: `<div class="fh-detail__line-sub">${this.esc(__("No attachments"))}</div>`;
-
-		const fieldDefs = this._editable_todo_fields();
-		const fieldSummary = Object.entries(fieldValues)
-			.filter(([fieldname]) => !["reference_type", "reference_name"].includes(fieldname))
-			.map(([fieldname, value]) => {
-				const def = fieldDefs.find(item => item.fieldname === fieldname);
-				const label = def ? def.label : fieldname;
-				return `<span class="fh-detail__tag">${this.esc(label)}: ${this.esc(String(value || ""))}</span>`;
-			})
-			.join("");
+		const attachmentChipsHtml = attachments.map(file => `
+			<span class="fh-attachment-chip">
+				<a class="fh-attachment-chip__link" href="${this.esc(file.file_url || "#")}" target="_blank" rel="noopener"
+					title="${this.esc(file.file_name || file.name || "")}">${this.esc(file.file_name || file.name || __("Attachment"))}</a>
+				<button type="button" class="fh-member-chip__remove"
+					data-detail-remove-attachment="${this.esc(file.name)}"
+					data-todo-name="${this.esc(name)}"
+					title="${__("Remove")}">×</button>
+			</span>`).join("");
 
 		const activityHtml = activity.length
-			? activity.map(entry => `
-				<div class="fh-detail__activity-item">
-					<div class="fh-detail__activity-head">
-						<span class="fh-detail__activity-type">${this.esc(entry.type || __("Comment"))}</span>
-						<span>${this.esc(entry.by || __("Unknown"))}</span>
-						<span>·</span>
-						<span>${this.esc(this._fmt_time_text(entry.creation) || "")}</span>
-					</div>
-					<div class="fh-detail__activity-content">${this.esc(entry.content || "")}</div>
-				</div>
-			`).join("")
+			? activity.map(entry => {
+				const type = String(entry.type || "Comment").trim();
+				const by   = String(entry.by || __("Unknown")).trim();
+				const time = this._fmt_time_text(entry.creation) || "";
+				const tmp  = document.createElement("div");
+				tmp.innerHTML = String(entry.content || "");
+				const plain = (tmp.textContent || tmp.innerText || "").trim().replace(/\s+/g, " ");
+				const isComment = type.toLowerCase() === "comment";
+				const body = isComment && plain
+					? `${this.esc(by)}: ${this.esc(plain.length > 80 ? plain.slice(0, 80) + "…" : plain)}`
+					: `${this.esc(by)} ${this.esc(type.toLowerCase())}`;
+				return `<div class="fh-detail__activity-item">${body}${time ? ` <span class="fh-detail__activity-time">· ${this.esc(time)}</span>` : ""}</div>`;
+			}).join("")
 			: `<div class="fh-detail__activity-empty">${this.esc(__("No activity yet"))}</div>`;
 
 		return `<div class="fh-detail">
 			<div class="fh-detail__actions">
 				<a class="fh-detail__action-btn is-link" href="/app/todo/${this.esc(name)}">${__("Open in form")} ↗</a>
 				<span class="fh-detail__action-spacer"></span>
-				<button type="button" class="fh-detail__action-btn" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${dueDate ? __("Due") : __("Set due")}</button>
-				<button type="button" class="fh-detail__action-btn" data-detail-prio="1" data-todo-name="${this.esc(name)}">${this.esc(priorityPc.icon)} ${this.esc(priority || __("Priority"))}</button>
-				<button type="button" class="fh-detail__action-btn is-primary" data-detail-action="done" data-todo-name="${this.esc(name)}">${__("Mark done")}</button>
 				<button type="button" class="fh-detail__action-btn is-quiet" data-close-detail title="${__("Close")}">✕</button>
 			</div>
 			<div class="fh-detail__content">
 				<div class="fh-detail__title-wrap">
-					<button type="button" class="fh-detail__checkbox" data-detail-action="done" data-todo-name="${this.esc(name)}" title="${__("Mark done")}">○</button>
-					<h3 class="fh-detail__title">${this.esc(title)}</h3>
+					${isEditingTitle
+						? `<input class="fh-detail__title-input" type="text" value="${this.esc(this._title_draft?.value || "")}" data-detail-title-input="${this.esc(name)}">`
+						: `<h3 class="fh-detail__title" data-detail-edit-title="${this.esc(name)}">${this.esc(title)}</h3>`
+					}
 				</div>
 				<div class="fh-detail__meta">
+					<button type="button" class="fh-detail__checkbox" data-detail-action="done" data-todo-name="${this.esc(name)}" title="${__("Mark done")}">○</button>
 					${dueLabel
-						? `<button type="button" class="fh-detail__meta-chip is-due fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${this.esc(dueLabel)}</button>`
-						: `<button type="button" class="fh-detail__meta-chip is-due fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(name)}" data-due-date="">${__("Set due")}</button>`
+						? `<button type="button" class="fh-meta-chip fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${this.esc(dueLabel)}</button>`
+						: `<button type="button" class="fh-meta-chip fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(name)}" data-due-date="">${__("Set due")}</button>`
 					}
-					<span class="fh-detail__meta-chip is-quiet">${this.esc(status || __("Open"))}</span>
-					<span class="fh-detail__meta-chip is-quiet">${this.esc(priority || __("No priority"))}</span>
+					<button type="button" class="fh-meta-chip fh-status-chip fh-status-chip--${this.esc((status || "open").toLowerCase().replace(/ /g, "_"))}" data-detail-status="1" data-todo-name="${this.esc(name)}">${this.esc(status || __("Open"))}</button>
+					<button type="button" class="fh-meta-chip fh-prio-chip fh-prio-chip--${this.esc((priority || "none").toLowerCase())}" data-detail-prio="1" data-todo-name="${this.esc(name)}">${this.esc(priorityPc.icon)} ${this.esc(priority || __("No priority"))}</button>
 				</div>
+
 				<hr class="fh-detail__divider">
 
 				<div class="fh-detail__section">
-					<div class="fh-members__grid">
+					<button class="fh-section-hdr ${propsOpen ? "is-open" : ""}" data-section-toggle="props">
+						<span class="fh-section-hdr__arrow">▶</span>${__("Properties")}
+					</button>
+					<div class="fh-section-body ${propsOpen ? "" : "is-hidden"}">
 						<div class="fh-field-outlined">
-							<span class="fh-field-outlined__label">${this.esc(__("Creator"))}</span>
-							<div class="fh-field-outlined__body">
-								<span class="fh-field-outlined__value ${creatorName ? "" : "is-empty"}">${this.esc(creatorName)}</span>
+							<span class="fh-field-outlined__label">${this.esc(__("Assignee(s)"))}</span>
+							<div class="fh-assignees-list">
+								${assigneeChipsHtml}
+								<button type="button" class="fh-members__add-btn" data-detail-add-assignee="${this.esc(name)}">+ ${__("Add")}</button>
+							</div>
+						</div>
+						<div class="fh-members__grid">
+							<div class="fh-field-outlined">
+								<span class="fh-field-outlined__label">${this.esc(__("Creator"))}</span>
+								<div class="fh-field-outlined__body">
+									<span class="fh-field-outlined__value ${creatorName ? "" : "is-empty"}">${this.esc(creatorName || "—")}</span>
+								</div>
+							</div>
+							<div class="fh-field-outlined fh-field-outlined--clickable"
+								data-detail-open-beneficiary="${this.esc(name)}"
+								data-current-beneficiary="${this.esc(beneficiaryUser)}">
+								<span class="fh-field-outlined__label">${this.esc(__("Beneficiary"))}</span>
+								<div class="fh-field-outlined__body">
+									<span class="fh-field-outlined__value ${beneficiaryName ? "" : "is-empty"}">${this.esc(beneficiaryName || "—")}</span>
+									${beneficiaryName
+										? `<button type="button" class="fh-field-outlined__clear" data-detail-clear-beneficiary="1" data-todo-name="${this.esc(name)}" title="${__("Clear")}">×</button>`
+										: ""}
+								</div>
 							</div>
 						</div>
 						<div class="fh-field-outlined fh-field-outlined--clickable"
-							data-detail-open-beneficiary="${this.esc(name)}"
-							data-current-beneficiary="${this.esc(beneficiaryUser)}">
-							<span class="fh-field-outlined__label">${this.esc(__("Beneficiary"))}</span>
+							data-detail-open-project="${this.esc(name)}"
+							data-current-project="${this.esc(projectName)}">
+							<span class="fh-field-outlined__label">${this.esc(__("Project"))}</span>
 							<div class="fh-field-outlined__body">
-								<span class="fh-field-outlined__value ${beneficiaryName ? "" : "is-empty"}">${this.esc(beneficiaryName)}</span>
-								${beneficiaryName
-									? `<button type="button" class="fh-field-outlined__clear" data-detail-clear-beneficiary="1" data-todo-name="${this.esc(name)}" title="${__("Clear")}">×</button>`
+								<span class="fh-field-outlined__value ${projectName ? "" : "is-empty"}">${this.esc(projectName || "—")}</span>
+								${projectName
+									? `<button type="button" class="fh-field-outlined__clear" data-detail-clear-project="1" data-todo-name="${this.esc(name)}" title="${__("Clear")}">×</button>`
 									: ""}
 							</div>
 						</div>
 					</div>
-					<div class="fh-field-outlined">
-						<span class="fh-field-outlined__label">${this.esc(__("Assignee(s)"))}</span>
-						<div class="fh-members__chips">
-							${assigneeChipsHtml}
-							<button type="button" class="fh-members__add-btn" data-detail-add-assignee="${this.esc(name)}">+ ${__("Add")}</button>
-						</div>
-					</div>
 				</div>
 
-				<div class="fh-detail__section">
-					<div class="fh-field-outlined fh-field-outlined--clickable"
-						data-detail-open-project="${this.esc(name)}"
-						data-current-project="${this.esc(projectName)}">
-						<span class="fh-field-outlined__label">${this.esc(__("Project"))}</span>
-						<div class="fh-field-outlined__body">
-							<span class="fh-field-outlined__value ${projectName ? "" : "is-empty"}">${this.esc(projectName)}</span>
-							${projectName
-								? `<button type="button" class="fh-field-outlined__clear" data-detail-clear-project="1" data-todo-name="${this.esc(name)}" title="${__("Clear")}">×</button>`
-								: ""}
-						</div>
-					</div>
-				</div>
+				<hr class="fh-detail__divider">
 
 				<div class="fh-detail__section">
-					<div class="fh-field-outlined fh-field-outlined--clickable ${isEditingDesc ? "is-open" : ""}"
-						${isEditingDesc ? "" : `data-detail-edit-desc="${this.esc(name)}"`}>
-						<span class="fh-field-outlined__label">${this.esc(__("Description"))}</span>
-						${isEditingDesc
-							? `<div class="fh-detail__desc-editor">
-								<textarea class="fh-detail__textarea" data-detail-desc-input="${this.esc(name)}">${this.esc(descValue || "")}</textarea>
-								<div class="fh-detail__editor-actions">
-									<button type="button" class="fh-detail__btn is-primary" data-detail-desc-save="${this.esc(name)}">${__("Save")}</button>
-									<button type="button" class="fh-detail__btn" data-detail-desc-cancel="1">${__("Cancel")}</button>
-								</div>
-							</div>`
-							: `<div class="fh-detail__desc-text ${hasDesc ? "" : "fh-detail__desc-empty"}">${hasDesc ? descValue : this.esc(__("Add a description…"))}</div>`
-						}
-					</div>
+					<div class="fh-section-label">${__("Description")}</div>
+					${isEditingDesc
+						? `<textarea class="fh-detail__desc-ta" rows="1" data-detail-desc-input="${this.esc(name)}" placeholder="${this.esc(__("Describe…"))}">${this.esc(this._description_draft?.value || "")}</textarea>`
+						: `<div class="fh-detail__desc-body ${hasDesc ? "" : "is-empty"}" data-detail-edit-desc="${this.esc(name)}">${hasDesc ? this.esc(descPlain) : this.esc(__("Describe…"))}</div>`
+					}
 				</div>
 
+				<hr class="fh-detail__divider">
+
 				<div class="fh-detail__section">
-					<div class="fh-field-outlined">
-						<span class="fh-field-outlined__label">${this.esc(__("Attachment(s)"))}</span>
-						<div class="fh-members__chips">
-							${attachments.map(file => `
-								<span class="fh-attachment-chip">
-									<a class="fh-attachment-chip__link" href="${this.esc(file.file_url || "#")}" target="_blank" rel="noopener"
-										title="${this.esc(file.file_name || file.name || "")}">${this.esc(file.file_name || file.name || __("Attachment"))}</a>
-									<button type="button" class="fh-member-chip__remove"
-										data-detail-remove-attachment="${this.esc(file.name)}"
-										data-todo-name="${this.esc(name)}"
-										title="${__("Remove")}">×</button>
-								</span>`).join("")}
+					<button class="fh-section-hdr ${attachOpen ? "is-open" : ""}" data-section-toggle="attachments">
+						<span class="fh-section-hdr__arrow">▶</span>${__("Attachments")}${attachments.length ? `<span class="fh-section-hdr__count">${attachments.length}</span>` : ""}
+					</button>
+					<div class="fh-section-body ${attachOpen ? "" : "is-hidden"}">
+						<div class="fh-members__chips" style="padding-bottom:0.3rem;">
+							${attachmentChipsHtml}
 							<button type="button" class="fh-members__add-btn" data-detail-add-attachment="${this.esc(name)}">+ ${__("Add")}</button>
 						</div>
 					</div>
 				</div>
 
-				<div class="fh-detail__section">
-					${this._render_extra_fields(name, fieldValues)}</div>
+				<hr class="fh-detail__divider">
 
 				<div class="fh-detail__section">
-					<div class="fh-detail__section-head">
-						<div class="fh-detail__section-title">${__("Activity")}</div>
-					</div>
-					${isLoading && !activity.length ? `<div class="fh-detail__loading">${this.esc(__("Loading details…"))}</div>` : `<div class="fh-detail__activity">${activityHtml}</div>`}
+					<div class="fh-section-label">${__("Activity")}</div>
+					${isLoading && !activity.length
+						? `<div class="fh-detail__loading">${this.esc(__("Loading details…"))}</div>`
+						: `<div class="fh-detail__activity">${activityHtml}</div>`}
 				</div>
 			</div>
 			<div class="fh-detail__composer">
-				<input type="text" class="fh-detail__composer-input" data-detail-comment-input="${this.esc(name)}" placeholder="${this.esc(__("Add comment"))}">
+				<textarea rows="1" class="fh-detail__composer-input" data-detail-comment-input="${this.esc(name)}" placeholder="${this.esc(__("Add comment… use @ to mention"))}"></textarea>
 				<button type="button" class="fh-detail__composer-send" data-detail-comment-send="${this.esc(name)}">${__("Send")}</button>
 			</div>
 		</div>`;
