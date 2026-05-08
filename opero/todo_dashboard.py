@@ -25,6 +25,7 @@ FLOW_HUB_EDITABLE_FIELDS = {
 	"date",
 	"priority",
 	"status",
+	"custom_title",
 	"description",
 	"reference_type",
 	"reference_name",
@@ -247,6 +248,9 @@ def update_todo_from_flow_hub(todo_name: str, values=None, expected_modified: st
 			frappe.throw(_("Unsupported ToDo status: {0}").format(status))
 		doc.status = status
 
+	if "custom_title" in values:
+		doc.custom_title = cstr(values.get("custom_title") or "").strip() or None
+
 	if "description" in values:
 		doc.description = cstr(values.get("description") or "").strip() or None
 
@@ -313,12 +317,21 @@ def get_todo_detail_context(todo_name: str):
 			)
 		}
 
+	creator_display = user_names.get(creator_user, creator_user) or cstr(doc.owner)
+	created_entry = {
+		"name": "created",
+		"type": "Created",
+		"by": creator_display,
+		"content": "",
+		"creation": cstr(doc.creation),
+	}
+
 	return {
 		"description": cstr(doc.description or ""),
 		"description_plain": extract_plain_text(doc.description),
 		"tags": _get_todo_tags([todo_name]).get(todo_name, []),
 		"attachments": _get_todo_attachments(todo_name),
-		"activity": _get_todo_activity(todo_name),
+		"activity": _get_todo_activity(todo_name) + [created_entry],
 		"field_values": _get_todo_detail_field_values(doc),
 		"modified": cstr(doc.modified),
 		"creator_user": creator_user,

@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.2.30 — 2026-05-07
+
+### Changed
+
+- Extended the outlined legend-border field design to description, attachments, and extra fields in the Flow Hub detail panel.
+- Description field now toggles between rendered view and inline edit mode within the same outline.
+- Attachments redesigned as an outlined field with file chips matching the Assignee(s) pattern; remove button hidden until chip is hovered.
+- Extra fields (Reference Type/Name, Role, Assignment Rule, Color, Sender) exposed inline in the panel; link fields use combobox, data fields use inline text input; empty fields hidden behind a toggle by default.
+
+### Fixed
+
+- Fixed Beneficiary field to use `assigned_by` instead of the non-existent `custom_owner`.
+
+---
+
+## 0.2.29 — 2026-05-07
+
+### Changed
+
+- Redesigned Flow Hub detail panel with a Members section (Creator, Beneficiary, Assignees) and combobox-based link fields.
+- Project field uses outlined legend-border design with inline combobox search.
+- Members section shows Creator (read-only), Beneficiary (combobox), and Assignee chips with main-assignee diamond marker and promote/remove interactions.
+- Status bar tab style updated to underline pattern matching Frappe form-tabs; removed chip icons and fixed last-updated wrapping at narrow widths.
+- Backend now exposes `creator_name` and `beneficiary_name` from `get_todo_detail_context`; uses `custom_short_name` (reyal_core) for all user display names where available.
+
+### Fixed
+
+- Fixed description field rendering raw HTML (Quill content) instead of rendered output.
+
+---
+
+## 0.2.28 — 2026-05-06
+
+### Changed
+
+- Consolidated AI working rules into `AGENTS.md` as single source of truth; `CLAUDE.md` now redirects there.
+
+---
+
 ## 0.2.27 — 2026-05-06
 
 ### Changed
