@@ -51,7 +51,7 @@ type: short description
 
 Types: `feat`, `fix`, `bump`, `chore`, `refactor`, `docs`
 
-No `--no-verify`.
+No `--no-verify`. No co-author lines — never add `Co-Authored-By` or any AI tool attribution to commits.
 
 ---
 
