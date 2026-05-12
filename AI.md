@@ -117,14 +117,14 @@ In the final response, explicitly confirm each command was run and whether it su
 
 ---
 
-## Post-Merge Deployment
+## Post-Merge
 
-After a PR merges to `main`, deploy to the target site:
+After a PR merges to `main`:
 
-```bash
-bench --site <site> migrate
-bench --site <site> clear-cache
-bench restart
-```
-
-Then follow the **Versioning** steps above (bump, tag, GitHub release).
+1. Sync local main:
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+2. Update `CHANGELOG.md` — add a new `## <version> — <date>` section at the top with `### Added`, `### Changed`, and/or `### Fixed` entries summarising the PR
+3. Follow the **Versioning** steps (bump `opero/__init__.py`, tag, GitHub release)
