@@ -26,9 +26,10 @@ gh pr create --base main
 Merge the PR on GitHub, then delete the feature branch (remotely and locally).
 
 **Rules:**
-- Never push directly to `main` — always use a PR
+- Never push directly to `main` — always use a PR, no exceptions
 - Always branch off the latest `main`
 - If `main` has moved while working, rebase before opening the PR: `git rebase origin/main`
+- PRs must be opened in **ready-to-merge** (open) status — never draft
 - Delete feature branches after merge
 
 ---
