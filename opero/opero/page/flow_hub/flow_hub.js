@@ -15,7 +15,7 @@ opero.FlowHubPage = class FlowHubPage {
 		this.wrapper = wrapper;
 		this.loading = false;
 		this.snapshot = {};
-		this._active_tab = null;
+		this._active_tab = "focus";
 		this._selected_todo = null;
 		this._saving = 0;
 		this._detail_context = {};
@@ -27,6 +27,10 @@ opero.FlowHubPage = class FlowHubPage {
 		this._mention_timer = null;
 		this._mentions_map = {};
 		this._detail_collapsed = {};
+		this._project_name_cache = {};
+		this._closed_queue    = null;
+		this._closed_has_more = false;
+		this._closed_loading  = false;
 		this._extra_fields_expanded = false;
 		this._rendered_todo_name = null;
 		this._queue_layout_open_raf = null;
@@ -64,6 +68,7 @@ opero.FlowHubPage = class FlowHubPage {
 
 		this._inject_styles();
 		this._init_tooltip();
+		this._init_search();
 		$(this.page.main).empty();
 		this.$root = $("<div class='fh'></div>").appendTo(this.page.main);
 		this._setup_realtime_sync();
@@ -238,6 +243,54 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-item:hover { background: var(--bg-color); }
 			.fh-item:last-child { border-bottom: none; }
+			@keyframes fh-fade-in {
+				from { opacity: 0; transform: translateY(3px); }
+				to   { opacity: 1; transform: translateY(0); }
+			}
+			.fh-queue, .fh-panel { animation: fh-fade-in 120ms ease both; }
+			.fh-band-closed { opacity: 0.6; }
+			.fh-band-closed .fh-item__title { text-decoration: line-through; color: var(--text-muted); }
+			.fh-closed-footer {
+				padding: 0.55rem 0.75rem;
+				font-size: var(--text-xs);
+				color: var(--text-muted);
+				border-top: 1px solid var(--border-color);
+				text-align: center;
+			}
+			.fh-closed-footer a { color: var(--text-muted); text-decoration: underline; }
+			.fh-closed-footer a:hover { color: var(--text-color); }
+			.fh-detail__reopen {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.3rem;
+				border: 1px solid var(--border-color);
+				border-radius: 999px;
+				background: var(--fg-color);
+				color: var(--text-muted);
+				font-size: var(--text-sm);
+				padding: 0.18rem 0.65rem;
+				cursor: pointer;
+				transition: color 120ms, border-color 120ms;
+			}
+			.fh-detail__reopen:hover { color: #059669; border-color: #059669; }
+			.fh-chip--closed { opacity: 0.75; }
+			.fh-chip--closed.is-active { opacity: 1; }
+			.fh-item.is-leaving {
+				opacity: 0.35;
+				pointer-events: none;
+			}
+			.fh-item.is-leaving .fh-item__title { font-style: italic; }
+			.fh-item.is-exiting {
+				overflow: hidden;
+				max-height: 0 !important;
+				opacity: 0 !important;
+				padding-top: 0 !important;
+				padding-bottom: 0 !important;
+				border-bottom-width: 0 !important;
+				transition: max-height 250ms ease-in, opacity 200ms ease-in,
+				            padding-top 250ms ease-in, padding-bottom 250ms ease-in,
+				            border-bottom-width 250ms ease-in;
+			}
 			.fh-item__body {
 				flex: 1;
 				min-width: 0;
@@ -399,9 +452,12 @@ opero.FlowHubPage = class FlowHubPage {
 				font-weight: var(--weight-regular);
 				line-height: 1.22;
 				font-family: var(--font-stack);
-				padding: 0;
-				margin: 0;
+				padding: 0.1rem 0.25rem;
+				margin: 0 -0.25rem;
+				border-radius: 4px;
+				transition: background 120ms;
 			}
+			.fh-detail__title-input:focus { background: var(--control-bg, var(--bg-color)); }
 			.fh-detail__meta {
 				display: flex;
 				align-items: center;
@@ -640,6 +696,11 @@ opero.FlowHubPage = class FlowHubPage {
 			}
 			.fh-field-outlined--clickable:hover { border-color: var(--primary); }
 			.fh-field-outlined--clickable.is-open { border-color: var(--primary); }
+			.fh-field-outlined:focus-within { border-color: var(--border-color); }
+			.fh-field-outlined__text-input:focus {
+				background: var(--control-bg, var(--bg-color));
+				border-radius: 3px;
+			}
 			.fh-field-outlined__clear {
 				border: none;
 				background: transparent;
@@ -691,6 +752,7 @@ opero.FlowHubPage = class FlowHubPage {
 				background: var(--bg-color);
 				color: var(--primary);
 			}
+			.fh-project-dropdown__id { font-size: var(--text-xs); color: var(--text-muted); margin-left: 0.35rem; }
 			.fh-project-dropdown__empty {
 				padding: 0.4rem 0.75rem;
 				font-size: var(--text-sm);
@@ -886,6 +948,12 @@ opero.FlowHubPage = class FlowHubPage {
 				resize: none;
 				overflow: hidden;
 				line-height: 1.5;
+				transition: background 120ms;
+			}
+			.fh-detail__composer-input:focus {
+				background: var(--control-bg, var(--bg-color));
+				border-color: var(--border-color);
+				outline: none;
 			}
 			.fh-mention-drop {
 				position: fixed;
@@ -1017,9 +1085,14 @@ opero.FlowHubPage = class FlowHubPage {
 				transition: background 100ms;
 			}
 			.fh-prio-drop__opt:hover { background: #f8fafc; }
-			.fh-prio-drop__opt.is-current { background: #f0fdf4; }
-			.fh-prio-drop__check { display: none; margin-left: auto; color: #059669; font-size: var(--text-sm); }
+			.fh-prio-drop__opt.is-current { background: color-mix(in srgb, var(--prio-color, #059669) 8%, transparent); }
+			.fh-prio-drop__opt { color: var(--prio-color, #0f172a); border-left: 2px solid transparent; }
+			.fh-prio-drop__opt:hover { border-left-color: var(--prio-color, #cbd5e1); }
+			.fh-prio-drop__check { display: none; margin-left: auto; color: var(--prio-color, #059669); font-size: var(--text-sm); }
 			.fh-prio-drop__opt.is-current .fh-prio-drop__check { display: inline; }
+			.fh-prio-drop__sep { height: 1px; background: var(--border-color); margin: 0.2rem 0; }
+			.fh-prio-drop__clear { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.55rem; border-radius: 5px; cursor: pointer; font-size: var(--text-sm); color: var(--text-muted); transition: background 100ms; }
+			.fh-prio-drop__clear:hover { background: #f8fafc; color: #0f172a; }
 			.fh-prio-drop__icon {
 				font-size: var(--text-xs);
 				font-weight: var(--weight-semibold);
@@ -1312,7 +1385,7 @@ opero.FlowHubPage = class FlowHubPage {
 				outline: none;
 				box-sizing: border-box;
 			}
-			.fh-alloc-pop__input:focus { border-color: #94a3b8; }
+			.fh-alloc-pop__input:focus { background: var(--control-bg, var(--bg-color)); border-color: var(--border-color); outline: none; }
 			.fh-alloc-pop__opt {
 				display: flex;
 				align-items: center;
@@ -1449,8 +1522,11 @@ opero.FlowHubPage = class FlowHubPage {
 
 			/* ── Throughput ─────────────────────────────────────── */
 			.fh-throughput { padding: 0 0.6rem 0.65rem; }
+			.fh { --fh-positive: #059669; --fh-negative: #e11d48; --fh-neutral: #64748b; }
 			.fh-sparkline-wrap {
 				margin-bottom: 0.6rem;
+				position: relative;
+				cursor: crosshair;
 			}
 			.fh-sparkline {
 				display: block;
@@ -1464,6 +1540,138 @@ opero.FlowHubPage = class FlowHubPage {
 				text-align: right;
 				margin-top: 0.15rem;
 			}
+			.fh-spark-area { fill: var(--fh-positive); fill-opacity: 0.15; }
+			.fh-spark-line { fill: none; stroke: var(--fh-positive); stroke-width: 1.5; stroke-linejoin: round; }
+			.fh-search-wrap {
+				display: flex;
+				align-items: center;
+				position: relative;
+				margin-right: 0.5rem;
+			}
+			.fh-search-input {
+				width: 200px;
+				height: 30px;
+				border: 1px solid transparent;
+				border-radius: 6px;
+				background: var(--control-bg, var(--bg-color));
+				color: var(--text-color);
+				font-size: var(--text-sm);
+				font-family: var(--font-stack);
+				padding: 0 0.65rem 0 2rem;
+				outline: none;
+				transition: background 150ms, border-color 150ms;
+			}
+			.fh-search-input:focus {
+				background: var(--control-bg, var(--bg-color));
+				border-color: var(--border-color);
+			}
+			.fh-search-icon {
+				position: absolute;
+				left: 0.55rem;
+				color: var(--text-muted);
+				font-size: 0.85rem;
+				pointer-events: none;
+				line-height: 1;
+			}
+			.fh-search-drop {
+				position: fixed;
+				z-index: 2200;
+				background: var(--fg-color);
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+				min-width: 320px;
+				max-width: 420px;
+				padding: 0.3rem 0;
+				display: none;
+			}
+			.fh-search-drop.is-open { display: block; }
+			.fh-search-result {
+				display: flex;
+				align-items: center;
+				gap: 0.6rem;
+				padding: 0.45rem 0.75rem;
+				cursor: pointer;
+				transition: background 100ms;
+			}
+			.fh-search-result:hover,
+			.fh-search-result.is-focused { background: var(--bg-color); }
+			.fh-search-result__title {
+				flex: 1;
+				min-width: 0;
+				font-size: var(--text-sm);
+				color: var(--text-color);
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.fh-search-result__tab {
+				flex-shrink: 0;
+				font-size: var(--text-xs);
+				font-weight: var(--weight-medium);
+				padding: 0.1rem 0.45rem;
+				border-radius: 999px;
+				border: 1px solid currentColor;
+				opacity: 0.75;
+			}
+			.fh-search-empty {
+				padding: 0.6rem 0.75rem;
+				font-size: var(--text-sm);
+				color: var(--text-muted);
+				text-align: center;
+			}
+			.fh-spark-tip {
+				position: fixed;
+				background: #1e293b;
+				color: #f1f5f9;
+				padding: 0.2rem 0.55rem;
+				border-radius: 4px;
+				font-size: var(--text-tiny);
+				pointer-events: none;
+				z-index: 9999;
+				white-space: nowrap;
+				display: none;
+			}
+			@keyframes fh-slide-up {
+				from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+				to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+			}
+			.fh-undo-toast {
+				position: fixed;
+				bottom: 1.5rem;
+				left: 50%;
+				transform: translateX(-50%);
+				background: #1e293b;
+				color: #f1f5f9;
+				padding: 0.55rem 1rem;
+				border-radius: 6px;
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				z-index: 9999;
+				font-size: var(--text-sm);
+				box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+				animation: fh-slide-up 200ms ease both;
+			}
+			.fh-undo-btn {
+				background: none;
+				border: 1px solid rgba(241,245,249,0.35);
+				color: #93c5fd;
+				border-radius: 4px;
+				padding: 0.15rem 0.6rem;
+				cursor: pointer;
+				font-size: inherit;
+			}
+			.fh-undo-btn:hover { background: rgba(241,245,249,0.1); }
+			.fh-detail__activity-skel { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.25rem 0; }
+			.fh-skel-row {
+				height: 12px;
+				border-radius: 4px;
+				background: linear-gradient(90deg, var(--bg-color) 25%, var(--border-color) 50%, var(--bg-color) 75%);
+				background-size: 200% 100%;
+				animation: fh-shimmer 1.4s infinite;
+			}
+			@keyframes fh-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 			.fh-trow {
 				display: flex;
 				align-items: center;
@@ -1793,8 +2001,8 @@ opero.FlowHubPage = class FlowHubPage {
 				gap: 0.35rem;
 				padding: 0.6rem 0 0.3rem;
 				font-size: var(--text-sm);
-				font-weight: var(--weight-semibold);
-				color: var(--text-muted);
+				font-weight: var(--weight-regular);
+				color: color-mix(in srgb, var(--text-muted) 55%, transparent);
 				cursor: pointer;
 				user-select: none;
 				border: none;
@@ -1830,8 +2038,8 @@ opero.FlowHubPage = class FlowHubPage {
 			/* Non-collapsible section label */
 			.fh-section-label {
 				font-size: var(--text-sm);
-				font-weight: var(--weight-semibold);
-				color: var(--text-muted);
+				font-weight: var(--weight-regular);
+				color: color-mix(in srgb, var(--text-muted) 55%, transparent);
 				padding: 0.6rem 0 0.3rem;
 				line-height: 1;
 			}
@@ -1867,8 +2075,12 @@ opero.FlowHubPage = class FlowHubPage {
 				line-height: 1.6;
 				resize: none;
 				overflow: hidden;
-				padding: 0.1rem 0 0.35rem;
+				padding: 0.1rem 0.25rem 0.35rem;
+				margin: 0 -0.25rem;
+				border-radius: 4px;
+				transition: background 120ms;
 			}
+			.fh-detail__desc-ta:focus { background: var(--control-bg, var(--bg-color)); }
 		`;
 	}
 
@@ -1989,11 +2201,11 @@ opero.FlowHubPage = class FlowHubPage {
 		frappe.realtime.on("list_update", this._on_todo_list_update);
 	}
 
-	refresh({ force = false } = {}) {
+	refresh({ force = false, silent = false } = {}) {
 		if (this.loading) return;
 		this.loading = true;
 		this.page.btn_primary?.prop("disabled", true);
-		this.render_loading();
+		if (!silent) this.render_loading();
 		frappe.call({
 			method: "opero.todo_dashboard.get_flow_hub_snapshot",
 			args: { force_refresh: force ? 1 : 0 },
@@ -2001,12 +2213,32 @@ opero.FlowHubPage = class FlowHubPage {
 				this.loading = false;
 				this.page.btn_primary?.prop("disabled", false);
 				this.snapshot = r.message || {};
-				this._detail_context = {};
-				this._detail_loading.clear();
-				this._description_draft = null;
-				this._title_draft = null;
+				if (!silent) {
+					this._detail_context = {};
+					this._detail_loading.clear();
+					this._closed_queue    = null;
+					this._closed_has_more = false;
+				} else if (this._selected_todo?.name) {
+					// Preserve context for the open todo so the panel doesn't flash;
+					// re-fetch it in the background to pick up any new activity.
+					const keep = this._selected_todo.name;
+					const preserved = this._detail_context[keep];
+					this._detail_context = {};
+					this._detail_loading.clear();
+					if (preserved) this._detail_context[keep] = preserved;
+				} else {
+					this._detail_context = {};
+					this._detail_loading.clear();
+				}
+				if (!silent) {
+					this._description_draft = null;
+					this._title_draft = null;
+				}
 				this._extra_fields_expanded = false;
 				this.render();
+				if (silent && this._selected_todo?.name) {
+					this._ensure_detail_context(this._selected_todo.name, { force: true });
+				}
 			},
 			error: () => {
 				this.loading = false;
@@ -2019,10 +2251,11 @@ opero.FlowHubPage = class FlowHubPage {
 	// ── Main render ──────────────────────────────────────────────────
 
 	render() {
-		const s = this.snapshot;
+		if (this._linger_timer) { clearTimeout(this._linger_timer); this._linger_timer = null; }
+		if (this._exit_timer)   { clearTimeout(this._exit_timer);   this._exit_timer   = null; }
+
+		const s   = this.snapshot;
 		const tab = this._active_tab;
-		let body;
-		let activeQueue = [];
 
 		// Snapshot pre-render state so we can restore it after the DOM swap
 		const wasDetailOpen = !!this.$root.find(".fh-queue-layout.is-detail-open").length;
@@ -2036,33 +2269,82 @@ opero.FlowHubPage = class FlowHubPage {
 			? (this.$root.find(".fh-detail__content")[0]?.scrollTop || 0)
 			: 0;
 
+		let body;
+		let activeQueue = [];
+
 		if (tab === "health") {
 			this._selected_todo = null;
 			body = this._render_health(s.throughput_30d || {}, s.risk || []);
+		} else if (tab === "closed" && this._closed_queue === null) {
+			this._selected_todo = null;
+			if (!this._closed_loading) this._fetch_closed_todos();
+			body = `<div class="fh-panel fh-panel--queue">
+				<div class="fh-panel__head"><h2 class="fh-panel__title">${__("Closed")}</h2></div>
+				<div class="fh-queue">
+					<div class="fh-detail__activity-skel" style="padding:0.75rem 1rem">
+						<div class="fh-skel-row"></div>
+						<div class="fh-skel-row" style="width:72%"></div>
+						<div class="fh-skel-row"></div>
+						<div class="fh-skel-row" style="width:85%"></div>
+					</div>
+				</div>
+			</div>`;
 		} else {
-			const { queue, title } = this._queue_for_tab(s, tab);
+			const { queue, title, emptyMsg } = this._queue_for_tab(s, tab);
 			activeQueue = queue;
 			// Deselect if the selected todo is no longer in the current queue
 			if (this._selected_todo) {
 				const refreshed = queue.find(r => r.name === this._selected_todo.name);
-				if (refreshed) {
-					this._selected_todo = refreshed;
-				} else {
-					this._selected_todo = null;
-				}
+				this._selected_todo = refreshed || null;
 			}
-			const queueHtml = this._render_focus_queue(queue, title);
+			const footerHtml = (tab === "closed" && this._closed_has_more)
+				? `<div class="fh-closed-footer">${__("Showing the 100 most recent")} · <a href="/app/todo" target="_blank">${__("View all")}</a></div>`
+				: "";
+			const queueHtml = this._render_focus_queue(queue, emptyMsg, footerHtml);
 			const queuePanel = `<div class="fh-panel fh-panel--queue"><div class="fh-panel__head"><h2 class="fh-panel__title">${this.esc(title)}</h2></div>${queueHtml}</div>`;
 			body = this._selected_todo
 				? `<div class="fh-queue-layout">${queuePanel}<button type="button" class="fh-detail__scrim" data-close-detail></button>${this._render_detail(this._selected_todo)}</div>`
 				: queuePanel;
 		}
+
+		// Linger-then-exit: when the same tab refreshes and items depart the list,
+		// dim them briefly then animate them out before swapping the DOM.
+		const sameTab = tab === this._rendered_tab && tab !== "health" && tab !== "closed";
+		if (sameTab && this._rendered_queue_names?.size > 0) {
+			const newNames  = new Set(activeQueue.map(r => r.name));
+			const departing = [...this._rendered_queue_names].filter(n => !newNames.has(n));
+			if (departing.length > 0) {
+				departing.forEach(name => {
+					this.$root.find(`.fh-item[data-todo-name="${CSS.escape(name)}"]`).addClass("is-leaving");
+				});
+				this._linger_timer = setTimeout(() => {
+					departing.forEach(name => {
+						const $el = this.$root.find(`.fh-item[data-todo-name="${CSS.escape(name)}"]`);
+						$el.css("max-height", $el.outerHeight() + "px");
+						requestAnimationFrame(() => $el.addClass("is-exiting"));
+					});
+					this._exit_timer = setTimeout(() => {
+						this._apply_render(s, tab, body, activeQueue, wasDetailOpen, sameTodo, prevScrollTop);
+					}, 270);
+				}, 1500);
+				return;
+			}
+		}
+
+		this._apply_render(s, tab, body, activeQueue, wasDetailOpen, sameTodo, prevScrollTop);
+	}
+
+	_apply_render(s, tab, body, activeQueue, wasDetailOpen, sameTodo, prevScrollTop) {
 		this.$root.html(`
 			${this._render_status_bar(s.attention || "", s.updated_at, s.counts || [], s.throughput_30d || {})}
 			${body}
 		`);
 		this._bind_events(s, activeQueue);
-		this._rendered_todo_name = this._selected_todo?.name || null;
+		this._rendered_todo_name  = this._selected_todo?.name || null;
+		this._rendered_tab        = tab;
+		this._rendered_queue_names = new Set(activeQueue.map(r => r.name));
+
+		this._resolve_visible_project_names();
 
 		if (this._selected_todo) {
 			this._ensure_detail_context(this._selected_todo.name);
@@ -2094,18 +2376,38 @@ opero.FlowHubPage = class FlowHubPage {
 	_queue_for_tab(s, tab) {
 		const q = s.focus_queue || [];
 		switch (tab) {
-			case "overdue":      return { queue: q.filter(r => r.urgency_band === "overdue"), title: __("Overdue") };
-			case "due_today":    return { queue: q.filter(r => r.urgency_band === "due_today"), title: __("Due Today") };
-			case "due_soon":     return { queue: q.filter(r => r.urgency_band === "due_soon"), title: __("Due Soon") };
-			case "in_progress":  return { queue: q.filter(r => r.status === "In Progress"), title: __("In Progress") };
-			case "action_queue": return { queue: q, title: __("Action Queue") };
+			case "overdue":      return { queue: q.filter(r => r.urgency_band === "overdue"),    title: __("Overdue"),      emptyMsg: __("Nothing overdue.") };
+			case "due_today":    return { queue: q.filter(r => r.urgency_band === "due_today"), title: __("Due Today"),    emptyMsg: __("Nothing due today.") };
+			case "due_soon":     return { queue: q.filter(r => r.urgency_band === "due_soon"),  title: __("Due Soon"),     emptyMsg: __("Nothing due soon.") };
+			case "in_progress":  return { queue: q.filter(r => r.status === "In Progress"),    title: __("In Progress"),  emptyMsg: __("Nothing in progress.") };
+			case "action_queue": return { queue: q,                                             title: __("Action Queue"), emptyMsg: __("All clear.") };
+			case "closed":       return { queue: this._closed_queue || [],                      title: __("Closed"),       emptyMsg: __("Nothing closed in the last 30 days.") };
+			case "focus":
 			default: {
-				const focus = q.filter(r =>
-					r.urgency_band === "overdue" ||
-					r.urgency_band === "due_today" ||
-					r.status === "In Progress"
-				);
-				return { queue: focus, title: __("Focus") };
+				const score = r => {
+					const overdue = r.urgency_band === "overdue";
+					const today   = r.urgency_band === "due_today";
+					const stale   = r.urgency_band === "stale";
+					const active  = r.status === "In Progress";
+					if (overdue && active) return 4;
+					if (overdue)           return 3;
+					if (today   && active) return 2;
+					if (today)             return 1;
+					if (active)            return 0;
+					if (stale)             return -1;
+					return -2;
+				};
+				const focus = q
+					.map(r => ({ r, s: score(r) }))
+					.filter(({ s }) => s >= -1)
+					.sort((a, b) => {
+						if (b.s !== a.s) return b.s - a.s;
+						const da = a.r.due_date || "9999-99-99";
+						const db = b.r.due_date || "9999-99-99";
+						return da < db ? -1 : da > db ? 1 : 0;
+					})
+					.map(({ r }) => r);
+				return { queue: focus, title: __("Focus"), emptyMsg: __("You’re clear — nothing urgent right now.") };
 			}
 		}
 	}
@@ -2135,10 +2437,7 @@ opero.FlowHubPage = class FlowHubPage {
 		const isActive = this._active_tab === "health";
 
 
-		let accent;
-		if (net > 0)       accent = "#059669";
-		else if (net < 0)  accent = "#e11d48";
-		else               accent = "#64748b";
+		const accent = net > 0 ? "var(--fh-positive)" : net < 0 ? "var(--fh-negative)" : "var(--fh-neutral)";
 
 		const arrow = trend === "improving" ? "↑" : trend === "worsening" ? "↓" : "→";
 		const sign = net > 0 ? "+" : "";
@@ -2148,8 +2447,7 @@ opero.FlowHubPage = class FlowHubPage {
 			data-chip-key="health"
 			data-tip="${this.esc(tip)}"
 			style="--fh-accent:${accent}">
-			<span class="fh-chip__label">${arrow} ${__("Health")}</span>
-			<span class="fh-chip__value ${net !== 0 ? "is-nonzero" : ""}">${sign}${net}</span>
+			<span class="fh-chip__label">${__("Health")} ${arrow}</span>
 		</button>`;
 	}
 
@@ -2176,17 +2474,27 @@ opero.FlowHubPage = class FlowHubPage {
 			</button>`;
 		}).join("");
 
+		const isFocusActive  = this._active_tab === "focus";
 		const isActionActive = this._active_tab === "action_queue";
+		const isClosedActive = this._active_tab === "closed";
 		return `
 			<div class="fh-status">
 				<span class="fh-status__msg ${msgClass}">${this.esc(attention)}</span>
 				<span class="fh-status__sep"></span>
 				<div class="fh-chips">
+					<button type="button" class="fh-chip ${isFocusActive ? "is-active" : ""}"
+						data-chip-key="focus" style="--fh-accent:#7c3aed">
+						<span class="fh-chip__label">${__("Focus")}</span>
+					</button>
 					${countChips}
 					${this._render_health_chip(throughput)}
 					<button type="button" class="fh-chip ${isActionActive ? "is-active" : ""}"
 						data-chip-key="action_queue" style="--fh-accent:#0ea5e9">
 						<span class="fh-chip__label">${__("Queue")}</span>
+					</button>
+					<button type="button" class="fh-chip fh-chip--closed ${isClosedActive ? "is-active" : ""}"
+						data-chip-key="closed" style="--fh-accent:#64748b">
+						<span class="fh-chip__label">${__("Closed")}</span>
 					</button>
 				</div>
 				<span class="fh-status__time">${this._fmt_time(updatedAt)}</span>
@@ -2194,7 +2502,7 @@ opero.FlowHubPage = class FlowHubPage {
 		`;
 	}
 
-	_render_focus_queue(queue, title) {
+	_render_focus_queue(queue, emptyMsg, footerHtml = "") {
 		const body = queue.length
 			? queue
 					.map((row, i) => {
@@ -2222,22 +2530,20 @@ opero.FlowHubPage = class FlowHubPage {
 						const prioTip = this.esc(row.priority || __("Priority"));
 						const isSelected = this._selected_todo?.name === row.name;
 						return `
-						<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}">
+						<button type="button" class="fh-item fh-band-${band}${isSelected ? " is-selected" : ""}" data-queue-index="${i}" data-todo-name="${this.esc(row.name)}">
 							<span role="button" class="fh-prio-btn" aria-label="${prioTip}" data-tip="${prioTip}" data-prio-index="${i}" data-todo-name="${this.esc(row.name)}" style="color:${pc.color}">${pc.icon}</span>
 							<div class="fh-item__body">
 								<div class="fh-item__title">${this.esc(row.title || row.name || "")}</div>
 							</div>
-							<div class="fh-item__due">${dueLabel}</div>
-							${avatars}
+							${isSelected ? "" : `<div class="fh-item__due">${dueLabel}</div>`}
+							${isSelected ? "" : avatars}
 						</button>
 					`;
 					})
 					.join("")
-			: `<div class="fh-empty is-clear">${this.esc(
-					__("All clear.")
-			  )}</div>`;
+			: `<div class="fh-empty is-clear">${this.esc(emptyMsg || __("All clear."))}</div>`;
 
-		return `<div class="fh-queue">${body}</div>`;
+		return `<div class="fh-queue">${body}${footerHtml}</div>`;
 	}
 
 	_render_risk(risk) {
@@ -2349,67 +2655,12 @@ opero.FlowHubPage = class FlowHubPage {
 		const areaD = `${lineD} L${W},${H} L0,${H} Z`;
 
 		return `
-			<div class="fh-sparkline-wrap">
+			<div class="fh-sparkline-wrap" data-spark-days="${days.join(",")}">
 				<svg class="fh-sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-					<path d="${areaD}" fill="#059669" fill-opacity="0.15"/>
-					<path d="${lineD}" fill="none" stroke="#059669" stroke-width="1.5" stroke-linejoin="round"/>
+					<path class="fh-spark-area" d="${areaD}"/>
+					<path class="fh-spark-line" d="${lineD}"/>
 				</svg>
 				<div class="fh-sparkline__period">30d</div>
-			</div>
-		`;
-	}
-
-	_render_throughput(t) {
-		const created = t.created || 0;
-		const closed = t.closed || 0;
-		const net = t.net !== undefined ? t.net : closed - created;
-		const prevNet = t.prev_net !== undefined ? t.prev_net : null;
-		const trend = t.trend || "stable";
-		const maxVal = Math.max(created, closed, 1);
-		const createdPct = Math.round((created / maxVal) * 100);
-		const closedPct = Math.round((closed / maxVal) * 100);
-
-		let netClass;
-		if (net > 0)       netClass = "is-ahead";
-		else if (net < 0)  netClass = "is-behind";
-		else               netClass = "is-neutral";
-
-		const sign = net > 0 ? "+" : "";
-		const netLabel = net === 0 ? __("Balanced") : __("Net {0}", [sign + net]);
-
-		let prevText = "";
-		if (prevNet !== null) {
-			const prevSign = prevNet > 0 ? "+" : "";
-			const trendIcon = trend === "improving" ? "↑" : trend === "worsening" ? "↓" : "→";
-			prevText = `<span class="fh-net__prev">${trendIcon} ${__("prev")} ${prevSign}${prevNet}</span>`;
-		}
-
-		return `
-			<div class="fh-panel">
-				<div class="fh-panel__head">
-					<h2 class="fh-panel__title">${this.esc(__("Velocity"))}</h2>
-				</div>
-				<div class="fh-throughput">
-					${this._render_sparkline(t.daily_closed)}
-					<div class="fh-trow">
-						<span class="fh-trow__label">${this.esc(__("Created"))}</span>
-						<div class="fh-trow__bar-wrap">
-							<div class="fh-trow__bar is-created" style="width:${createdPct}%"></div>
-						</div>
-						<span class="fh-trow__count">${created}</span>
-					</div>
-					<div class="fh-trow">
-						<span class="fh-trow__label">${this.esc(__("Closed"))}</span>
-						<div class="fh-trow__bar-wrap">
-							<div class="fh-trow__bar is-closed" style="width:${closedPct}%"></div>
-						</div>
-						<span class="fh-trow__count">${closed}</span>
-					</div>
-					<div class="fh-net ${netClass}">
-						<span class="fh-net__main">${this.esc(netLabel)}</span>
-						${prevText}
-					</div>
-				</div>
 			</div>
 		`;
 	}
@@ -2439,6 +2690,17 @@ opero.FlowHubPage = class FlowHubPage {
 			});
 		});
 
+		this.$root.find(".fh-queue").on("keydown", (e) => {
+			if (!["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) return;
+			e.preventDefault();
+			const $items = this.$root.find(".fh-item");
+			const $focused = $items.filter(":focus");
+			const idx = $items.index($focused);
+			if (e.key === "ArrowDown") $items.eq(Math.min(idx + 1, $items.length - 1)).focus();
+			else if (e.key === "ArrowUp") $items.eq(Math.max(idx - 1, 0)).focus();
+			else if (e.key === "Enter" && $focused.length) $focused.trigger("click");
+		});
+
 		this.$root.find("[data-close-detail]").on("click", () => {
 			this._selected_todo = null;
 			this._description_draft = null;
@@ -2461,6 +2723,19 @@ opero.FlowHubPage = class FlowHubPage {
 			const todoName = $(e.currentTarget).attr("data-todo-name");
 			if (!todoName) return;
 			this._mark_todo_done(todoName);
+		});
+
+		this.$root.find("[data-detail-action='reopen']").on("click", (e) => {
+			e.stopPropagation();
+			const todoName = $(e.currentTarget).attr("data-todo-name");
+			if (!todoName) return;
+			this._saving++;
+			frappe.call({
+				method: "opero.todo_dashboard.update_todo_from_flow_hub",
+				args: { todo_name: todoName, values: { status: "Open" }, expected_modified: this._row_modified(todoName) },
+				callback: () => this._on_save_done(),
+				error:    () => this._on_save_error(),
+			});
 		});
 
 		this.$root.find("[data-add-alloc]").on("click", (e) => {
@@ -2508,12 +2783,14 @@ opero.FlowHubPage = class FlowHubPage {
 			const user     = $(e.currentTarget).attr("data-remove-assignee");
 			const todoName = $(e.currentTarget).attr("data-todo-name");
 			if (!user || !todoName) return;
-			this._saving++;
-			frappe.call({
-				method:   "opero.todo_dashboard.remove_todo_assignee",
-				args:     { todo_name: todoName, user, expected_modified: this._row_modified(todoName) },
-				callback: () => this._on_save_done(),
-				error:    () => this._on_save_error(),
+			this._with_undo(__("Assignee removed"), () => {
+				this._saving++;
+				frappe.call({
+					method:   "opero.todo_dashboard.remove_todo_assignee",
+					args:     { todo_name: todoName, user, expected_modified: this._row_modified(todoName) },
+					callback: () => this._on_save_done(),
+					error:    () => this._on_save_error(),
+				});
 			});
 		});
 
@@ -2547,7 +2824,8 @@ opero.FlowHubPage = class FlowHubPage {
 			e.preventDefault();
 			e.stopPropagation();
 			const todoName = $(e.currentTarget).attr("data-todo-name");
-			if (todoName) this._save_project_reference(todoName, "");
+			if (!todoName) return;
+			this._with_undo(__("Project removed"), () => this._save_project_reference(todoName, ""));
 		});
 
 		this.$root.find("[data-detail-edit-title]").on("click", (e) => {
@@ -2666,9 +2944,34 @@ opero.FlowHubPage = class FlowHubPage {
 			this._post_detail_comment(todoName, $input);
 		});
 
+		this.$root.find(".fh-sparkline-wrap").on("mousemove", (e) => {
+			const $wrap = $(e.currentTarget);
+			const days = ($wrap.attr("data-spark-days") || "").split(",").map(Number);
+			if (!days.length) return;
+			const rect = e.currentTarget.getBoundingClientRect();
+			const pct = (e.clientX - rect.left) / rect.width;
+			const idx = Math.min(days.length - 1, Math.max(0, Math.round(pct * (days.length - 1))));
+			const count = days[idx];
+			const daysAgo = days.length - 1 - idx;
+			const label = daysAgo === 0 ? __("Today") : daysAgo === 1 ? __("Yesterday") : __("{0}d ago", [daysAgo]);
+			this._show_spark_tip(e.clientX, rect.top, `${label}: ${count}`);
+		}).on("mouseleave", () => this._hide_spark_tip());
+
+		const RISK_TAB = { stale: "stale", high_priority: "action_queue", no_due_date: "action_queue" };
 		this.$root.find("[data-risk-index]").each((_, el) => {
-			const signal = risk[parseInt($(el).attr("data-risk-index"), 10)];
-			if (signal) $(el).on("click", () => this._navigate(signal));
+			const signal  = risk[parseInt($(el).attr("data-risk-index"), 10)];
+			const riskKey = $(el).attr("data-risk-key");
+			const tabKey  = RISK_TAB[riskKey];
+			if (!signal) return;
+			$(el).on("click", () => {
+				if (tabKey) {
+					this._active_tab = tabKey;
+					this._selected_todo = null;
+					this.render();
+				} else {
+					this._navigate(signal);
+				}
+			});
 		});
 	}
 
@@ -2927,17 +3230,17 @@ opero.FlowHubPage = class FlowHubPage {
 		if (!$drop.length) {
 			$drop = $(`<div id="fh-prio-drop" class="fh-prio-drop">
 				${PRIORITIES.map(p => `
-					<div class="fh-prio-drop__opt" data-prio-value="${p.value}">
-						<span class="fh-prio-drop__icon" style="color:${p.color}">${p.icon}</span>
+					<div class="fh-prio-drop__opt" data-prio-value="${p.value}" style="--prio-color:${p.color}">
+						<span class="fh-prio-drop__icon">${p.icon}</span>
 						<span>${p.label}</span>
 						<span class="fh-prio-drop__check">✓</span>
 					</div>
 				`).join("")}
+				<div class="fh-prio-drop__sep"></div>
+				<div class="fh-prio-drop__clear" data-prio-value="">— ${__("No priority")}</div>
 			</div>`).appendTo(document.body);
 
-			$drop.on("click", ".fh-prio-drop__opt", (e) => {
-				e.stopPropagation();
-				const newPrio = $(e.currentTarget).attr("data-prio-value");
+			const _savePrio = (newPrio) => {
 				const $btn = $drop.data("active-btn");
 				$drop.removeClass("is-open");
 				if (!$btn) return;
@@ -2945,15 +3248,13 @@ opero.FlowHubPage = class FlowHubPage {
 				this._saving++;
 				frappe.call({
 					method: "opero.todo_dashboard.update_todo_from_flow_hub",
-					args: {
-						todo_name: todoName,
-						values: { priority: newPrio },
-						expected_modified: this._row_modified(todoName),
-					},
+					args: { todo_name: todoName, values: { priority: newPrio }, expected_modified: this._row_modified(todoName) },
 					callback: () => this._on_save_done(),
 					error: () => this._on_save_error(),
 				});
-			});
+			};
+			$drop.on("click", ".fh-prio-drop__opt", (e) => { e.stopPropagation(); _savePrio($(e.currentTarget).attr("data-prio-value")); });
+			$drop.on("click", ".fh-prio-drop__clear", (e) => { e.stopPropagation(); _savePrio(""); });
 		}
 
 		if ($drop.hasClass("is-open") && $drop.data("active-btn") === btn) {
@@ -3232,9 +3533,85 @@ opero.FlowHubPage = class FlowHubPage {
 	}
 
 	_open_project_combobox(todoName, $field, currentProject = "") {
-		this._open_link_combobox(todoName, $field, currentProject, "Project", (val) => {
-			this._save_project_reference(todoName, val);
+		$field.addClass("is-open");
+		const $body = $field.find(".fh-field-outlined__body");
+		const displayName = this._project_name_cache[currentProject] || currentProject;
+		$body.html(`<input class="fh-project-input" type="text" value="${this.esc(displayName)}" placeholder="${__("Search…")}" autocomplete="off" spellcheck="false">`);
+		const $input = $body.find(".fh-project-input").focus().select();
+
+		const $drop = $("<ul class='fh-project-dropdown'></ul>").appendTo(document.body);
+		let results = [], focusIdx = -1, _timer;
+
+		const _position = () => {
+			const r = $field[0].getBoundingClientRect();
+			$drop.css({ top: r.bottom + 3, left: r.left, width: r.width });
+		};
+		_position();
+
+		const _highlight = () => {
+			$drop.find(".fh-project-dropdown__item").removeClass("is-focused").eq(focusIdx).addClass("is-focused");
+		};
+
+		const _render_results = (rows) => {
+			results = rows; focusIdx = -1;
+			$drop.html(results.length
+				? results.map((item, i) => {
+					const label = this.esc(item.label || item.value);
+					const sub = (item.label && item.label !== item.value)
+						? `<span class="fh-project-dropdown__id">${this.esc(item.value)}</span>`
+						: "";
+					return `<li class="fh-project-dropdown__item" data-idx="${i}">${label}${sub}</li>`;
+				}).join("")
+				: `<li class="fh-project-dropdown__empty">${__("No matches")}</li>`
+			);
+		};
+
+		const _search = (txt) => {
+			clearTimeout(_timer);
+			_timer = setTimeout(() => {
+				frappe.call({
+					method: "frappe.desk.search.search_link",
+					args: { txt, doctype: "Project", ignore_user_permissions: 0, reference_doctype: "ToDo", page_length: 10 },
+					callback: (r) => {
+						const rows = (r.message || []).map(x => ({
+							value: typeof x === "string" ? x : (x.value || ""),
+							label: typeof x === "string" ? x : (x.label || x.value || ""),
+						})).filter(x => x.value);
+						_render_results(rows);
+					},
+				});
+			}, 180);
+		};
+
+		const ns = "mousedown.fh_project";
+		const _cleanup = () => { clearTimeout(_timer); $drop.remove(); $(document).off(ns); };
+		const _cancel  = () => { _cleanup(); this.render(); };
+		const _select  = (item) => {
+			_cleanup();
+			this._project_name_cache[item.value] = item.label || item.value;
+			this._save_project_reference(todoName, item.value);
+		};
+
+		$input.on("input", (e) => _search(e.target.value));
+		$input.on("keydown", (e) => {
+			if (e.key === "Escape") { _cancel(); return; }
+			if (e.key === "ArrowDown") { focusIdx = Math.min(focusIdx + 1, results.length - 1); _highlight(); e.preventDefault(); return; }
+			if (e.key === "ArrowUp")   { focusIdx = Math.max(focusIdx - 1, 0); _highlight(); e.preventDefault(); return; }
+			if (e.key === "Enter") {
+				const pick = focusIdx >= 0 ? results[focusIdx] : (results.length === 1 ? results[0] : null);
+				if (pick) _select(pick);
+				e.preventDefault();
+			}
 		});
+		$drop.on("mousedown", ".fh-project-dropdown__item", (e) => {
+			e.preventDefault();
+			const idx = parseInt($(e.currentTarget).attr("data-idx"), 10);
+			if (results[idx]) _select(results[idx]);
+		});
+		$(document).on(ns, (e) => {
+			if (!$field[0].contains(e.target) && !$drop[0].contains(e.target)) _cancel();
+		});
+		_search(currentProject);
 	}
 
 	_open_link_combobox(todoName, $field, currentValue = "", doctype, onSelect) {
@@ -3616,13 +3993,17 @@ opero.FlowHubPage = class FlowHubPage {
 		this._saving = Math.max(0, this._saving - 1);
 		if (this._saving === 0) {
 			frappe.show_alert({ message: __("Saved"), indicator: "green" }, 2);
-			this.refresh({ force: true });
+			if (this._active_tab === "closed") {
+				this._closed_queue   = null;
+				this._closed_has_more = false;
+			}
+			this.refresh({ force: true, silent: true });
 		}
 	}
 
 	_on_save_error() {
 		this._saving = Math.max(0, this._saving - 1);
-		this.refresh({ force: true });
+		this.refresh({ force: true, silent: true });
 	}
 
 	_save_due_date(todoName, date) {
@@ -3639,17 +4020,200 @@ opero.FlowHubPage = class FlowHubPage {
 		});
 	}
 
-	_mark_todo_done(todoName) {
-		this._saving++;
+	_init_search() {
+		const TAB_LABEL = {
+			overdue:      { label: __("Overdue"),  color: "#ef4444" },
+			due_today:    { label: __("Today"),    color: "#f97316" },
+			due_soon:     { label: __("Soon"),     color: "#2563eb" },
+			stale:        { label: __("Stale"),    color: "#7c3aed" },
+			in_progress:  { label: __("Active"),   color: "#1d4ed8" },
+			action_queue: { label: __("Queue"),    color: "#64748b" },
+		};
+
+		const _todo_tab = (item) => {
+			const band = item.urgency_band;
+			if (band === "overdue")   return "overdue";
+			if (band === "due_today") return "due_today";
+			if (band === "due_soon")  return "due_soon";
+			if (band === "stale")     return "stale";
+			if (item.status === "In Progress") return "in_progress";
+			return "action_queue";
+		};
+
+		// Inject search box into page header — before the standard action buttons
+		this.$search_wrap = $(`
+			<div class="fh-search-wrap">
+				<span class="fh-search-icon">⌕</span>
+				<input type="text" class="fh-search-input" placeholder="${__("Search ToDos… (/)")}" autocomplete="off" spellcheck="false">
+			</div>
+		`).insertBefore(this.page.standard_actions);
+
+		const $input = this.$search_wrap.find(".fh-search-input");
+		const $drop  = $('<div class="fh-search-drop"></div>').appendTo(document.body);
+
+		let _results = [], _focusIdx = -1, _timer;
+
+		const _position = () => {
+			const r = $input[0].getBoundingClientRect();
+			$drop.css({ top: r.bottom + 4, left: r.left, minWidth: Math.max(320, r.width) });
+		};
+
+		const _highlight = () => {
+			$drop.find(".fh-search-result").removeClass("is-focused").eq(_focusIdx).addClass("is-focused");
+		};
+
+		const _close = () => {
+			$drop.removeClass("is-open");
+			_results = []; _focusIdx = -1;
+		};
+
+		const _render = (rows) => {
+			_results = rows; _focusIdx = -1;
+			if (!rows.length) {
+				$drop.html(`<div class="fh-search-empty">${__("No matches")}</div>`).addClass("is-open");
+				return;
+			}
+			$drop.html(rows.map((item, i) => {
+				const tab   = _todo_tab(item);
+				const meta  = TAB_LABEL[tab] || TAB_LABEL.action_queue;
+				return `<div class="fh-search-result" data-idx="${i}">
+					<span class="fh-search-result__title">${this.esc(item.title || item.name)}</span>
+					<span class="fh-search-result__tab" style="color:${meta.color}">${meta.label}</span>
+				</div>`;
+			}).join("")).addClass("is-open");
+			_position();
+		};
+
+		const _select = (item) => {
+			_close();
+			$input.val("").blur();
+			const tab = _todo_tab(item);
+			this._active_tab = tab;
+			this._selected_todo = item;
+			// Ensure the item is in focus_queue so saves work
+			const q = this.snapshot.focus_queue || [];
+			if (!q.find(r => r.name === item.name)) {
+				this.snapshot.focus_queue = [item, ...q];
+			}
+			this.render();
+			if (item.name) this._ensure_detail_context(item.name);
+		};
+
+		const _search = (txt) => {
+			clearTimeout(_timer);
+			if (!txt || txt.length < 2) { _close(); return; }
+			_timer = setTimeout(() => {
+				frappe.call({
+					method: "opero.todo_dashboard.search_flow_hub_todos",
+					args: { query: txt },
+					callback: (r) => _render(r.message || []),
+				});
+			}, 200);
+		};
+
+		$input.on("input", (e) => { _position(); _search(e.target.value); });
+
+		$input.on("keydown", (e) => {
+			if (e.key === "Escape") { _close(); $input.blur(); return; }
+			if (e.key === "ArrowDown") { _focusIdx = Math.min(_focusIdx + 1, _results.length - 1); _highlight(); e.preventDefault(); return; }
+			if (e.key === "ArrowUp")   { _focusIdx = Math.max(_focusIdx - 1, 0); _highlight(); e.preventDefault(); return; }
+			if (e.key === "Enter") {
+				const pick = _focusIdx >= 0 ? _results[_focusIdx] : (_results.length === 1 ? _results[0] : null);
+				if (pick) _select(pick);
+				e.preventDefault();
+			}
+		});
+
+		$drop.on("mousedown", ".fh-search-result", (e) => {
+			e.preventDefault();
+			const item = _results[parseInt($(e.currentTarget).attr("data-idx"), 10)];
+			if (item) _select(item);
+		});
+
+		$(document).on("mousedown.fh_search", (e) => {
+			if (!this.$search_wrap[0].contains(e.target) && !$drop[0].contains(e.target)) _close();
+		});
+
+		// / shortcut — focus the search input unless already in a text field
+		document.addEventListener("keydown", (e) => {
+			if (e.key !== "/") return;
+			const tag = document.activeElement?.tagName;
+			if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+			e.preventDefault();
+			$input.focus().select();
+		});
+	}
+
+	_fetch_closed_todos() {
+		this._closed_loading = true;
 		frappe.call({
-			method: "opero.todo_dashboard.update_todo_from_flow_hub",
-			args: {
-				todo_name: todoName,
-				values: { status: "Closed" },
-				expected_modified: this._row_modified(todoName),
+			method: "opero.todo_dashboard.get_closed_todos",
+			callback: (r) => {
+				this._closed_loading  = false;
+				this._closed_queue    = (r.message?.items) || [];
+				this._closed_has_more = !!(r.message?.has_more);
+				if (this._active_tab === "closed") this.render();
 			},
-			callback: () => this._on_save_done(),
-			error: () => this._on_save_error(),
+			error: () => {
+				this._closed_loading = false;
+				this._closed_queue   = [];
+			},
+		});
+	}
+
+	_resolve_project_name(projectId) {
+		if (!projectId || this._project_name_cache[projectId] !== undefined) return;
+		this._project_name_cache[projectId] = projectId; // guard against duplicate fetches
+		frappe.db.get_value("Project", projectId, "project_name", (r) => {
+			const displayName = r?.project_name || projectId;
+			this._project_name_cache[projectId] = displayName;
+			this.$root.find(`.fh-field-outlined__value[data-project-id="${CSS.escape(projectId)}"]`).text(displayName);
+		});
+	}
+
+	_resolve_visible_project_names() {
+		this.$root.find(".fh-field-outlined__value[data-project-id]").each((_, el) => {
+			this._resolve_project_name($(el).attr("data-project-id"));
+		});
+	}
+
+	_show_spark_tip(x, y, text) {
+		let $tip = $("#fh-spark-tip");
+		if (!$tip.length) $tip = $('<div id="fh-spark-tip" class="fh-spark-tip"></div>').appendTo(document.body);
+		$tip.text(text).css({ left: x + 10, top: y - 30, display: "block" });
+	}
+
+	_hide_spark_tip() { $("#fh-spark-tip").hide(); }
+
+	_with_undo(message, saveFn) {
+		let undone = false;
+		const $toast = $(`<div class="fh-undo-toast">
+			<span>${this.esc(message)}</span>
+			<button type="button" class="fh-undo-btn">${__("Undo")}</button>
+		</div>`).appendTo(document.body);
+		$toast.find(".fh-undo-btn").on("click", () => {
+			undone = true;
+			$toast.remove();
+		});
+		setTimeout(() => {
+			$toast.remove();
+			if (!undone) saveFn();
+		}, 4000);
+	}
+
+	_mark_todo_done(todoName) {
+		this._with_undo(__("Marked as done"), () => {
+			this._saving++;
+			frappe.call({
+				method: "opero.todo_dashboard.update_todo_from_flow_hub",
+				args: {
+					todo_name: todoName,
+					values: { status: "Closed" },
+					expected_modified: this._row_modified(todoName),
+				},
+				callback: () => this._on_save_done(),
+				error: () => this._on_save_error(),
+			});
 		});
 	}
 
@@ -3752,7 +4316,10 @@ opero.FlowHubPage = class FlowHubPage {
 					}
 				</div>
 				<div class="fh-detail__meta">
-					<button type="button" class="fh-detail__checkbox" data-detail-action="done" data-todo-name="${this.esc(name)}" title="${__("Mark done")}">○</button>
+					${status === "Closed"
+						? `<button type="button" class="fh-detail__reopen" data-detail-action="reopen" data-todo-name="${this.esc(name)}">${__("↩ Reopen")}</button>`
+						: `<button type="button" class="fh-detail__checkbox" data-detail-action="done" data-todo-name="${this.esc(name)}" title="${__("Mark done")}">○</button>`
+					}
 					${dueLabel
 						? `<button type="button" class="fh-meta-chip fh-due-btn ${dueBandClass}" data-due-todo="${this.esc(name)}" data-due-date="${this.esc(dueDate)}">${this.esc(dueLabel)}</button>`
 						: `<button type="button" class="fh-meta-chip fh-due-btn fh-due-btn--empty" data-due-todo="${this.esc(name)}" data-due-date="">${__("Set due")}</button>`
@@ -3799,7 +4366,7 @@ opero.FlowHubPage = class FlowHubPage {
 							data-current-project="${this.esc(projectName)}">
 							<span class="fh-field-outlined__label">${this.esc(__("Project"))}</span>
 							<div class="fh-field-outlined__body">
-								<span class="fh-field-outlined__value ${projectName ? "" : "is-empty"}">${this.esc(projectName || "—")}</span>
+								<span class="fh-field-outlined__value ${projectName ? "" : "is-empty"}" ${projectName ? `data-project-id="${this.esc(projectName)}"` : ""}>${this.esc((projectName && this._project_name_cache[projectName]) || projectName || "—")}</span>
 								${projectName
 									? `<button type="button" class="fh-field-outlined__clear" data-detail-clear-project="1" data-todo-name="${this.esc(name)}" title="${__("Clear")}">×</button>`
 									: ""}
@@ -3837,7 +4404,12 @@ opero.FlowHubPage = class FlowHubPage {
 				<div class="fh-detail__section">
 					<div class="fh-section-label">${__("Activity")}</div>
 					${isLoading && !activity.length
-						? `<div class="fh-detail__loading">${this.esc(__("Loading details…"))}</div>`
+						? `<div class="fh-detail__activity-skel">
+							<div class="fh-skel-row"></div>
+							<div class="fh-skel-row" style="width:65%"></div>
+							<div class="fh-skel-row"></div>
+							<div class="fh-skel-row" style="width:80%"></div>
+						  </div>`
 						: `<div class="fh-detail__activity">${activityHtml}</div>`}
 				</div>
 			</div>
