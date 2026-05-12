@@ -628,6 +628,140 @@ def get_flow_hub_snapshot(filters=None, force_refresh=0):
 	return result
 
 
+@frappe.whitelist()
+def get_closed_todos():
+	from datetime import timedelta
+
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
+	today = getdate(nowdate())
+	cutoff = today - timedelta(days=30)
+	fetch_limit = 101  # one extra to detect overflow
+
+	rows = frappe.db.sql(
+		f"""
+			SELECT
+				todo.name,
+				todo.custom_title,
+				todo.description,
+				todo.status,
+				todo.priority,
+				todo.date,
+				todo.custom_closed_on,
+				todo.custom_cancelled_on,
+				todo.modified,
+				todo.allocated_to,
+				todo.assigned_by,
+				todo.custom_created_by
+			FROM `tabToDo` todo
+			WHERE todo.status = 'Closed'
+				AND todo.custom_closed_on >= %s
+				AND {user_scope_sql}
+			ORDER BY todo.custom_closed_on DESC, todo.modified DESC
+			LIMIT %s
+		""",
+		[cutoff, *user_scope_params, fetch_limit],
+		as_dict=True,
+	)
+
+	has_more = len(rows) >= fetch_limit
+	if has_more:
+		rows = rows[:100]
+
+	if not rows:
+		return {"items": [], "has_more": False}
+
+	names = [row.name for row in rows]
+	assignee_map = get_todo_assignees(names)
+
+	all_users = set()
+	for row in rows:
+		users = assignee_map.get(row.name) or ([row.allocated_to] if row.allocated_to else [])
+		all_users.update(users)
+
+	user_details = {}
+	if all_users:
+		for u in frappe.get_all(
+			"User",
+			filters={"name": ("in", list(all_users))},
+			fields=_user_fields(include_image=True),
+			limit_page_length=0,
+		):
+			user_details[u.name] = u
+
+	items = []
+	for row in rows:
+		serialized = _serialize_focus_row(row, today, today, today, assignee_map, user_details)
+		serialized["urgency_band"] = "closed"
+		items.append(serialized)
+
+	return {"items": items, "has_more": has_more}
+
+
+@frappe.whitelist()
+def search_flow_hub_todos(query):
+	query = (query or "").strip()
+	if len(query) < 2:
+		return []
+
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
+	today = getdate(nowdate())
+	stale_cutoff  = getdate(add_days(today, -7))
+	due_soon_to   = getdate(add_days(today, 3))
+	like_query    = f"%{query}%"
+
+	rows = frappe.db.sql(
+		f"""
+			SELECT
+				todo.name,
+				todo.custom_title,
+				todo.description,
+				todo.status,
+				todo.priority,
+				todo.date,
+				todo.custom_closed_on,
+				todo.custom_cancelled_on,
+				todo.modified,
+				todo.allocated_to,
+				todo.assigned_by,
+				todo.custom_created_by
+			FROM `tabToDo` todo
+			WHERE todo.status IN ('Open', 'In Progress')
+				AND (todo.custom_title LIKE %s OR todo.description LIKE %s)
+				AND {user_scope_sql}
+			ORDER BY todo.modified DESC
+			LIMIT 15
+		""",
+		[like_query, like_query, *user_scope_params],
+		as_dict=True,
+	)
+
+	if not rows:
+		return []
+
+	names = [row.name for row in rows]
+	assignee_map = get_todo_assignees(names)
+
+	all_users = set()
+	for row in rows:
+		users = assignee_map.get(row.name) or ([row.allocated_to] if row.allocated_to else [])
+		all_users.update(users)
+
+	user_details = {}
+	if all_users:
+		for u in frappe.get_all(
+			"User",
+			filters={"name": ("in", list(all_users))},
+			fields=_user_fields(include_image=True),
+			limit_page_length=0,
+		):
+			user_details[u.name] = u
+
+	return [
+		_serialize_focus_row(row, today, stale_cutoff, due_soon_to, assignee_map, user_details)
+		for row in rows
+	]
+
+
 def get_default_action_queue_statuses(filters=None) -> list[str]:
 	parsed = parse_filters(filters)
 	statuses = parse_multi_select(parsed.get("status"))
