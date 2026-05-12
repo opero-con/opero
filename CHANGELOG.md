@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.2.32 — 2026-05-11
+
+### Added
+
+- Focus chip as the default landing tab with a priority-scored algorithm (overdue+active → overdue → today+active → today → active → stale)
+- Closed tab showing todos closed in the last 30 days with lazy fetch, reopen action, and a 100-item cap with overflow footer
+- Search box in the page header (press `/`) with cross-tab routing — results show which tab the todo lives in and open its detail panel there
+- Keyboard navigation in the queue list (ArrowUp/Down to move, Enter to open)
+- Undo toast (4-second window) for mark-done, remove assignee, and clear project actions
+- Sparkline hover tooltips showing date and count for each day
+- Stale items included in the Focus tab at the lowest priority tier
+- Priority dropdown now shows colour-coded rows with a left-border accent and a "No priority" clear option
+- Project field displays `project_name` instead of the project ID; search works by both name and ID; resolved names are cached client-side
+
+### Changed
+
+- Health chip shows a directional arrow (↑/↓/→) to the right of the label instead of a numeric value
+- Items departing a filtered list now linger briefly with a fade-then-collapse exit animation instead of disappearing instantly
+- Save refresh is silent — no loading skeleton flash while the server round-trip completes
+- Detail panel context is preserved across silent refreshes so the panel does not jump or reload
+- Selected list item hides the due pill and avatars (already shown in the detail panel)
+- Risk rows in the Health tab now navigate to the matching tab within Flow Hub instead of leaving to the List view
+- Section labels in the detail panel use a more muted tinted colour to recede behind content
+- Input fields show a grey background on focus with no border highlight, consistent with Frappe form styling
+- Tab switches animate with a 120ms fade
+- Sparkline colours use CSS variables (`--fh-positive`, `--fh-negative`, `--fh-neutral`) for theme compatibility
+- Activity section shows a shimmer skeleton while loading instead of plain text
+
+### Fixed
+
+- Contextual empty state messages per tab (e.g. "Nothing overdue." instead of generic "All clear.")
+- Due date picker opens at the existing due date's month rather than always defaulting to the current month
+
+---
+
 ## 0.2.30 — 2026-05-07
 
 ### Changed
