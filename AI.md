@@ -51,7 +51,7 @@ type: short description
 
 Types: `feat`, `fix`, `bump`, `chore`, `refactor`, `docs`
 
-No co-author lines. No `--no-verify`.
+No `--no-verify`.
 
 ---
 
