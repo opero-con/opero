@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.33 — 2026-07-09
+
+### Changed
+
+- Replaced machine-specific AI rule references with portable bench-relative paths.
+- Documented Opero-specific rule precedence against bench-wide guidance.
+
+---
+
 ## 0.2.32 — 2026-05-11
 
 ### Added
