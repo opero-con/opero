@@ -1,6 +1,20 @@
 # Opero AI Working Rules
 
-This is the single source of truth for all AI tools (Claude, Codex, Cursor, etc.).
+This is the single source of truth for app-specific AI-tool rules in this repository.
+
+Bench-wide operational rules still come from
+`../../AGENTS.md`.
+
+## Rule Precedence
+
+- Follow the user-level `AGENTS.md`, when present, for shared defaults and routing.
+- Follow `../../AGENTS.md` for bench-wide
+  operational rules.
+- This file adds Opero-specific workflow, release, build, and versioning
+  rules.
+- If this file conflicts with the bench file on site resolution, housekeeping
+  command order, or reporting, the bench file wins unless it explicitly grants
+  an exception.
 
 ---
 
@@ -88,7 +102,10 @@ After editing code and before committing, apply changes to the local site so you
 
 ### Site selection
 - Do not hardcode a site name in commands.
-- Use the active bench-level default site unless the user explicitly provides one (see `common_site_config.json` → `default_site`).
+- Resolve the site in this order:
+  1. Use the explicit site provided by the user.
+  2. Otherwise use `sites/currentsite.txt` if present and non-empty.
+  3. Otherwise default to `127.0.0.1`.
 
 ### Required sequence
 
@@ -114,6 +131,12 @@ After editing code and before committing, apply changes to the local site so you
 
 ### Completion rule
 In the final response, explicitly confirm each command was run and whether it succeeded or failed. If any command fails, include the failing command and the exact error summary.
+
+### Relationship To Bench Rules
+- This file is the canonical source for app-specific AI-tool operating rules in
+  this repo.
+- Bench-wide operational rules still come from
+  `../../AGENTS.md`.
 
 ---
 
