@@ -15,37 +15,6 @@ fixtures = [
 			]
 		],
 	},
-	{
-		"dt": "Server Script",
-		"filters": [
-			[
-				"name",
-				"in",
-				[
-					"Allocated Hrs Fetch and Throw",
-					"Anti Spill",
-					"Auto Share Records",
-					"Available Hrs",
-					"Chart in Project Budget",
-					"Custom_Title",
-					"Full Name",
-					"Get Project Master Managers",
-					"Holidays Fetch",
-					"Missing Project Rate Factor",
-					"Non PM Restriction",
-					"PM Email Fetch",
-					"Previous Workflow State",
-					"Sum of Allocated Hrs in Project",
-					"TTD Update",
-					"Time dist. listen to working hrs",
-					"ToDo AutoShare upon Mention",
-					"ToDo Email Notification",
-					"on_update push to TTD",
-					"on_update pust start to TDD",
-				],
-			]
-		],
-	},
 ]
 app_title = "Opero Custom Development"
 app_publisher = "Patrick Willy"
@@ -213,12 +182,29 @@ has_permission = {
 doc_events = {
 	"ToDo": {
 		"validate": "opero.todo_enhancements.validate_todo",
+		"on_update": "opero.todo_enhancements.on_update_todo",
 	},
 	"Timesheet": {
+		"validate": "opero.events.timesheet.validate_timesheet",
+		"before_submit": "opero.events.timesheet.before_submit_timesheet",
 		"on_submit": "opero.zoho_books.sync_timesheet_to_zoho",
 		"on_cancel": "opero.zoho_books.sync_timesheet_to_zoho",
 		"on_amend": "opero.zoho_books.sync_timesheet_to_zoho",
-	}
+	},
+	"Task": {
+		"before_insert": "opero.events.task.before_insert_task",
+		"after_insert": "opero.events.task.after_insert_task",
+		"on_update": "opero.events.task.on_update_task",
+	},
+	"Travel Request": {
+		"validate": "opero.events.travel_request.validate_travel_request",
+	},
+	"HR Settings": {
+		"on_update": "opero.events.hr_settings.on_update_hr_settings",
+	},
+	"Comment": {
+		"on_update": "opero.events.comment.on_update_comment",
+	},
 }
 
 # Scheduled Tasks

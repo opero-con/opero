@@ -64,7 +64,7 @@ frappe.ui.form.on('Cash Advance-Reimbursable Form', {
             frm.doc.workflow_state === "Pending PM's Approval"
         ) {
             frappe.call({
-                method: "Get Project Master Managers",
+                method: "opero.api.project_managers.get_project_master_managers",
                 callback: function(response) {
                     const users = (response.message || []).filter(
                         user => user.name !== frappe.session.user
