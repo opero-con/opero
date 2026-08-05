@@ -33,9 +33,15 @@ def execute(filters=None):
 	granularity = _get_granularity(filters, day_span)
 	_validate_granularity_limits(granularity, day_span)
 
-	created_counts = _get_created_counts(from_date, to_date)
-	closed_counts = _get_completion_counts(from_date, to_date, "Closed", "custom_closed_on")
-	cancelled_counts = _get_completion_counts(from_date, to_date, "Cancelled", "custom_cancelled_on")
+	entity_sql, entity_params = todo_dashboard.get_entity_condition(filters)
+
+	created_counts = _get_created_counts(from_date, to_date, entity_sql, entity_params)
+	closed_counts = _get_completion_counts(
+		from_date, to_date, "Closed", "custom_closed_on", entity_sql, entity_params
+	)
+	cancelled_counts = _get_completion_counts(
+		from_date, to_date, "Cancelled", "custom_cancelled_on", entity_sql, entity_params
+	)
 	created_bucket = _aggregate_by_bucket(created_counts, granularity)
 	closed_bucket = _aggregate_by_bucket(closed_counts, granularity)
 	cancelled_bucket = _aggregate_by_bucket(cancelled_counts, granularity)
@@ -109,33 +115,35 @@ def get_columns(granularity):
 	]
 
 
-def _get_created_counts(from_date, to_date):
-	date_expr = _date_expr("creation")
+def _get_created_counts(from_date, to_date, entity_sql="", entity_params=None):
+	date_expr = _date_expr("todo.creation")
 	rows = frappe.db.sql(
 		f"""
 			SELECT {date_expr} AS day_key, COUNT(*) AS total
-			FROM `tabToDo`
+			FROM `tabToDo` todo
 			WHERE {date_expr} BETWEEN %s AND %s
+				{f"AND {entity_sql}" if entity_sql else ""}
 			GROUP BY {date_expr}
 		""",
-		[from_date, to_date],
+		[from_date, to_date, *(entity_params or [])],
 		as_dict=True,
 	)
 	return {getdate(row.day_key): row.total for row in rows}
 
 
-def _get_completion_counts(from_date, to_date, status, fieldname):
-	date_expr = _date_expr(fieldname)
+def _get_completion_counts(from_date, to_date, status, fieldname, entity_sql="", entity_params=None):
+	date_expr = _date_expr(f"todo.{fieldname}")
 	rows = frappe.db.sql(
 		f"""
 			SELECT {date_expr} AS day_key, COUNT(*) AS total
-			FROM `tabToDo`
-			WHERE status = %s
-				AND {fieldname} IS NOT NULL
+			FROM `tabToDo` todo
+			WHERE todo.status = %s
+				AND todo.{fieldname} IS NOT NULL
 				AND {date_expr} BETWEEN %s AND %s
+				{f"AND {entity_sql}" if entity_sql else ""}
 			GROUP BY {date_expr}
 		""",
-		[status, from_date, to_date],
+		[status, from_date, to_date, *(entity_params or [])],
 		as_dict=True,
 	)
 	counts = defaultdict(int)

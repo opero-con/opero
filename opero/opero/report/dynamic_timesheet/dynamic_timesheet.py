@@ -25,7 +25,14 @@ def execute(filters=None):
 			"label": _("Task Subject"),
 			"fieldtype": "Data",
 			"width": 220,
-		}
+		},
+		{
+			"fieldname": "company",
+			"label": _("Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"width": 140,
+		},
 	]
 	month_selects = []
 	for month in months:
@@ -48,6 +55,9 @@ def execute(filters=None):
 	month_columns_sql = ", ".join(month_selects)
 	conditions = []
 	values = {}
+	if filters.get("company"):
+		conditions.append("project.company = %(company)s")
+		values["company"] = filters["company"]
 	if filters.get("project"):
 		conditions.append("t.project = %(project)s")
 		values["project"] = filters["project"]
@@ -64,12 +74,14 @@ def execute(filters=None):
 		f"""
 		SELECT
 			t.subject AS task_subject,
+			project.company AS company,
 			{month_columns_sql}
 		FROM `tabTask` t
+		LEFT JOIN `tabProject` project ON project.name = t.project
 		LEFT JOIN `tabTimesheet Detail` tsd ON tsd.task = t.name
 		LEFT JOIN `tabTimesheet` ts ON ts.name = tsd.parent
 		WHERE 1=1 {where_sql}
-		GROUP BY t.name, t.subject
+		GROUP BY t.name, t.subject, project.company
 		ORDER BY t.subject
 		""",
 		values,

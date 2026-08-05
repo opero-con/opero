@@ -18,6 +18,8 @@ from frappe.utils import nowdate
 from frappe.utils.data import strip_html
 from frappe.utils.html_utils import unescape_html
 
+from opero import entity
+
 ACTIVE_STATUSES = ("Open", "In Progress")
 COMPLETED_STATUSES = ("Closed", "Cancelled")
 HIGH_PRIORITY_VALUES = {"High", "Urgent"}
@@ -170,6 +172,70 @@ def get_todo_assignees(todo_names: list[str]) -> dict[str, list[str]]:
 			assignee_map[row.parent].append(assignee)
 
 	return assignee_map
+
+
+def _entity_reference_sources() -> dict[str, str]:
+	"""Referenced DocTypes a ToDo can inherit an entity from -> their company field."""
+	sources = {"Project": "company"}
+	for doctype, scope in entity.active_project_scopes().items():
+		if frappe.get_meta(doctype).has_field(scope.company_field):
+			sources[doctype] = scope.company_field
+	return sources
+
+
+def get_entity_condition(filters=None, alias: str = "todo") -> tuple[str, list]:
+	"""SQL restricting ToDos to one entity, resolved through their reference.
+
+	A ToDo carries no company of its own — it inherits one from whatever it
+	points at. ToDos referencing something that is not entity-scoped, or nothing
+	at all, drop out when the filter is set; that is what filtering by entity
+	means here.
+	"""
+	company = _to_text(parse_filters(filters).get("company"))
+	if not company:
+		return "", []
+
+	clauses = []
+	params: list[str] = []
+	for doctype, company_field in _entity_reference_sources().items():
+		clauses.append(
+			f"({alias}.reference_type = %s AND {alias}.reference_name IN"
+			f" (SELECT name FROM `tab{doctype}` WHERE `{company_field}` = %s))"
+		)
+		params.extend([doctype, company])
+
+	return "(" + " OR ".join(clauses) + ")", params
+
+
+def get_todo_entities(rows: list) -> dict[str, str]:
+	"""Map each row's ToDo name to the entity of the document it references."""
+	wanted: dict[str, list[str]] = defaultdict(list)
+	for row in rows:
+		reference_type = _to_text(row.get("reference_type"))
+		reference_name = _to_text(row.get("reference_name"))
+		if reference_type and reference_name:
+			wanted[reference_type].append(reference_name)
+
+	sources = _entity_reference_sources()
+	entities: dict[str, str] = {}
+	for reference_type, names in wanted.items():
+		company_field = sources.get(reference_type)
+		if not company_field:
+			continue
+		for record in frappe.get_all(
+			reference_type,
+			filters={"name": ("in", list(set(names)))},
+			fields=["name", f"{company_field} as company"],
+			limit_page_length=0,
+		):
+			entities[f"{reference_type}:{record.name}"] = record.company
+
+	return {
+		row.get("todo") or row.get("name"): entities.get(
+			f"{_to_text(row.get('reference_type'))}:{_to_text(row.get('reference_name'))}", ""
+		)
+		for row in rows
+	}
 
 
 def get_completion_metrics(filters=None, default_days: int = 30) -> dict[str, float]:
