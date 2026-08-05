@@ -28,11 +28,11 @@ FC_DOCTYPES = [
 	"Task Time Distribution",
 	"Task Time Distribution Spread",
 	"Time Allocation Detail",
-	"WaSH Category",
-	"WaSH Competency Category",
-	"WaSH Expert Profile",
-	"WaSH Expertise Area",
-	"WaSH Personnel",
+	"WASH Category",
+	"WASH Competency Category",
+	"WASH Expert Profile",
+	"WASH Expertise Area",
+	"WASH Personnel",
 	"Work Hours Summary",
 ]
 

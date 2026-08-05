@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class WaSHPersonnel(Document):
+class WASHPersonnel(Document):
 	pass

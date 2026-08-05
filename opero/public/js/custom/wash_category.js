@@ -1,8 +1,8 @@
-// Opero: client scripts for WaSH Category
+// Opero: client scripts for WASH Category
 // Migrated from Frappe Cloud Client Scripts (enabled Form scripts).
 
 // --- Subcategory Options ---
-frappe.ui.form.on('WaSH Category', {
+frappe.ui.form.on('WASH Category', {
     category_name: function(frm) {
         let options_map = {
             "Business Management & Finance": [
