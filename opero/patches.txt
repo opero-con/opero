@@ -44,3 +44,5 @@ opero.patches.v0_0.rename_todo_allocatee_to_assignee
 opero.patches.v0_0.delete_child_todos
 opero.patches.v0_1.add_zoho_entry_id_to_time_log
 opero.patches.v0_1.migrate_zoho_mappings_to_integration_mapping
+opero.patches.v0_2.adopt_fc_custom_doctypes
+opero.patches.v0_2.add_travel_request_custom_fields
