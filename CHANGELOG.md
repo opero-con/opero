@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.35 — 2026-08-05
+
+### Added
+
+- Ported enabled Form Client Scripts for Timesheet, Task, Project, Travel Request, and Material Request into `public/js/custom/`
+- Server Script fixtures for Timesheet/Task/Travel/ToDo/Comment/HR Settings behaviour used with those forms
+- Migrate patch for Project/Task/Timesheet/Timesheet Detail/ToDo custom fields required by the ported scripts
+- Patch to disable superseded site Client Scripts after deploy
+
+---
+
 ## 0.2.34 — 2026-08-05
 
 ### Added
