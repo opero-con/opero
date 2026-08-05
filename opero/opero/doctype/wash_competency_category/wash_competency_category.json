@@ -18,7 +18,7 @@
    "fieldname": "category_name",
    "label": "Category Name",
    "fieldtype": "Link",
-   "options": "WaSH Category",
+   "options": "WASH Category",
    "permlevel": 0,
    "columns": 0,
    "length": 0,
@@ -45,7 +45,7 @@
  "modified": "2026-08-04 21:32:44.372786",
  "modified_by": "Administrator",
  "module": "Opero",
- "name": "WaSH Competency Category",
+ "name": "WASH Competency Category",
  "owner": "Administrator",
  "permissions": [
   {

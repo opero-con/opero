@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class WaSHCategory(Document):
+class WASHCategory(Document):
 	pass

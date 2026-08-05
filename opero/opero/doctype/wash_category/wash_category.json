@@ -67,7 +67,7 @@
    "fieldname": "old_parent",
    "label": "Old Parent",
    "fieldtype": "Link",
-   "options": "WaSH Category",
+   "options": "WASH Category",
    "hidden": 1,
    "permlevel": 0,
    "columns": 0,
@@ -76,15 +76,15 @@
   {
    "idx": 6,
    "fieldname": "parent_wash_category",
-   "label": "Parent WaSH Category",
+   "label": "Parent WASH Category",
    "fieldtype": "Link",
-   "options": "WaSH Category",
+   "options": "WASH Category",
    "depends_on": "eval:doc.is_group == 0",
    "permlevel": 0,
    "ignore_user_permissions": 1,
    "columns": 0,
    "length": 0,
-   "link_filters": "[[\"WaSH Category\",\"is_group\",\"=\",1]]"
+   "link_filters": "[[\"WASH Category\",\"is_group\",\"=\",1]]"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -97,7 +97,7 @@
  "modified": "2026-08-04 21:32:43.864022",
  "modified_by": "Administrator",
  "module": "Opero",
- "name": "WaSH Category",
+ "name": "WASH Category",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
