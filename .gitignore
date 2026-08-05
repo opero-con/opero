@@ -7,3 +7,6 @@ node_modules
 __pycache__
 .vscode/
 .claude/
+
+# Local FC backup extracts (do not commit)
+.fc-export/

@@ -1,0 +1,176 @@
+{
+ "actions": [
+  {
+   "idx": 1,
+   "label": "Update WHS",
+   "action_type": "Server Action",
+   "action": "update_work_hours_summary()",
+   "hidden": 1
+  }
+ ],
+ "allow_auto_repeat": 0,
+ "allow_import": 0,
+ "allow_rename": 1,
+ "autoname": "format:{year}-{full_name}-WHS",
+ "creation": "2024-09-28 16:40:22.994978",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "personnel",
+  "full_name",
+  "section_break_wrup",
+  "year",
+  "column_break_bayo",
+  "holiday_list",
+  "column_break_vncv",
+  "working_hours",
+  "section_break_nxot",
+  "distribution_detail"
+ ],
+ "fields": [
+  {
+   "idx": 1,
+   "fieldname": "personnel",
+   "label": "Personnel",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 2,
+   "fieldname": "full_name",
+   "label": "Name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0,
+   "fetch_from": "personnel.employee_name"
+  },
+  {
+   "idx": 3,
+   "fieldname": "section_break_wrup",
+   "fieldtype": "Section Break",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 4,
+   "fieldname": "year",
+   "label": "Year",
+   "fieldtype": "Link",
+   "options": "Fiscal Year",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 5,
+   "fieldname": "column_break_bayo",
+   "fieldtype": "Column Break",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 6,
+   "fieldname": "holiday_list",
+   "label": "Holiday List",
+   "fieldtype": "Link",
+   "options": "Holiday List",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 7,
+   "fieldname": "column_break_vncv",
+   "fieldtype": "Column Break",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 8,
+   "fieldname": "working_hours",
+   "label": "Working Hours",
+   "fieldtype": "Float",
+   "permlevel": 0,
+   "columns": 0,
+   "read_only": 1,
+   "precision": "2",
+   "length": 0
+  },
+  {
+   "idx": 9,
+   "fieldname": "section_break_nxot",
+   "fieldtype": "Section Break",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 10,
+   "fieldname": "distribution_detail",
+   "label": "Monthly Distribution Details",
+   "fieldtype": "Table",
+   "options": "Distribution Detail",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 0,
+ "is_tree": 0,
+ "is_virtual": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-08-04 21:32:46.307105",
+ "modified_by": "Administrator",
+ "module": "Opero",
+ "name": "Work Hours Summary",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "idx": 1,
+   "permlevel": 0,
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "share": 1,
+   "print": 1,
+   "email": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "max_attachments": 0,
+ "quick_entry": 0,
+ "track_seen": 0,
+ "track_views": 0,
+ "is_calendar_and_gantt": 0,
+ "show_title_field_in_link": 0,
+ "grid_page_length": 50,
+ "protect_attached_files": 0,
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "beta": 0,
+ "has_web_view": 0,
+ "make_attachments_public": 0,
+ "show_name_in_global_search": 0,
+ "show_preview_popup": 0
+}
