@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.38 — 2026-08-05
+
+### Added
+
+- Ported remaining enabled Form Client Scripts for Leave Application, Item, and Activity Cost into `public/js/custom/`
+- Resource Planner query-report JS (info box + drill-down) via `app_include_js`
+- Activity Cost custom fields (day rate / currency / exchange rate) via migrate patch
+- Patch to disable the six superseded site Client Scripts
+
+### Fixed
+
+- Leave Application Name Autohide now reads `employee_name` (FC script looked up `personnel_name`)
+
+---
+
 ## 0.2.37 — 2026-08-05
 
 ### Changed
