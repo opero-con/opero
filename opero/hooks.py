@@ -43,7 +43,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/opero/css/opero.css"
-# app_include_js = "/assets/opero/js/opero.js"
+app_include_js = ["/assets/opero/js/custom/resource_planner_reports.js"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/opero/css/opero.css"
@@ -62,9 +62,12 @@ app_include_css = "/assets/opero/css/opero.css"
 # include js in doctype views
 doctype_js = {
 	"ToDo": "public/js/todo.js",
+	"Activity Cost": "public/js/custom/activity_cost.js",
 	"Actual Spend": "public/js/custom/actual_spend.js",
 	"Cash Advance-Reimbursable Form": "public/js/custom/cash_advance_reimbursable_form.js",
 	"Consultant Task": "public/js/custom/consultant_task.js",
+	"Item": "public/js/custom/item.js",
+	"Leave Application": "public/js/custom/leave_application.js",
 	"Material Request": "public/js/custom/material_request.js",
 	"My ToDo": "public/js/custom/my_todo.js",
 	"Project": "public/js/custom/project.js",
