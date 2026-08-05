@@ -16,6 +16,7 @@
   "date",
   "section_break_mvly",
   "project",
+  "company",
   "pm_name",
   "column_break_pveg",
   "personnel",
@@ -92,6 +93,15 @@
    "permlevel": 0,
    "columns": 0,
    "length": 0
+  },
+  {
+   "fetch_from": "project.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
   },
   {
    "idx": 7,

@@ -17,6 +17,7 @@
   "hours_allocated",
   "section_break_jhdb",
   "project",
+  "company",
   "time_allocated_hours",
   "project_name",
   "column_break_flbt",
@@ -110,6 +111,15 @@
    "read_only": 1,
    "length": 0,
    "fetch_from": "project_task.project"
+  },
+  {
+   "fetch_from": "project.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
   },
   {
    "idx": 8,
