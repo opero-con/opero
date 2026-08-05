@@ -1855,7 +1855,7 @@
   "module": "Opero",
   "property": "hidden",
   "property_type": "Check",
-  "value": "1",
+  "value": "0",
   "default_value": null,
   "doctype": "Property Setter"
  },
@@ -2635,7 +2635,7 @@
   "module": "Opero",
   "property": "hidden",
   "property_type": "Check",
-  "value": "1",
+  "value": "0",
   "default_value": null,
   "doctype": "Property Setter"
  },
