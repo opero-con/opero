@@ -58,6 +58,30 @@ A DocType reaches its project either directly (`project`, `parent_project`,
 `custom_project`) or through another document — Actual Spend reads its entity
 from its Cash Advance, Activity Cost from its Activity Type.
 
+### Where the field appears
+
+| DocType | Field | On the form |
+|---|---|---|
+| Opero's project-linked DocTypes | new `company` | Directly below the project, read-only |
+| Actual Spend | new `company` | Below `cash_advance`, read-only |
+| Work Hours Summary, Contract Documents | new `company` | Below `personnel`, read-only |
+| Activity Type, Activity Cost | new `custom_company` | Below `custom_project` / `activity_type`, read-only |
+| Task, Expense Claim, Material Request | ERPNext's own | Where ERPNext puts it; locked once a project is set |
+| Timesheet, Travel Request | ERPNext's / HRMS's own | Where they put it; locked once a project is set |
+
+Timesheet and Travel Request were hidden while the site ran a single company.
+They are unhidden, because they are the two forms where cross-entity work
+actually shows up — someone employed by one entity logging time or travel
+against another entity's project — and the field decides which entity bears the
+cost. Hiding it also hid the fact that picking a project can move the document,
+and its currency, into the other entity's books.
+
+HRMS fetches `Travel Request.company` from the employee. Frappe applies
+`fetch_from` before `validate`, so the project still wins.
+
+Both stay visible-but-locked rather than permanently read-only, so a document
+with no project keeps whatever company it would have had before.
+
 ### Documents may not span entities
 
 Where a document has child rows carrying their own project (Timesheet time logs,
