@@ -9,8 +9,7 @@ frappe.ui.form.on('Project Budget', {
         frm.fields_dict.timesheet_budget_chart.$wrapper.empty();
 
         frappe.call({
-            method: "project-budget-timesheet-actuals",
-            type: "GET",
+            method: "opero.api.project_budget.get_timesheet_actuals",
             args: { project: frm.doc.project },
             callback: function (r) {
                 const actuals = r.message || {};
