@@ -1,0 +1,61 @@
+[
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_rates",
+    "label": "Rates",
+    "fieldtype": "Section Break",
+    "insert_after": "department",
+    "collapsible": 1
+  },
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_use_day_rate",
+    "label": "Use Day Rate",
+    "fieldtype": "Check",
+    "insert_after": "custom_rates"
+  },
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_column_break_eytoy",
+    "fieldtype": "Column Break",
+    "insert_after": "custom_use_day_rate"
+  },
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_currency",
+    "label": "Currency",
+    "fieldtype": "Link",
+    "options": "Currency",
+    "insert_after": "custom_column_break_eytoy"
+  },
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_column_break_7axdf",
+    "fieldtype": "Column Break",
+    "insert_after": "custom_currency"
+  },
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_exchange_rate",
+    "label": "Exchange Rate",
+    "fieldtype": "Float",
+    "insert_after": "custom_column_break_7axdf",
+    "depends_on": "eval:doc.custom_currency"
+  },
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_day_billing_rate",
+    "label": "Day Billing Rate",
+    "fieldtype": "Currency",
+    "insert_after": "section_break_4",
+    "depends_on": "eval:doc.custom_use_day_rate"
+  },
+  {
+    "dt": "Activity Cost",
+    "fieldname": "custom_day_costing_rate",
+    "label": "Day Costing Rate",
+    "fieldtype": "Currency",
+    "insert_after": "column_break_6",
+    "depends_on": "eval:doc.custom_use_day_rate"
+  }
+]
