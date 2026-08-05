@@ -36,7 +36,7 @@
   "name": "Full Name",
   "idx": 0,
   "script_type": "DocType Event",
-  "reference_doctype": "WaSH Personnel",
+  "reference_doctype": "WASH Personnel",
   "event_frequency": "All",
   "doctype_event": "Before Save",
   "allow_guest": 0,

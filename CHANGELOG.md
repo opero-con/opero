@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.36 — 2026-08-05
+
+### Changed
+
+- Renamed WaSH DocTypes and labels to all-caps WASH (Water And Sanitation Hygiene): Category, Competency Category, Expert Profile, Expertise Area, and Personnel
+
+---
+
 ## 0.2.35 — 2026-08-05
 
 ### Added
@@ -15,7 +23,7 @@
 
 ### Added
 
-- Consolidated 24 Frappe Cloud custom DocTypes into Opero as standard module DocTypes (budget/spend, time allocation, WaSH/personnel, and related child tables)
+- Consolidated 24 Frappe Cloud custom DocTypes into Opero as standard module DocTypes (budget/spend, time allocation, WASH/personnel, and related child tables)
 - Ported enabled Form Client Scripts for those DocTypes into `public/js/custom/`
 - Server Script fixtures for Auto Share Records, Chart in Project Budget, Full Name, Get Project Master Managers, and Holidays Fetch
 - Travel Request custom fields (accommodation, mileage, per diem, project) via migrate patch when HRMS is installed

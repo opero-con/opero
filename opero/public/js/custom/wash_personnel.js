@@ -1,8 +1,8 @@
-// Opero: client scripts for WaSH Personnel
+// Opero: client scripts for WASH Personnel
 // Migrated from Frappe Cloud Client Scripts (enabled Form scripts).
 
 // --- New Contact Button ---
-frappe.ui.form.on('WaSH Personnel', {
+frappe.ui.form.on('WASH Personnel', {
     refresh: function(frm) {
         if (frm.doc.contact) {
             frappe.call({
@@ -58,7 +58,7 @@ function set_add_contact_button(frm) {
         $('#add_contact_btn').click(() => {
             frappe.new_doc('Contact', {
                 links: [{
-                    link_doctype: 'WaSH Personnel',
+                    link_doctype: 'WASH Personnel',
                     link_name: frm.doc.name
                 }]
             });
@@ -67,7 +67,7 @@ function set_add_contact_button(frm) {
 }
 
 // --- Filter ---
-frappe.ui.form.on('WaSH Personnel', {
+frappe.ui.form.on('WASH Personnel', {
     refresh: function(frm) {
         frm.fields_dict["wash_expert_profile"].grid.get_field("subcategory_name").get_query = function(doc, cdt, cdn) {
             let row = locals[cdt][cdn]; // Get the current row in the child table

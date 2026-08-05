@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class WaSHExpertProfile(Document):
+class WASHExpertProfile(Document):
 	pass

@@ -3,7 +3,7 @@
  "allow_auto_repeat": 0,
  "allow_import": 0,
  "allow_rename": 1,
- "autoname": "format:WaSH-P-{##}",
+ "autoname": "format:WASH-P-{##}",
  "creation": "2025-02-06 21:16:15.397618",
  "custom": 0,
  "doctype": "DocType",
@@ -235,7 +235,7 @@
    "fieldname": "expertise_area",
    "label": "Expertise Area",
    "fieldtype": "Link",
-   "options": "WaSH Expertise Area",
+   "options": "WASH Expertise Area",
    "permlevel": 0,
    "columns": 0,
    "length": 0
@@ -253,7 +253,7 @@
    "fieldname": "wash_expert_profile",
    "label": "Competency Category",
    "fieldtype": "Table",
-   "options": "WaSH Expert Profile",
+   "options": "WASH Expert Profile",
    "permlevel": 0,
    "columns": 0,
    "length": 0
@@ -311,7 +311,7 @@
    "permlevel": 0,
    "columns": 0,
    "length": 0,
-   "link_filters": "[[\"Contact\",\"link_doctype\",\"=\",\"WaSH Personnel\"]]"
+   "link_filters": "[[\"Contact\",\"link_doctype\",\"=\",\"WASH Personnel\"]]"
   },
   {
    "idx": 31,
@@ -334,7 +334,7 @@
  "modified": "2026-08-04 21:32:43.638868",
  "modified_by": "Administrator",
  "module": "Opero",
- "name": "WaSH Personnel",
+ "name": "WASH Personnel",
  "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [

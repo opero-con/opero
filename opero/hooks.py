@@ -105,8 +105,8 @@ doctype_js = {
 	"Task Time Distribution": "public/js/custom/task_time_distribution.js",
 	"Timesheet": "public/js/custom/timesheet.js",
 	"Travel Request": "public/js/custom/travel_request.js",
-	"WaSH Category": "public/js/custom/wash_category.js",
-	"WaSH Personnel": "public/js/custom/wash_personnel.js",
+	"WASH Category": "public/js/custom/wash_category.js",
+	"WASH Personnel": "public/js/custom/wash_personnel.js",
 	"Work Hours Summary": "public/js/custom/work_hours_summary.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
