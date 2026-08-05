@@ -1,0 +1,74 @@
+[
+ {
+  "name": "Approved",
+  "idx": 5193,
+  "workflow_state_name": "Approved",
+  "icon": "ok-sign",
+  "style": "Success",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "Cancelled",
+  "idx": 215,
+  "workflow_state_name": "Cancelled",
+  "icon": "",
+  "style": "Danger",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "Completed",
+  "idx": 390,
+  "workflow_state_name": "Completed",
+  "icon": "",
+  "style": "Info",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "Draft",
+  "idx": 11241,
+  "workflow_state_name": "Draft",
+  "icon": "",
+  "style": "Warning",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "Open",
+  "idx": 92,
+  "workflow_state_name": "Open",
+  "icon": "",
+  "style": "Primary",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "Pending PM's Approval",
+  "idx": 732,
+  "workflow_state_name": "Pending PM's Approval",
+  "icon": "",
+  "style": "Warning",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "Rejected",
+  "idx": 80,
+  "workflow_state_name": "Rejected",
+  "icon": "remove",
+  "style": "Danger",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "Submitted",
+  "idx": 13069,
+  "workflow_state_name": "Submitted",
+  "icon": "",
+  "style": "Info",
+  "doctype": "Workflow State"
+ },
+ {
+  "name": "To Reconcile",
+  "idx": 247,
+  "workflow_state_name": "To Reconcile",
+  "icon": "",
+  "style": "",
+  "doctype": "Workflow State"
+ }
+]
