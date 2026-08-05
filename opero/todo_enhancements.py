@@ -15,11 +15,16 @@ USER_TOKEN_SPLIT = re.compile(r"[\n,;]+")
 
 
 def validate_todo(doc: Document, _method: str | None = None):
+	_autofill_title_from_reference(doc)
 	_sync_title_and_description(doc)
 	_sync_owner_display(doc)
 	_sync_status_timestamps(doc)
 	_validate_title_or_description(doc)
 	_normalize_assignees(doc)
+
+
+def on_update_todo(doc: Document, _method: str | None = None):
+	_send_assignment_email(doc)
 
 
 def get_permission_query_conditions(user=None):
@@ -60,6 +65,29 @@ def has_permission(doc: Document, ptype: str = "read", user: str | None = None) 
 	return user in assignees
 
 
+def _autofill_title_from_reference(doc: Document):
+	"""Ported from FC Server Script Custom_Title."""
+	if (getattr(doc, "custom_title", None) or "").strip():
+		return
+
+	reference_type = getattr(doc, "reference_type", None)
+	reference_name = getattr(doc, "reference_name", None)
+	if reference_type and reference_name:
+		try:
+			ref_doc = frappe.get_doc(reference_type, reference_name)
+			title = (
+				getattr(ref_doc, "title", None)
+				or getattr(ref_doc, "subject", None)
+				or ref_doc.name
+			)
+			doc.custom_title = f"{reference_type}: {title}"
+		except Exception:
+			doc.custom_title = f"{reference_type}: {reference_name}"
+		return
+
+	doc.custom_title = getattr(doc, "description", None) or "General Task"
+
+
 def _sync_title_and_description(doc: Document):
 	raw_title = (getattr(doc, "custom_title", None) or "").strip()
 	raw_description = (getattr(doc, "description", None) or "").strip()
@@ -71,6 +99,32 @@ def _sync_title_and_description(doc: Document):
 
 	if description and not title:
 		doc.custom_title = description
+
+
+def _send_assignment_email(doc: Document):
+	"""Ported from FC Server Script ToDo Email Notification."""
+	if getattr(doc, "custom_email_sent", None):
+		return
+	if not getattr(doc, "allocated_to", None) or getattr(doc, "status", None) != "Open":
+		return
+
+	email = frappe.db.get_value("User", doc.allocated_to, "email")
+	if not email:
+		return
+
+	todo_link = frappe.utils.get_url_to_form("ToDo", doc.name)
+	message = (
+		f"You've been assigned a ToDo: <b>{doc.custom_title or doc.name}</b><br><br>"
+		f'<a href="{todo_link}">Open the ToDo</a>'
+	)
+	frappe.sendmail(
+		recipients=email,
+		subject="New ToDo Assigned",
+		message=message,
+		reference_doctype="ToDo",
+		reference_name=doc.name,
+	)
+	frappe.db.set_value("ToDo", doc.name, "custom_email_sent", 1, update_modified=False)
 
 
 def _extract_plain_text(value: str | None) -> str:

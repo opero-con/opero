@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.37 — 2026-08-05
+
+### Changed
+
+- Rewrote all 20 Frappe Cloud Server Scripts into Opero Python (`doc_events`, DocType controllers, and whitelisted APIs)
+- Client JS for Project Budget and Cash Advance now calls `opero.api.*` methods instead of Server Script API names
+- Fixed Task→TTD date sync to filter on `project_task` (FC scripts used `parent`)
+- Project Time Allocation now computes available hours and shares with personnel (FC scripts targeted wrong/missing DocTypes)
+- Work Hours Summary holiday fill runs on `validate` without recursive `doc.save`
+- Patch disables the superseded site Server Scripts after migrate; Server Script fixtures removed from the app
+
+---
+
 ## 0.2.36 — 2026-08-05
 
 ### Changed
