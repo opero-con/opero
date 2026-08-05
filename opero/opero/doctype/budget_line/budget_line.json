@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "allow_auto_repeat": 0,
+ "allow_import": 0,
+ "allow_rename": 1,
+ "autoname": "format:{code}-{description}",
+ "creation": "2025-03-09 21:13:41.462088",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "project",
+  "section_break_vzgo",
+  "code",
+  "column_break_kmyy",
+  "description"
+ ],
+ "fields": [
+  {
+   "idx": 1,
+   "fieldname": "project",
+   "label": "Project",
+   "fieldtype": "Link",
+   "options": "Project",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 2,
+   "fieldname": "section_break_vzgo",
+   "fieldtype": "Section Break",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 3,
+   "fieldname": "code",
+   "label": "Code",
+   "fieldtype": "Data",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 4
+  },
+  {
+   "idx": 4,
+   "fieldname": "column_break_kmyy",
+   "fieldtype": "Column Break",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  },
+  {
+   "idx": 5,
+   "fieldname": "description",
+   "label": "Description",
+   "fieldtype": "Data",
+   "permlevel": 0,
+   "columns": 0,
+   "length": 0
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 0,
+ "is_tree": 0,
+ "is_virtual": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-08-04 21:32:41.320206",
+ "modified_by": "Administrator",
+ "module": "Opero",
+ "name": "Budget Line",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "idx": 1,
+   "permlevel": 0,
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "share": 1,
+   "print": 1,
+   "email": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "max_attachments": 0,
+ "quick_entry": 0,
+ "track_seen": 0,
+ "track_views": 0,
+ "is_calendar_and_gantt": 0,
+ "show_title_field_in_link": 0,
+ "grid_page_length": 50,
+ "protect_attached_files": 0,
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "beta": 0,
+ "has_web_view": 0,
+ "make_attachments_public": 0,
+ "show_name_in_global_search": 0,
+ "show_preview_popup": 0
+}

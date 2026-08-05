@@ -1,7 +1,36 @@
 app_name = "opero"
 
 fixtures = [
-    {"dt": "Custom Field", "filters": [["dt", "in", ["Project", "Timesheet Detail"]], ["fieldname", "in", ["zoho_project_id", "zoho_entry_id", "zoho_task_id"]]]}
+	{
+		"dt": "Custom Field",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Project-zoho_project_id",
+					"Timesheet Detail-zoho_entry_id",
+					"Timesheet Detail-zoho_task_id",
+				],
+			]
+		],
+	},
+	{
+		"dt": "Server Script",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Auto Share Records",
+					"Chart in Project Budget",
+					"Full Name",
+					"Get Project Master Managers",
+					"Holidays Fetch",
+				],
+			]
+		],
+	},
 ]
 app_title = "Opero Custom Development"
 app_publisher = "Patrick Willy"
@@ -47,7 +76,19 @@ app_include_css = "/assets/opero/css/opero.css"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"ToDo": "public/js/todo.js"}
+doctype_js = {
+	"ToDo": "public/js/todo.js",
+	"Actual Spend": "public/js/custom/actual_spend.js",
+	"Cash Advance-Reimbursable Form": "public/js/custom/cash_advance_reimbursable_form.js",
+	"Consultant Task": "public/js/custom/consultant_task.js",
+	"My ToDo": "public/js/custom/my_todo.js",
+	"Project Budget": "public/js/custom/project_budget.js",
+	"Project Time Allocation": "public/js/custom/project_time_allocation.js",
+	"Task Time Distribution": "public/js/custom/task_time_distribution.js",
+	"WaSH Category": "public/js/custom/wash_category.js",
+	"WaSH Personnel": "public/js/custom/wash_personnel.js",
+	"Work Hours Summary": "public/js/custom/work_hours_summary.js",
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.34 — 2026-08-05
+
+### Added
+
+- Consolidated 24 Frappe Cloud custom DocTypes into Opero as standard module DocTypes (budget/spend, time allocation, WaSH/personnel, and related child tables)
+- Ported enabled Form Client Scripts for those DocTypes into `public/js/custom/`
+- Server Script fixtures for Auto Share Records, Chart in Project Budget, Full Name, Get Project Master Managers, and Holidays Fetch
+- Travel Request custom fields (accommodation, mileage, per diem, project) via migrate patch when HRMS is installed
+- Patch to mark former site DocTypes as app-owned (`custom=0`) and disable superseded Client Scripts
+
+---
+
 ## 0.2.33 — 2026-07-09
 
 ### Changed
