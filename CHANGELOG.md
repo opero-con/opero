@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.39 — 2026-08-05
+
+### Added
+
+- Frappe Cloud site-config import (via migrate patch, skip-if-DocType-missing): active Workflows, Workflow States/Actions, Print Formats, Notifications, custom Reports, remaining Custom Fields, and Opero-related Property Setters
+- Script Reports `Dynamic Timesheet` and `Used Hrs Summary` deferred (need Python modules)
+---
+
 ## 0.2.38 — 2026-08-05
 
 ### Added

@@ -52,3 +52,4 @@ opero.patches.v0_2.disable_ported_standard_client_scripts
 opero.patches.v0_2.disable_ported_server_scripts
 opero.patches.v0_2.add_activity_cost_custom_fields
 opero.patches.v0_2.disable_remaining_ported_client_scripts
+opero.patches.v0_2.import_fc_site_config
