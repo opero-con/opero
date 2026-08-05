@@ -100,6 +100,11 @@ def get_data(filters):
 	conditions = []
 	params = []
 
+	entity_sql, entity_params = todo_dashboard.get_entity_condition(filters)
+	if entity_sql:
+		conditions.append(entity_sql)
+		params.extend(entity_params)
+
 	assignee = (filters.get("assignee") or "").strip()
 	if assignee:
 		conditions.append(

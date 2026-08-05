@@ -11,10 +11,20 @@ frappe.query_reports["Used Hrs Summary"] = {
 			reqd: 1,
 		},
 		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+		},
+		{
 			fieldname: "project",
 			label: __("Project"),
 			fieldtype: "Link",
 			options: "Project",
+			get_query: () => {
+				const company = frappe.query_report.get_filter_value("company");
+				return company ? { filters: { company } } : {};
+			},
 		},
 	],
 };

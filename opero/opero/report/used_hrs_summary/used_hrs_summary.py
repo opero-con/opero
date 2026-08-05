@@ -12,6 +12,7 @@ def execute(filters=None):
 	filters = filters or {}
 	year = cint(filters.get("year") or getdate().year)
 	project = filters.get("project") or None
+	company = filters.get("company") or None
 
 	columns = [
 		{
@@ -19,6 +20,13 @@ def execute(filters=None):
 			"label": _("Contributor"),
 			"fieldtype": "Data",
 			"width": 220,
+		},
+		{
+			"fieldname": "company",
+			"label": _("Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"width": 140,
 		},
 		{
 			"fieldname": "project",
@@ -45,15 +53,19 @@ def execute(filters=None):
 		"""
 		SELECT
 			ts.employee_name AS contributor,
+			project.company AS company,
 			ts.parent_project AS project,
 			MONTHNAME(ts.start_date) AS month,
 			SUM(tl.hours) AS posted_hrs
 		FROM `tabTimesheet` ts
 		JOIN `tabTimesheet Detail` tl ON ts.name = tl.parent
+		LEFT JOIN `tabProject` project ON project.name = ts.parent_project
 		WHERE YEAR(ts.start_date) = %(year)s
 		  AND (%(project)s IS NULL OR ts.parent_project = %(project)s)
+		  AND (%(company)s IS NULL OR project.company = %(company)s)
 		GROUP BY
 			ts.employee_name,
+			project.company,
 			ts.parent_project,
 			MONTH(ts.start_date),
 			MONTHNAME(ts.start_date)
@@ -65,7 +77,7 @@ def execute(filters=None):
 			),
 			ts.employee_name
 		""",
-		{"year": year, "project": project},
+		{"year": year, "project": project, "company": company},
 		as_dict=True,
 	)
 

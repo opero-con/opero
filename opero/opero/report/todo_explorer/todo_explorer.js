@@ -1,6 +1,12 @@
 frappe.query_reports["ToDo Explorer"] = {
 	filters: [
 		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+		},
+		{
 			fieldname: "assignee",
 			label: __("Assignee"),
 			fieldtype: "Link",
