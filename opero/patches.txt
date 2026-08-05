@@ -54,3 +54,5 @@ opero.patches.v0_2.add_activity_cost_custom_fields
 opero.patches.v0_2.disable_remaining_ported_client_scripts
 opero.patches.v0_2.import_fc_site_config
 opero.patches.v0_2.adopt_fc_script_reports
+opero.patches.v0_3.add_entity_company_fields
+opero.patches.v0_3.backfill_entity_company

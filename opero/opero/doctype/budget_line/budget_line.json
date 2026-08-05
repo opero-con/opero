@@ -11,6 +11,7 @@
  "engine": "InnoDB",
  "field_order": [
   "project",
+  "company",
   "section_break_vzgo",
   "code",
   "column_break_kmyy",
@@ -26,6 +27,15 @@
    "permlevel": 0,
    "columns": 0,
    "length": 0
+  },
+  {
+   "fetch_from": "project.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
   },
   {
    "idx": 2,

@@ -6,8 +6,13 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate
 
+from opero import entity
+
 
 class ProjectTimeAllocation(Document):
+	def autoname(self):
+		self.name = entity.entity_series_name(self, "TA-.{first_name}.-.MM..YY.-.####")
+
 	def validate(self):
 		self._calculate_available_hours()
 

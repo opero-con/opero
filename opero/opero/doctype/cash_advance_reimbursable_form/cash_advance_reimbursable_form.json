@@ -20,6 +20,7 @@
   "currency",
   "column_break_fapu",
   "project",
+  "company",
   "project_manager",
   "pm_email",
   "section_break_xukl",
@@ -129,6 +130,15 @@
    "permlevel": 0,
    "columns": 0,
    "length": 0
+  },
+  {
+   "fetch_from": "project.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
   },
   {
    "idx": 11,
