@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.40 — 2026-08-05
+
+### Added
+
+- Ported remaining enabled FC Script Reports into Opero as standard module reports: `Dynamic Timesheet` and `Used Hrs Summary`
+- Patch adopts any pre-existing custom site copies of those reports to Opero module ownership
+
+---
+
 ## 0.2.39 — 2026-08-05
 
 ### Added
