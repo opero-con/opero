@@ -19,6 +19,7 @@
  "engine": "InnoDB",
  "field_order": [
   "personnel",
+  "company",
   "full_name",
   "section_break_wrup",
   "year",
@@ -39,6 +40,15 @@
    "permlevel": 0,
    "columns": 0,
    "length": 0
+  },
+  {
+   "fetch_from": "personnel.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
   },
   {
    "idx": 2,

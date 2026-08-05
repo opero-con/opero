@@ -12,6 +12,7 @@
   "section_break_ypzi",
   "amended_from",
   "cash_advance",
+  "company",
   "column_break_flys",
   "claim_date",
   "classifications",
@@ -51,6 +52,15 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "length": 0
+  },
+  {
+   "fetch_from": "cash_advance.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
   },
   {
    "idx": 4,

@@ -43,7 +43,10 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/opero/css/opero.css"
-app_include_js = ["/assets/opero/js/custom/resource_planner_reports.js"]
+app_include_js = [
+	"/assets/opero/js/custom/resource_planner_reports.js",
+	"/assets/opero/js/custom/entity_scope.js",
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/opero/css/opero.css"
@@ -183,6 +186,12 @@ has_permission = {
 }
 
 doc_events = {
+	# Entity scoping: a Project's company owns every document beneath it.
+	# Which DocTypes are scoped is data, held in opero/entity.py, so this is
+	# wired once for all of them instead of being duplicated per DocType here.
+	"*": {
+		"validate": "opero.entity.apply_entity_scope",
+	},
 	"ToDo": {
 		"validate": "opero.todo_enhancements.validate_todo",
 		"on_update": "opero.todo_enhancements.on_update_todo",
