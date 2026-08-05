@@ -1,6 +1,12 @@
 frappe.query_reports["ToDo Created vs Closed"] = {
 	filters: [
 		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+		},
+		{
 			fieldname: "time_window",
 			label: __("Window"),
 			fieldtype: "Select",

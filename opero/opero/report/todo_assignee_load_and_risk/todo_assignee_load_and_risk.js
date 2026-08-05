@@ -9,6 +9,12 @@ frappe.query_reports["ToDo Assignee Load and Risk"] = {
 	},
 	filters: [
 		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+		},
+		{
 			fieldname: "assignee",
 			label: __("Assignee"),
 			fieldtype: "Link",

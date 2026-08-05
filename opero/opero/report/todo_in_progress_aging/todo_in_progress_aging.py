@@ -32,6 +32,13 @@ def get_columns():
 			"width": 140,
 		},
 		{"fieldname": "title", "label": _("Title"), "fieldtype": "Data", "width": 260},
+		{
+			"fieldname": "company",
+			"label": _("Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"width": 140,
+		},
 		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 120},
 		{"fieldname": "priority", "label": _("Priority"), "fieldtype": "Data", "width": 110},
 		{"fieldname": "due_date", "label": _("Due Date"), "fieldtype": "Date", "width": 120},
@@ -63,6 +70,11 @@ def get_data(filters):
 
 	conditions = []
 	params = []
+
+	entity_sql, entity_params = todo_dashboard.get_entity_condition(filters)
+	if entity_sql:
+		conditions.append(entity_sql)
+		params.extend(entity_params)
 
 	if statuses:
 		placeholders = ", ".join(["%s"] * len(statuses))
@@ -105,6 +117,8 @@ def get_data(filters):
 				todo.status,
 				todo.priority,
 				todo.date,
+				todo.reference_type,
+				todo.reference_name,
 				todo.allocated_to,
 				todo.custom_created_by,
 				todo.owner,
@@ -128,6 +142,7 @@ def get_data(filters):
 
 	names = [row.name for row in rows]
 	assignee_map = todo_dashboard.get_todo_assignees(names)
+	entity_map = todo_dashboard.get_todo_entities(rows)
 
 	data = []
 	for row in rows:
@@ -141,6 +156,7 @@ def get_data(filters):
 			{
 				"todo": row.name,
 				"title": todo_dashboard.get_todo_title(row),
+				"company": entity_map.get(row.name) or "",
 				"status": row.status,
 				"priority": row.priority,
 				"due_date": row.date,
