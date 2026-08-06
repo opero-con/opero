@@ -121,6 +121,11 @@ A project's company can be changed freely while nothing hangs off it. As soon as
 any document exists under the project, the change is refused and the blocking
 documents are listed. Remove or cancel them first.
 
+The Project form says so before the save rather than after: the company field is
+read-only while documents depend on it, under a headline giving the count.
+`get_project_lock` answers that in one round trip — the form only needs the
+total, whereas the guard needs the per-DocType breakdown to explain a refusal.
+
 ---
 
 ## Display name

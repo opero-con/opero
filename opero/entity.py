@@ -153,6 +153,31 @@ def get_project_entity(project: str) -> dict:
 
 
 @frappe.whitelist()
+def get_project_lock(project: str) -> dict:
+	"""How many documents pin a project to its entity.
+
+	One round trip rather than a count per DocType: the Project form asks on
+	every load and only needs the total. `guard_project_company` does the
+	per-DocType breakdown, which it needs to explain a refusal.
+	"""
+	if not project:
+		return {"locked": False, "count": 0}
+	frappe.has_permission("Project", doc=project, throw=True)
+
+	scopes = [(dt, s) for dt, s in active_project_scopes().items() if not s.via]
+	if not scopes:
+		return {"locked": False, "count": 0}
+
+	union = " UNION ALL ".join(
+		f"SELECT COUNT(*) AS c FROM `tab{doctype}` WHERE `{scope.project_field}` = %s"
+		for doctype, scope in scopes
+	)
+	total = frappe.db.sql(f"SELECT SUM(c) FROM ({union}) counts", [project] * len(scopes))[0][0]
+	total = int(total or 0)
+	return {"locked": bool(total), "count": total}
+
+
+@frappe.whitelist()
 def get_company_entity(company: str) -> dict:
 	"""Describe an entity the form already knows the name of."""
 	if not company:
