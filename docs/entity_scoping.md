@@ -103,6 +103,27 @@ documents are listed. Remove or cancel them first.
 
 ---
 
+## Display name
+
+A Company is named after its registered legal name — right for invoices and the
+ledger, but long and near-identical between entities in every link field, filter
+and report column.
+
+Each Company therefore carries a **Display Name**. Frappe renders it in place of
+the stored name wherever a link appears — form fields, link dropdowns, list views
+and report columns all run through the same formatter — and falls back to the
+registered name when it is blank. Nothing about what documents record changes.
+
+Set it on the Company record. It is data, not configuration: the names live on
+the site, not in this repository.
+
+The registered name still appears where it should: on the Company form itself,
+in print formats, and in anything reading `Company.company_name`.
+
+Note this is separate from the abbreviation. Numbering below uses `Company.abbr`,
+which ERPNext also embeds in every Account and Cost Center name and marks
+`set_only_once` — changing it is a chart-of-accounts operation, not a relabel.
+
 ## Numbering
 
 Documents carry their entity's abbreviation, and each entity keeps its own

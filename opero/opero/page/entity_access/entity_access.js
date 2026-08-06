@@ -68,7 +68,12 @@ class EntityAccess {
 		}
 
 		const head = entities
-			.map((e) => `<th class="ea-entity">${frappe.utils.escape_html(e.name)}</th>`)
+			.map(
+				(e) =>
+					`<th class="ea-entity" title="${frappe.utils.escape_html(e.name)}">
+						${frappe.utils.escape_html(e.label)}
+					</th>`
+			)
 			.join("");
 
 		const rows = users.map((u) => this.render_row(u, entities)).join("");
@@ -100,6 +105,11 @@ class EntityAccess {
 		});
 	}
 
+	label_for(company) {
+		const entity = (this.matrix.entities || []).find((e) => e.name === company);
+		return (entity && entity.label) || company;
+	}
+
 	render_row(user, entities) {
 		const cells = entities
 			.map((entity) => {
@@ -121,7 +131,9 @@ class EntityAccess {
 				<div class="ea-name">${frappe.utils.escape_html(user.full_name)}</div>
 				<div class="ea-sub">${frappe.utils.escape_html(user.user)}</div>
 			</td>
-			<td class="ea-sub">${frappe.utils.escape_html(user.employer || "—")}</td>
+			<td class="ea-sub">${frappe.utils.escape_html(
+				user.employer ? this.label_for(user.employer) : "—"
+			)}</td>
 			${cells}
 			<td>${unrestricted}</td>
 		</tr>`;
@@ -146,7 +158,10 @@ class EntityAccess {
 			this.render();
 			frappe.show_alert({
 				message: result.allowed.length
-					? __("{0} restricted to {1}", [user, result.allowed.join(", ")])
+					? __("{0} restricted to {1}", [
+							user,
+							result.allowed.map((c) => this.label_for(c)).join(", "),
+					  ])
 					: __("{0} can now see every entity", [user]),
 				indicator: "green",
 			});
