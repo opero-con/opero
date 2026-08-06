@@ -82,6 +82,26 @@ HRMS fetches `Travel Request.company` from the employee. Frappe applies
 Both stay visible-but-locked rather than permanently read-only, so a document
 with no project keeps whatever company it would have had before.
 
+### Telling people about it
+
+There is deliberately no standing banner. The company field is on the form
+already, and a notice repeating it on every document — when the overwhelming
+majority are single-entity — becomes furniture nobody reads, which is exactly
+when it would be needed. An earlier attempt at one ships disabled in
+`.fc-export/client_scripts/Company_Default.json`.
+
+The risk is not *which* entity a document is in, which the field answers. It is
+the **move**: choosing a project can take a document, and its currency, into
+another entity's books. A permanent banner is worst at showing a change, because
+it reads identically either side of it. So instead:
+
+* **A toast when the entity actually changes**, naming the new entity and its
+  currency. Fires only on the move, so it is never noise.
+* **A headline only when the document belongs to an entity other than your
+  own** — cross-entity work, the genuinely surprising case. Your own entity
+  comes from your Employee record, published once at boot
+  (`opero/boot.py`) rather than fetched per form.
+
 ### Documents may not span entities
 
 Where a document has child rows carrying their own project (Timesheet time logs,
