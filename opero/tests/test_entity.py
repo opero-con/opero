@@ -217,6 +217,47 @@ class TestEntityScoping(FrappeTestCase):
 
 		self.assertEqual(frappe.db.get_value("Project", project, "company"), self.entity_a)
 
+	def test_reports_hide_entities_the_user_may_not_see(self):
+		"""Report SQL is raw, so it has to narrow rows itself."""
+		from opero.opero.report.dynamic_timesheet.dynamic_timesheet import execute
+
+		project = self._project(self.entity_b)
+		task = frappe.get_doc(
+			{"doctype": "Task", "subject": "hidden by permission", "project": project}
+		).insert(ignore_permissions=True)
+
+		# A dedicated user: an existing one may already carry Company permissions,
+		# which would decide the outcome before the test does.
+		user = "_test_entity_reader@example.com"
+		if not frappe.db.exists("User", user):
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": user,
+					"first_name": "_Test Entity Reader",
+					"send_welcome_email": 0,
+				}
+			).insert(ignore_permissions=True)
+
+		frappe.get_doc(
+			{
+				"doctype": "User Permission",
+				"user": user,
+				"allow": "Company",
+				"for_value": self.entity_a,
+				"apply_to_all_doctypes": 1,
+			}
+		).insert(ignore_permissions=True)
+		frappe.clear_cache(user=user)
+
+		frappe.set_user(user)
+		try:
+			self.assertEqual(entity.get_permitted_companies(), [self.entity_a])
+			subjects = {row.get("task_subject") for row in execute({})[1]}
+			self.assertNotIn(task.subject, subjects)
+		finally:
+			frappe.set_user("Administrator")
+
 	def test_lock_lookup_agrees_with_the_guard(self):
 		"""The form reads one total; the guard counts per DocType. They must agree."""
 		project = self._project(self.entity_a)
