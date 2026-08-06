@@ -126,6 +126,24 @@ read-only while documents depend on it, under a headline giving the count.
 `get_project_lock` answers that in one round trip — the form only needs the
 total, whereas the guard needs the per-DocType breakdown to explain a refusal.
 
+## Tests
+
+	bench --site <site> run-tests --app opero
+
+`opero/tests/test_entity.py` covers the rules that fail *silently*: a broken
+registry, a lock that stops firing, a submitted document quietly restamped.
+Naming, the display name, the access page and the reports are left out — they
+announce themselves the moment they break.
+
+The tests reuse ERPNext's `_Test Company` records rather than creating
+companies, and skip if those are absent. Standing up a Company drags in a chart
+of accounts, warehouses and modes of payment; it is slow, and it fails outright
+on any site whose existing setup data is imperfect. Two distinct entities is all
+these tests need.
+
+Fixtures are deliberately left uncommitted, since `FrappeTestCase` registers a
+rollback as class cleanup.
+
 ---
 
 ## Display name
