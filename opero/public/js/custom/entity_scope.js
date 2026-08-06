@@ -63,9 +63,20 @@ opero.entity.describe = function (company) {
 
 opero.entity.follow_project = async function (frm, scope) {
 	const project = frm.doc[scope.project];
-	if (!project) return;
+	if (!project) {
+		// Clearing the project releases the company field; returning early here
+		// used to leave it read-only until the next refresh.
+		opero.entity.lock_company(frm, scope);
+		opero.entity.flag_cross_entity(frm, scope);
+		return;
+	}
 
 	const entity = await frappe.xcall("opero.entity.get_project_entity", { project });
+
+	// The project may have changed again while this was in flight. Applying a
+	// stale entity would pull accounts and cost centres from the wrong one.
+	if (frm.doc[scope.project] !== project) return;
+
 	if (!entity || !entity.company) return;
 	opero.entity._described[entity.company] = Promise.resolve(entity);
 
