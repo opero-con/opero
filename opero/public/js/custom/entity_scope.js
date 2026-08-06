@@ -47,21 +47,76 @@ opero.entity.lock_company = function (frm, scope) {
 	frm.set_df_property(scope.company, "read_only", frm.doc[scope.project] ? 1 : 0);
 };
 
+// Entity descriptions are stable for a session, so each one is fetched once.
+// The promise itself is cached, which also collapses concurrent lookups.
+opero.entity._described = {};
+
+opero.entity.describe = function (company) {
+	if (!company) return Promise.resolve(null);
+	if (!opero.entity._described[company]) {
+		opero.entity._described[company] = frappe.xcall("opero.entity.get_company_entity", {
+			company,
+		});
+	}
+	return opero.entity._described[company];
+};
+
 opero.entity.follow_project = async function (frm, scope) {
 	const project = frm.doc[scope.project];
 	if (!project) return;
 
-	const company = (
-		await frappe.db.get_value("Project", project, "company")
-	)?.message?.company;
+	const entity = await frappe.xcall("opero.entity.get_project_entity", { project });
+	if (!entity || !entity.company) return;
+	opero.entity._described[entity.company] = Promise.resolve(entity);
 
-	if (company && frm.doc[scope.company] !== company) {
+	const previous = frm.doc[scope.company];
+	if (previous !== entity.company) {
 		// Set it here rather than waiting for the save, so company-dependent
 		// fields (accounts, cost centres, currency) refresh against the right
 		// entity while the user is still filling the form in.
-		await frm.set_value(scope.company, company);
+		await frm.set_value(scope.company, entity.company);
+
+		// Announced only on the change itself. Choosing a project can move a
+		// document — and its currency — into another entity's books, and that
+		// is a moment rather than a state, so a standing banner would look
+		// identical either side of it.
+		if (previous) {
+			frappe.show_alert({
+				message: __("Moved to {0} ({1})", [entity.label, entity.currency || ""]),
+				indicator: "orange",
+			});
+		}
 	}
+
 	opero.entity.lock_company(frm, scope);
+	opero.entity.flag_cross_entity(frm, scope);
+};
+
+// A headline only when the document belongs to an entity other than the user's
+// own. That is the surprising case; saying so on every document would make it
+// furniture nobody reads.
+opero.entity.flag_cross_entity = async function (frm, scope) {
+	const company = frm.doc[scope.company];
+	const home = frappe.boot.opero_home_company;
+
+	// Cleared first: a headline set for one document would otherwise survive
+	// into the next one rendered by the same form.
+	frm.dashboard.clear_headline();
+
+	if (!company || !home || company === home) return;
+
+	const entity = await opero.entity.describe(company);
+	const label = (entity && entity.label) || company;
+
+	// The form may have moved on while the description was in flight.
+	if (frm.doc[scope.company] !== company) return;
+
+	frm.dashboard.set_headline(
+		__("Cross-entity: this belongs to {0}, which carries the cost — not your own entity.", [
+			frappe.utils.escape_html(label),
+		]),
+		"orange"
+	);
 };
 
 opero.entity.apply_link_filters = function (frm, scope) {
@@ -92,6 +147,7 @@ Object.entries(opero.entity.SCOPED).forEach(([doctype, scope]) => {
 		refresh(frm) {
 			opero.entity.lock_company(frm, scope);
 			opero.entity.apply_link_filters(frm, scope);
+			opero.entity.flag_cross_entity(frm, scope);
 		},
 		[scope.project](frm) {
 			opero.entity.follow_project(frm, scope);

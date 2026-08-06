@@ -121,6 +121,46 @@ def active_project_scopes() -> dict[str, ProjectScope]:
 	}
 
 
+def describe_company(company: str | None) -> dict:
+	"""Company plus what a form needs to name it and warn about it."""
+	if not company:
+		return {}
+
+	label, currency = frappe.db.get_value(
+		"Company", company, ["custom_display_name", "default_currency"]
+	) or (None, None)
+	return {"company": company, "label": label or company, "currency": currency}
+
+
+def get_home_company(user: str | None = None) -> str | None:
+	"""The entity a user belongs to, as opposed to one they are working for.
+
+	Their Employee record is the honest answer; the user default is a fallback
+	for people who have a login but no Employee record.
+	"""
+	user = user or frappe.session.user
+	company = frappe.db.get_value("Employee", {"user_id": user}, "company")
+	return company or frappe.defaults.get_user_default("company", user)
+
+
+@frappe.whitelist()
+def get_project_entity(project: str) -> dict:
+	"""Entity behind a project, for the form to describe before the save."""
+	if not project:
+		return {}
+	frappe.has_permission("Project", doc=project, throw=True)
+	return describe_company(get_project_company(project))
+
+
+@frappe.whitelist()
+def get_company_entity(company: str) -> dict:
+	"""Describe an entity the form already knows the name of."""
+	if not company:
+		return {}
+	frappe.has_permission("Company", doc=company, throw=True)
+	return describe_company(company)
+
+
 # ---------------------------------------------------------------------------
 # Enforcement — wired to `validate` for every DocType in the registries
 # ---------------------------------------------------------------------------
