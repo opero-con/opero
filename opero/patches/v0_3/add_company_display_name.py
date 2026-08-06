@@ -44,10 +44,21 @@ def execute():
 
 	_set_doctype_property("title_field", DISPLAY_FIELD, "Data")
 	_set_doctype_property("show_title_field_in_link", "1", "Check")
-	# Makes the entity findable by its short name in link dropdowns and search.
-	_set_doctype_property("search_fields", f"{DISPLAY_FIELD},abbr", "Data")
+	# Makes the entity findable by its short name in link dropdowns and search,
+	# without discarding search fields the site already configured.
+	_set_doctype_property("search_fields", _merged_search_fields(), "Data")
 
 	frappe.clear_cache(doctype="Company")
+
+
+def _merged_search_fields() -> str:
+	"""Add the display name and abbreviation to whatever is already searched."""
+	current = frappe.get_meta("Company").search_fields or ""
+	fields = [field.strip() for field in current.split(",") if field.strip()]
+	for field in (DISPLAY_FIELD, "abbr"):
+		if field not in fields:
+			fields.append(field)
+	return ",".join(fields)
 
 
 def _set_doctype_property(property_name: str, value: str, property_type: str) -> None:
