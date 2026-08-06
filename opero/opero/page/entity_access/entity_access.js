@@ -114,10 +114,14 @@ class EntityAccess {
 		const cells = entities
 			.map((entity) => {
 				const checked = user.allowed.includes(entity.name) ? "checked" : "";
+				// The column header alone does not name the checkbox for a screen
+				// reader, and the grid is meaningless without both values.
+				const label = __("Allow {0} to access {1}", [user.full_name, entity.label]);
 				return `<td class="ea-cell">
 					<input type="checkbox" data-toggle-entity
 						data-user="${frappe.utils.escape_html(user.user)}"
-						data-entity="${frappe.utils.escape_html(entity.name)}" ${checked}>
+						data-entity="${frappe.utils.escape_html(entity.name)}"
+						aria-label="${frappe.utils.escape_html(label)}" ${checked}>
 				</td>`;
 			})
 			.join("");
