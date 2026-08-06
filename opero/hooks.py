@@ -119,6 +119,11 @@ doctype_js = {
 # 	"filters": "opero.utils.jinja_filters"
 # }
 
+# Boot
+# ----
+
+extend_bootinfo = "opero.boot.boot_session"
+
 # Installation
 # ------------
 
