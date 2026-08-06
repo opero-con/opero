@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.2.41 — 2026-08-06
+
+### Added
+
+- Multi-entity support: a Project's company is now the single source of truth for which legal entity owns a piece of work, and every document linked to that project inherits it, shows it read-only, and has it re-derived on every save
+- `company` field on Budget Line, Cash Advance-Reimbursable Form, Consultant Task, Project Budget, Project Time Allocation, Task Time Distribution, Actual Spend, Work Hours Summary and Contract Documents; `custom_company` on Activity Type and Activity Cost
+- Entity Access page (System Manager) for granting a user access to another entity, writing Company User Permissions with `apply_to_all_doctypes` set
+- Optional Company filter on every Opero report; Company column on Dynamic Timesheet, Used Hrs Summary, ToDo Explorer and ToDo In Progress Aging
+- Per-entity naming: documents carry their entity's abbreviation and each entity keeps its own counter, so the same budget code can exist in both
+- Display Name on Company, shown in place of the registered legal name wherever a link renders, falling back to the registered name when blank
+- Toast when a document's entity changes, and a headline when a document belongs to an entity other than the user's own
+- Entity lock surfaced on the Project form: company is read-only while documents depend on it, under a headline giving the count
+- `opero/tests/test_entity.py` covering the scoping invariants that fail silently
+
+### Changed
+
+- A document may no longer span entities: a child row pointing at another entity's project is rejected on save
+- A project's company is locked once documents exist under it; a submitted document can no longer be moved between entities
+- Company field unhidden on Timesheet and Travel Request, where cross-entity work shows up
+
+### Fixed
+
+- Format-string naming counters that shared one global sequence keyed on an empty prefix
+
+---
+
 ## 0.2.40 — 2026-08-05
 
 ### Added
