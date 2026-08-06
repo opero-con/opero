@@ -142,6 +142,49 @@ opero.entity.apply_link_filters = function (frm, scope) {
 	}
 };
 
+// A project's entity is fixed once documents hang off it. Say so on the form
+// rather than letting the save be the first anyone hears of it.
+opero.entity.show_project_lock = async function (frm) {
+	const restore = () => {
+		frm.set_df_property("company", "read_only", 0);
+		if (frm.__opero_lock_headline) {
+			frm.dashboard.clear_headline();
+			frm.__opero_lock_headline = false;
+		}
+	};
+
+	if (frm.is_new()) {
+		restore();
+		return;
+	}
+
+	const project = frm.doc.name;
+	const lock = await frappe.xcall("opero.entity.get_project_lock", { project });
+
+	// The form may have moved to another project while this was in flight.
+	if (frm.doc.name !== project) return;
+
+	if (!lock || !lock.locked) {
+		restore();
+		return;
+	}
+
+	frm.set_df_property("company", "read_only", 1);
+	frm.dashboard.set_headline(
+		__("Entity locked — {0} document(s) belong to this project. Remove or cancel them to change entity.", [
+			lock.count,
+		]),
+		"orange"
+	);
+	frm.__opero_lock_headline = true;
+};
+
+frappe.ui.form.on("Project", {
+	refresh(frm) {
+		opero.entity.show_project_lock(frm);
+	},
+});
+
 Object.entries(opero.entity.SCOPED).forEach(([doctype, scope]) => {
 	frappe.ui.form.on(doctype, {
 		refresh(frm) {
