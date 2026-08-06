@@ -187,8 +187,10 @@ def get_project_lock(project: str) -> dict:
 	if not scopes:
 		return {"locked": False, "count": 0}
 
+	# Cancelled documents do not hold the entity: the refusal tells people to
+	# remove or cancel dependants, so cancelling has to actually release it.
 	union = " UNION ALL ".join(
-		f"SELECT COUNT(*) AS c FROM `tab{doctype}` WHERE `{scope.project_field}` = %s"
+		f"SELECT COUNT(*) AS c FROM `tab{doctype}` WHERE `{scope.project_field}` = %s AND docstatus != 2"
 		for doctype, scope in scopes
 	)
 	total = frappe.db.sql(f"SELECT SUM(c) FROM ({union}) counts", [project] * len(scopes))[0][0]
@@ -335,7 +337,7 @@ def count_project_documents(project: str) -> dict[str, int]:
 		if scope.via:
 			# Reached through its parent, which is counted in its own right.
 			continue
-		count = frappe.db.count(doctype, {scope.project_field: project})
+		count = frappe.db.count(doctype, {scope.project_field: project, "docstatus": ("!=", 2)})
 		if count:
 			counts[doctype] = count
 	return counts

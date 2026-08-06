@@ -217,6 +217,30 @@ class TestEntityScoping(FrappeTestCase):
 
 		self.assertEqual(frappe.db.get_value("Project", project, "company"), self.entity_a)
 
+	def test_cancelling_a_dependent_releases_the_project(self):
+		"""The refusal says to remove or cancel dependants, so cancelling must work."""
+		project = self._project(self.entity_a)
+		advance = frappe.get_doc(
+			{
+				"doctype": "Cash Advance-Reimbursable Form",
+				"project": project,
+				"personnel": self.manager,
+				"request_date": frappe.utils.nowdate(),
+			}
+		).insert(ignore_permissions=True)
+		advance.submit()
+		self.assertTrue(entity.get_project_lock(project)["locked"])
+
+		advance.cancel()
+
+		self.assertFalse(entity.get_project_lock(project)["locked"])
+		self.assertEqual(entity.count_project_documents(project), {})
+
+		doc = frappe.get_doc("Project", project)
+		doc.company = self.entity_b
+		doc.save(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Project", project, "company"), self.entity_b)
+
 	def test_reports_hide_entities_the_user_may_not_see(self):
 		"""Report SQL is raw, so it has to narrow rows itself."""
 		from opero.opero.report.dynamic_timesheet.dynamic_timesheet import execute
