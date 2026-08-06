@@ -29,12 +29,20 @@ def _check_manage_permission() -> None:
 
 
 def get_entities() -> list[dict]:
-	"""Every company on the site, newest naming first."""
-	return frappe.get_all(
+	"""Every company on the site, with the short name people recognise.
+
+	This page renders its own markup, so it does not pass through the link
+	formatter that substitutes the display name elsewhere; it falls back to the
+	registered name the same way.
+	"""
+	entities = frappe.get_all(
 		"Company",
-		fields=["name", "abbr", "default_currency"],
+		fields=["name", "abbr", "default_currency", "custom_display_name"],
 		order_by="name",
 	)
+	for entity in entities:
+		entity["label"] = entity.get("custom_display_name") or entity["name"]
+	return entities
 
 
 @frappe.whitelist()
