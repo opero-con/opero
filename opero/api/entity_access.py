@@ -113,6 +113,11 @@ def set_access(user: str, companies: str | list[str]) -> dict:
 	if not frappe.db.exists("User", user):
 		frappe.throw(_("Unknown user: {0}").format(user))
 
+	# Read, diff and write are one unit. Two administrators saving this user at
+	# once would otherwise each diff against the same starting set and produce a
+	# union of both selections, granting an entity neither of them ticked.
+	frappe.db.sql("SELECT name FROM `tabUser` WHERE name = %s FOR UPDATE", user)
+
 	existing = {
 		row.for_value: row.name
 		for row in frappe.get_all(
