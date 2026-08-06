@@ -132,6 +132,25 @@ def describe_company(company: str | None) -> dict:
 	return {"company": company, "label": label or company, "currency": currency}
 
 
+def get_permitted_companies(user: str | None = None) -> list[str] | None:
+	"""Entities a user is confined to, or None when they are unrestricted.
+
+	Frappe's rule: no Company User Permission means every entity. Reports run raw
+	SQL, which the permission layer never sees, so they have to ask for this and
+	narrow their own rows.
+	"""
+	from frappe.permissions import get_user_permissions
+
+	user = user or frappe.session.user
+	if user == "Administrator":
+		return None
+
+	permitted = [
+		row.get("doc") for row in (get_user_permissions(user).get("Company") or []) if row.get("doc")
+	]
+	return permitted or None
+
+
 def get_home_company(user: str | None = None) -> str | None:
 	"""The entity a user belongs to, as opposed to one they are working for.
 
