@@ -6,6 +6,8 @@ from __future__ import annotations
 import frappe
 from frappe import _
 
+from opero import entity
+
 
 def execute(filters=None):
 	filters = filters or {}
@@ -58,6 +60,15 @@ def execute(filters=None):
 	if filters.get("company"):
 		conditions.append("project.company = %(company)s")
 		values["company"] = filters["company"]
+
+	# Raw SQL never passes through the permission layer, so the user's Company
+	# User Permissions have to be applied here. A task with no project has no
+	# entity to be forbidden, so it stays visible.
+	permitted = entity.get_permitted_companies()
+	if permitted:
+		names = ", ".join(f"%(permitted_{i})s" for i in range(len(permitted)))
+		conditions.append(f"(project.company IS NULL OR project.company IN ({names}))")
+		values.update({f"permitted_{i}": company for i, company in enumerate(permitted)})
 	if filters.get("project"):
 		conditions.append("t.project = %(project)s")
 		values["project"] = filters["project"]

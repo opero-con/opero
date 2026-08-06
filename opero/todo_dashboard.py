@@ -184,27 +184,61 @@ def _entity_reference_sources() -> dict[str, str]:
 
 
 def get_entity_condition(filters=None, alias: str = "todo") -> tuple[str, list]:
-	"""SQL restricting ToDos to one entity, resolved through their reference.
+	"""SQL narrowing ToDos by entity, resolved through the document they reference.
 
-	A ToDo carries no company of its own — it inherits one from whatever it
-	points at. ToDos referencing something that is not entity-scoped, or nothing
-	at all, drop out when the filter is set; that is what filtering by entity
-	means here.
+	Two independent jobs:
+
+	* the Company **filter**, which keeps only ToDos resolving to that entity;
+	* the Company **User Permission**, which drops ToDos resolving to an entity
+	  the user may not see. Reports run raw SQL, so the permission layer never
+	  gets a chance to do this for us.
+
+	A ToDo carries no company of its own. One referencing nothing, or something
+	that is not entity-scoped, has no entity to be forbidden — so it survives the
+	permission predicate, and only the explicit filter excludes it.
 	"""
+	clauses = []
+	params: list[str] = []
+
 	company = _to_text(parse_filters(filters).get("company"))
-	if not company:
-		return "", []
+	if company:
+		matches, match_params = _reference_entity_clause(alias, [company])
+		clauses.append(matches)
+		params.extend(match_params)
+
+	permitted = entity.get_permitted_companies()
+	if permitted:
+		forbidden, forbidden_params = _reference_entity_clause(alias, permitted, exclude=True)
+		clauses.append(forbidden)
+		params.extend(forbidden_params)
+
+	return (" AND ".join(clauses), params) if clauses else ("", [])
+
+
+def _reference_entity_clause(
+	alias: str, companies: list[str], exclude: bool = False
+) -> tuple[str, list]:
+	"""Match — or rule out — ToDos whose reference resolves to one of `companies`.
+
+	`NOT IN` leaves rows whose referenced document has no company untouched,
+	which is what keeps entity-less ToDos visible to a restricted user.
+	"""
+	placeholders = ", ".join(["%s"] * len(companies))
+	joiner = " AND " if exclude else " OR "
 
 	clauses = []
 	params: list[str] = []
 	for doctype, company_field in _entity_reference_sources().items():
-		clauses.append(
-			f"({alias}.reference_type = %s AND {alias}.reference_name IN"
-			f" (SELECT name FROM `tab{doctype}` WHERE `{company_field}` = %s))"
+		match = (
+			f"{alias}.reference_type = %s AND {alias}.reference_name IN"
+			f" (SELECT name FROM `tab{doctype}`"
+			f" WHERE `{company_field}` {'NOT IN' if exclude else 'IN'} ({placeholders}))"
 		)
-		params.extend([doctype, company])
+		clauses.append(f"NOT ({match})" if exclude else f"({match})")
+		params.append(doctype)
+		params.extend(companies)
 
-	return "(" + " OR ".join(clauses) + ")", params
+	return "(" + joiner.join(clauses) + ")", params
 
 
 def get_todo_entities(rows: list) -> dict[str, str]:
