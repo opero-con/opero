@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.43 — 2026-08-09
+
+### Fixed
+
+- Travel Request (and Timesheet) email notifications now set a short `notification_message` for the desk bell, so Frappe no longer copies the full email HTML into Notification Log descriptions
+- Existing Travel Request notification logs with email-HTML descriptions are cleared on migrate
+
 ## 0.2.42 — 2026-08-09
 
 ### Fixed
