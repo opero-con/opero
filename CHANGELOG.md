@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.42 — 2026-08-09
+
+### Fixed
+
+- Declared `[tool.bench.frappe-dependencies]` with a bounded Frappe 15 range so Frappe Cloud **Run Validations → Pre-build** can resolve a compatible version and deploy succeeds
+
+---
+
 ## 0.2.41 — 2026-08-06
 
 ### Added
