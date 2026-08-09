@@ -75,7 +75,7 @@
   "from_attach_field": null,
   "notification_type": "Alert",
   "notification_title": null,
-  "notification_message": null,
+  "notification_message": "{{ doc.employee_name or doc.owner }} · Timesheet pending approval",
   "recipients": [
    {
     "idx": 1,
@@ -121,7 +121,7 @@
   "from_attach_field": null,
   "notification_type": "Alert",
   "notification_title": null,
-  "notification_message": null,
+  "notification_message": "{{ doc.employee_name }} · {{ doc.custom_project_name }} · {{ doc.workflow_state or \"Approved\" }}",
   "recipients": [
    {
     "idx": 1,
@@ -167,7 +167,7 @@
   "from_attach_field": null,
   "notification_type": "Alert",
   "notification_title": null,
-  "notification_message": null,
+  "notification_message": "{{ doc.employee_name }} · {{ doc.custom_project_name }} · {{ doc.workflow_state or \"Pending Approval\" }}",
   "recipients": [
    {
     "idx": 1,
@@ -213,7 +213,7 @@
   "from_attach_field": null,
   "notification_type": "Alert",
   "notification_title": null,
-  "notification_message": null,
+  "notification_message": "{{ doc.employee_name }} · {{ doc.custom_project_name }} · {{ doc.workflow_state or \"Updated\" }}",
   "recipients": [
    {
     "idx": 1,
