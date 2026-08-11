@@ -1,8 +1,7 @@
 # Entity Scoping
 
 Opero runs more than one legal entity in a single site. This document describes
-how a project's entity reaches everything beneath it, and how people are given
-access across entities.
+how a project's entity reaches everything beneath it.
 
 An **entity** is an ERPNext **Company**. No entity is named anywhere in this
 repository: every rule is derived from the Company records on the site, so
@@ -18,7 +17,7 @@ work — regardless of who does the work.
 
 Cross-entity staffing is normal and supported: an employee of entity A may be
 booked onto entity B's project. The document then belongs to **B**. Access is
-granted separately, through Company User Permissions.
+managed outside Opero (for example via Frappe roles); Opero only stamps which entity owns each document.
 
 ---
 
@@ -49,7 +48,7 @@ list lives — `hooks.py` wires the dispatcher once for every DocType:
   Activity Type and Activity Cost.
 * `EMPLOYEE_SCOPED_DOCTYPES` — company comes from the employee, because the
   document describes a person rather than a project: Work Hours Summary and
-  Contract Documents. These are stamped so User Permissions can filter them at
+  Contract Documents. These are stamped with the employee's company for reporting and filters at
   all; without a company field they would be visible to everyone.
 
 Adding a DocType to a registry is all that is needed to enforce it.
@@ -188,26 +187,6 @@ inside one entity, and both entities can run one.
 
 A document saved before its project is known falls back to the DocType's own
 `autoname`, so nothing fails for want of an entity.
-
----
-
-## Giving someone access to another entity
-
-Frappe's rule is easy to get wrong by hand:
-
-* a user with **no** Company User Permission sees **every** entity;
-* a user with **one or more** sees **only** those.
-
-So granting access to a second entity means also holding one for their own —
-otherwise "adding" access silently removes it everywhere else.
-
-Use **Entity Access** (`/app/entity-access`, System Manager only). Tick the
-entities a person may see; the page writes the Company User Permissions,
-`apply_to_all_doctypes` included, and shows an "all entities" badge for anyone
-who is currently unrestricted. Clearing every tick restores unrestricted access.
-
-The same thing can be done by hand under User Permissions; the page exists
-because the "no permission means everything" rule catches people out.
 
 ---
 

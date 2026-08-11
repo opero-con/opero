@@ -7,8 +7,7 @@ and is re-derived from the project on every save.
 
 Cross-entity staffing is allowed. An employee of one entity may be booked to
 another entity's project — the document then belongs to the *project's* entity,
-because that entity bears the cost. Access to the other entity's records is
-granted through Company User Permissions (see `opero.api.entity_access`).
+because that entity bears the cost.
 
 Nothing in this module names or identifies a specific entity. Every rule is
 derived from the Company records on the site, so entities can be added, renamed
@@ -66,7 +65,7 @@ PROJECT_SCOPED_DOCTYPES: dict[str, ProjectScope] = {
 }
 
 #: Documents that belong to the employee's own entity — they describe the person,
-#: not a project. Stamped so Company User Permissions can filter them.
+#: not a project.
 EMPLOYEE_SCOPED_DOCTYPES: dict[str, str] = {
 	"Work Hours Summary": "personnel",
 	"Contract Documents": "personnel",
@@ -130,25 +129,6 @@ def describe_company(company: str | None) -> dict:
 		"Company", company, ["custom_display_name", "default_currency"]
 	) or (None, None)
 	return {"company": company, "label": label or company, "currency": currency}
-
-
-def get_permitted_companies(user: str | None = None) -> list[str] | None:
-	"""Entities a user is confined to, or None when they are unrestricted.
-
-	Frappe's rule: no Company User Permission means every entity. Reports run raw
-	SQL, which the permission layer never sees, so they have to ask for this and
-	narrow their own rows.
-	"""
-	from frappe.permissions import get_user_permissions
-
-	user = user or frappe.session.user
-	if user == "Administrator":
-		return None
-
-	permitted = [
-		row.get("doc") for row in (get_user_permissions(user).get("Company") or []) if row.get("doc")
-	]
-	return permitted or None
 
 
 def get_home_company(user: str | None = None) -> str | None:

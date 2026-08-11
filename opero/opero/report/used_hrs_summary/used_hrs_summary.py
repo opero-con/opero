@@ -7,8 +7,6 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate
 
-from opero import entity
-
 
 def execute(filters=None):
 	filters = filters or {}
@@ -51,16 +49,7 @@ def execute(filters=None):
 		},
 	]
 
-	# Raw SQL never passes through the permission layer, so the user's Company
-	# User Permissions have to be applied here. A timesheet with no project has
-	# no entity to be forbidden, so it stays visible.
 	values = {"year": year, "project": project, "company": company}
-	permitted = entity.get_permitted_companies()
-	permitted_sql = ""
-	if permitted:
-		names = ", ".join(f"%(permitted_{i})s" for i in range(len(permitted)))
-		permitted_sql = f"AND (project.company IS NULL OR project.company IN ({names}))"
-		values.update({f"permitted_{i}": company for i, company in enumerate(permitted)})
 
 	data = frappe.db.sql(
 		f"""
@@ -76,7 +65,6 @@ def execute(filters=None):
 		WHERE YEAR(ts.start_date) = %(year)s
 		  AND (%(project)s IS NULL OR ts.parent_project = %(project)s)
 		  AND (%(company)s IS NULL OR project.company = %(company)s)
-		  {permitted_sql}
 		GROUP BY
 			ts.employee_name,
 			project.company,

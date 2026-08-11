@@ -2,7 +2,7 @@
 
 Projects keep whatever company they already have — nothing is reassigned. This
 only fills in the company that was previously implicit on their child documents,
-so entity filters and Company User Permissions have something to work with.
+so entity filters and report company columns have something to work with.
 
 Written as set-based UPDATEs: the volumes are large, `modified` should not move
 for a backfill, and submitted documents have to be stamped too.

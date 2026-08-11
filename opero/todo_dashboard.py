@@ -186,16 +186,10 @@ def _entity_reference_sources() -> dict[str, str]:
 def get_entity_condition(filters=None, alias: str = "todo") -> tuple[str, list]:
 	"""SQL narrowing ToDos by entity, resolved through the document they reference.
 
-	Two independent jobs:
-
-	* the Company **filter**, which keeps only ToDos resolving to that entity;
-	* the Company **User Permission**, which drops ToDos resolving to an entity
-	  the user may not see. Reports run raw SQL, so the permission layer never
-	  gets a chance to do this for us.
-
-	A ToDo carries no company of its own. One referencing nothing, or something
-	that is not entity-scoped, has no entity to be forbidden — so it survives the
-	permission predicate, and only the explicit filter excludes it.
+	Applies the optional Company **filter** only: keeps ToDos that resolve to that
+	entity. A ToDo carries no company of its own; one referencing nothing, or
+	something that is not entity-scoped, has no entity and is only excluded by an
+	explicit filter.
 	"""
 	clauses = []
 	params: list[str] = []
@@ -206,12 +200,6 @@ def get_entity_condition(filters=None, alias: str = "todo") -> tuple[str, list]:
 		clauses.append(matches)
 		params.extend(match_params)
 
-	permitted = entity.get_permitted_companies()
-	if permitted:
-		forbidden, forbidden_params = _reference_entity_clause(alias, permitted, exclude=True)
-		clauses.append(forbidden)
-		params.extend(forbidden_params)
-
 	return (" AND ".join(clauses), params) if clauses else ("", [])
 
 
@@ -220,8 +208,8 @@ def _reference_entity_clause(
 ) -> tuple[str, list]:
 	"""Match — or rule out — ToDos whose reference resolves to one of `companies`.
 
-	`NOT IN` leaves rows whose referenced document has no company untouched,
-	which is what keeps entity-less ToDos visible to a restricted user.
+	`exclude=True` remains for callers that need a negative match; entity-less
+	ToDos are left untouched by `NOT IN`.
 	"""
 	placeholders = ", ".join(["%s"] * len(companies))
 	joiner = " AND " if exclude else " OR "
