@@ -1,11 +1,26 @@
 # Changelog
 
+## 0.2.44 — 2026-08-11
+
+### Removed
+
+- Entity Access page and API that created/managed Company **User Permission** rows
+- Report / ToDo dashboard SQL that re-applied those User Permissions on raw queries
+
+### Changed
+
+- Entity scoping still stamps `company` from `Project.company` (and employee-scoped docs); access control is left to standard Frappe roles / site configuration
+
+---
+
 ## 0.2.43 — 2026-08-09
 
 ### Fixed
 
 - Travel Request (and Timesheet) email notifications now set a short `notification_message` for the desk bell, so Frappe no longer copies the full email HTML into Notification Log descriptions
 - Existing Travel Request notification logs with email-HTML descriptions are cleared on migrate
+
+---
 
 ## 0.2.42 — 2026-08-09
 
@@ -21,7 +36,6 @@
 
 - Multi-entity support: a Project's company is now the single source of truth for which legal entity owns a piece of work, and every document linked to that project inherits it, shows it read-only, and has it re-derived on every save
 - `company` field on Budget Line, Cash Advance-Reimbursable Form, Consultant Task, Project Budget, Project Time Allocation, Task Time Distribution, Actual Spend, Work Hours Summary and Contract Documents; `custom_company` on Activity Type and Activity Cost
-- Entity Access page (System Manager) for granting a user access to another entity, writing Company User Permissions with `apply_to_all_doctypes` set
 - Optional Company filter on every Opero report; Company column on Dynamic Timesheet, Used Hrs Summary, ToDo Explorer and ToDo In Progress Aging
 - Per-entity naming: documents carry their entity's abbreviation and each entity keeps its own counter, so the same budget code can exist in both
 - Display Name on Company, shown in place of the registered legal name wherever a link renders, falling back to the registered name when blank
