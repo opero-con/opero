@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.46 — 2026-08-12
+
+### Added
+
+- Project Hours section shows used vs allocated hours as a compact progress summary (values remain on the document for reports)
+
+### Changed
+
+- App title shortened to **Opero**
+- Desk JS/CSS asset URLs are version-busted so form script updates load without a stale cache
+- Costing and Billing / Margin on Project are visible to all users (email allowlist hide removed)
+
+### Fixed
+
+- Project entity lock no longer shows an orange “Entity locked …” form banner; Company stays read-only when related documents pin the entity
+
+---
+
 ## 0.2.45 — 2026-08-12
 
 ### Changed
