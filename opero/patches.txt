@@ -60,3 +60,5 @@ opero.patches.v0_3.show_company_on_project_documents
 opero.patches.v0_3.add_company_display_name
 opero.patches.v0_3.set_desk_friendly_notification_messages
 opero.patches.v0_3.remove_entity_access_page
+opero.patches.v0_3.allow_budget_line_on_submit_material_request
+opero.patches.v0_3.allow_material_request_items_grid_on_submit
