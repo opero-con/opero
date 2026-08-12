@@ -18,7 +18,7 @@ fixtures = [
 		],
 	},
 ]
-app_title = "Opero Custom Development"
+app_title = "Opero"
 app_publisher = "Patrick Willy"
 app_description = "Custom development app for Opero"
 app_email = "kakoi@hi2.in"
