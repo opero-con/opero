@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.45 — 2026-08-12
+
+### Changed
+
+- Material Request Item **Budget Line** can be edited after submit, including inline in the items table
+- Submitted Material Requests still cannot add or remove item rows
+
+---
+
 ## 0.2.44 — 2026-08-11
 
 ### Removed
