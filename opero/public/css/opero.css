@@ -1,1 +1,37 @@
-/* ── Opero global styles ──────────────────────────────────────────────────── */
+/* Opero global styles */
+
+.opero-hours-summary {
+  display: inline-block;
+  padding: 4px 0 8px;
+  vertical-align: top;
+  max-width: 100%;
+}
+
+.opero-hours-summary__bar {
+  height: 8px;
+  margin-bottom: 10px;
+  background-color: var(--control-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.opero-hours-summary__fill {
+  height: 100%;
+  border-radius: 4px;
+  background-color: var(--primary);
+}
+
+.opero-hours-summary__fill.is-over {
+  background-color: var(--red-500, #e24c4c);
+}
+
+.opero-hours-summary__meta {
+  display: block;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.opero-hours-summary__meta strong {
+  font-weight: 600;
+}
