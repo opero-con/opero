@@ -47,8 +47,22 @@ frappe.ui.form.on('Material Request', {
         frm.refresh_field('items');
     },
     refresh: function(frm) {
+        const items_grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+        if (!items_grid) {
+            return;
+        }
+
+        // Parent Table must be allow_on_submit for inline grid edits; keep
+        // submitted docs from adding/removing rows (Budget Line only).
+        const submitted = frm.doc.docstatus === 1;
+        items_grid.cannot_add_rows = submitted;
+        items_grid.df.cannot_delete_rows = submitted;
+        if (submitted) {
+            frm.refresh_field('items');
+        }
+
         // Set a filter for custom_budget_line in the child table
-        frm.fields_dict['items'].grid.get_field('custom_budget_line').get_query = function(doc, cdt, cdn) {
+        items_grid.get_field('custom_budget_line').get_query = function(doc, cdt, cdn) {
             return {
                 filters: {
                     'project': frm.doc.custom_project // Ensure only budget lines related to the project are selectable
