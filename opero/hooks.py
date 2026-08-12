@@ -1,5 +1,7 @@
 app_name = "opero"
 
+from opero import __version__ as _opero_asset_v
+
 fixtures = [
 	{
 		"dt": "Custom Field",
@@ -42,10 +44,11 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/opero/css/opero.css"
+# Query string busts desk asset caches when the app version advances.
+app_include_css = f"/assets/opero/css/opero.css?v={_opero_asset_v}"
 app_include_js = [
-	"/assets/opero/js/custom/resource_planner_reports.js",
-	"/assets/opero/js/custom/entity_scope.js",
+	f"/assets/opero/js/custom/resource_planner_reports.js?v={_opero_asset_v}",
+	f"/assets/opero/js/custom/entity_scope.js?v={_opero_asset_v}",
 ]
 
 # include js, css files in header of web template
