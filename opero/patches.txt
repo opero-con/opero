@@ -65,3 +65,4 @@ opero.patches.v0_3.allow_material_request_items_grid_on_submit
 opero.patches.v0_3.project_hours_summary_html
 opero.patches.v0_3.fix_project_hours_summary_layout
 opero.patches.v0_3.isolate_project_hours_summary_section
+opero.patches.v0_3.remove_item_custom_company
