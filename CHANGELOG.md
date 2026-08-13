@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.47 — 2026-08-13
+
+### Removed
+
+- `Item-custom_company` leftover Company link from the Frappe Cloud site-config import
+
+### Fixed
+
+- Company User Permissions no longer block Item create for users who have Item Manager
+
+---
+
 ## 0.2.46 — 2026-08-12
 
 ### Added
