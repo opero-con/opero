@@ -21,7 +21,7 @@ class TestOperoSiteTeamMember(FrappeTestCase):
 		self.assertEqual(doc.slug, "nicola-greene")
 		self.assertEqual(doc.name, "nicola-greene")
 
-	def test_linkedin_must_be_https_url(self):
+	def test_linkedin_must_be_full_url(self):
 		doc = self._member(linkedin="linkedin.com/in/nicolagreene")
 		with self.assertRaises(ValidationError):
 			doc.insert(ignore_permissions=True)
