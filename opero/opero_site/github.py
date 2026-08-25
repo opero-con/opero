@@ -60,6 +60,22 @@ class ContentRepo:
 				out[path] = content
 		return out
 
+	def list_markdown(self, prefix: str, ref: str) -> list[str]:
+		head = self._api("GET", f"/repos/{self.repo}/commits/{ref}")
+		tree = self._api(
+			"GET",
+			f"/repos/{self.repo}/git/trees/{head['commit']['tree']['sha']}?recursive=1",
+		)
+		if tree.get("truncated"):
+			raise GithubError(_("GitHub tree listing was truncated."))
+		return [
+			entry["path"]
+			for entry in tree.get("tree", [])
+			if entry.get("type") == "blob"
+			and entry.get("path", "").startswith(prefix)
+			and entry["path"].endswith(".md")
+		]
+
 	def open_content_pr(self, files: list[tuple[str, str]], branch: str, title: str, body: str) -> str:
 		head = self._api("GET", f"/repos/{self.repo}/commits/{self.base_branch}")
 		base_sha = head["sha"]

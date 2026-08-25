@@ -58,7 +58,7 @@ Merge the PR on GitHub, then delete the feature branch (remotely and locally).
 
 ## Public site
 
-Opero Site DocTypes publish Markdown into `opero-con/opero-content` as a pull request. Set `opero_content_github_token` in `site_config.json` (optional `opero_content_repo`, `opero_content_base_branch`). Desk: Opero Site Settings → Publish to website. Do not put the token in git.
+Opero Site DocTypes load and publish Markdown in `opero-con/opero-content`. Set `opero_content_github_token` in `site_config.json` (optional `opero_content_repo`, `opero_content_base_branch`). Desk: Opero Site Settings → Website → Load from website content, then Publish to website. Load upserts by slug and does not delete extra local team members. Do not put the token in git. Keep Sveltia until load+publish is trusted; do not dual-write the same files in production.
 
 
 ---

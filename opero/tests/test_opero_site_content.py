@@ -209,6 +209,20 @@ class TestOperoSiteContent(FrappeTestCase):
 		with self.assertRaises(ValidationError):
 			doc.insert(ignore_permissions=True)
 
+	def test_publication_accepts_site_relative_file_url(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Opero Site Publication",
+				"title": "Portfolio Path",
+				"published_at": "2023-01-01",
+				"publication_type": "Portfolio",
+				"summary": "Relative download path from opero-content.",
+				"file_url": "/downloads/opero-project-portfolio.pdf",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.assertEqual(doc.file_url, "/downloads/opero-project-portfolio.pdf")
+
 	def test_privacy_frontmatter_matches_privacy_collection(self):
 		doc = frappe.get_single("Opero Site Privacy")
 		doc.last_reviewed = "2026-07-23"
