@@ -1,0 +1,157 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "creation": "2026-08-25 12:35:00.000000",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_hero",
+  "hero_eyebrow",
+  "hero_title",
+  "hero_description",
+  "column_hero",
+  "hero_image",
+  "hero_image_alt",
+  "section_about",
+  "about_title",
+  "about_paragraphs",
+  "section_pillars",
+  "pillars",
+  "section_impacts",
+  "impacts",
+  "section_projects",
+  "projects",
+  "section_partners",
+  "partners"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_hero",
+   "fieldtype": "Section Break",
+   "label": "Hero"
+  },
+  {
+   "fieldname": "hero_eyebrow",
+   "fieldtype": "Data",
+   "label": "Eyebrow"
+  },
+  {
+   "fieldname": "hero_title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "hero_description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_hero",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hero_image",
+   "fieldtype": "Attach Image",
+   "label": "Image",
+   "description": "Large banner image at the top of the homepage."
+  },
+  {
+   "fieldname": "hero_image_alt",
+   "fieldtype": "Data",
+   "label": "Image alt text"
+  },
+  {
+   "fieldname": "section_about",
+   "fieldtype": "Section Break",
+   "label": "About"
+  },
+  {
+   "fieldname": "about_title",
+   "fieldtype": "Data",
+   "label": "Title"
+  },
+  {
+   "fieldname": "about_paragraphs",
+   "fieldtype": "Table",
+   "label": "Paragraphs",
+   "options": "Opero Site Paragraph"
+  },
+  {
+   "fieldname": "section_pillars",
+   "fieldtype": "Section Break",
+   "label": "Service pillars"
+  },
+  {
+   "fieldname": "pillars",
+   "fieldtype": "Table",
+   "label": "Service pillars",
+   "options": "Opero Site Pillar"
+  },
+  {
+   "fieldname": "section_impacts",
+   "fieldtype": "Section Break",
+   "label": "Impact metrics"
+  },
+  {
+   "fieldname": "impacts",
+   "fieldtype": "Table",
+   "label": "Impact metrics",
+   "options": "Opero Site Impact"
+  },
+  {
+   "fieldname": "section_projects",
+   "fieldtype": "Section Break",
+   "label": "Projects",
+   "description": "Team members are Opero Site Team Member records, not this form."
+  },
+  {
+   "fieldname": "projects",
+   "fieldtype": "Table",
+   "label": "Projects",
+   "options": "Opero Site Home Project"
+  },
+  {
+   "fieldname": "section_partners",
+   "fieldtype": "Section Break",
+   "label": "Partners"
+  },
+  {
+   "fieldname": "partners",
+   "fieldtype": "Table",
+   "label": "Partners",
+   "options": "Opero Site Partner"
+  }
+ ],
+ "issingle": 1,
+ "istable": 0,
+ "is_submittable": 0,
+ "has_web_view": 0,
+ "module": "Opero Site",
+ "name": "Opero Site Home",
+ "owner": "Administrator",
+ "modified": "2026-08-25 12:35:00.000000",
+ "modified_by": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "track_changes": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "index_web_pages_for_search": 0,
+ "make_attachments_public": 0
+}

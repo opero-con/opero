@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-import re
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, flt
 
-_LINKEDIN_URL = re.compile(r"^https://\S+\.\S+")
+from opero.opero_site.utils import optional_url, slugify
 
-
-def slugify(text: str) -> str:
-	value = cstr(text).strip().lower()
-	value = re.sub(r"[^a-z0-9]+", "-", value)
-	return value.strip("-")
+__all__ = ["OperoSiteTeamMember", "slugify"]
 
 
 class OperoSiteTeamMember(Document):
@@ -33,19 +27,10 @@ class OperoSiteTeamMember(Document):
 			frappe.throw(_("Slug must contain at least one letter or number."))
 
 		self.role = cstr(self.role).strip()
-		self._validate_linkedin()
+		self.linkedin = optional_url(self.linkedin, "LinkedIn URL")
 		if self.show_on_website is None:
 			self.show_on_website = 1
 		self.sort_order = cint(self.sort_order)
-
-	def _validate_linkedin(self):
-		url = cstr(self.linkedin).strip()
-		if not url:
-			self.linkedin = ""
-			return
-		if not _LINKEDIN_URL.match(url):
-			frappe.throw(_("LinkedIn URL must be a full https URL, or left blank."))
-		self.linkedin = url
 
 	def to_site_frontmatter(self) -> dict:
 		"""YAML frontmatter for opero-content `content/team/<slug>.md`."""
