@@ -1,0 +1,78 @@
+name: Sanitize AI attribution
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  sanitize-pr-text:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Strip AI attribution from PR title and body
+        uses: actions/github-script@v9
+        with:
+          script: |
+            // Line-anchored, same shape as the local commit-msg hook: trailers
+            // and "Made with [Product](url)" footers, not those words in prose.
+            const products = "claude|anthropic|openai|chatgpt|copilot|gemini|cursor";
+            const patterns = [
+              new RegExp(`^Co-authored-by:.*(${products}).*$`, "gim"),
+              new RegExp(
+                `^[ \\t]*(?:Made|Generated) with[ \\t]+\\[?(?:${products})\\]?(?:\\([^)]*\\))?\\.?[ \\t]*$`,
+                "gim"
+              ),
+              /^[ \t]*Made-with:.*$/gim,
+              /^[ \t]*Generated-by:.*$/gim,
+              /^[ \t]*🤖.*generated.*$/gim
+            ];
+
+            const pr = context.payload.pull_request;
+            let title = pr.title;
+            let body = pr.body || "";
+
+            for (const re of patterns) {
+              title = title.replace(re, "").trim();
+              body = body.replace(re, "");
+            }
+
+            // Em dashes read as AI-generated prose; normalize to a plain hyphen.
+            title = title.replace(/\s*—\s*/g, " - ");
+            body = body.replace(/\s*—\s*/g, " - ");
+
+            body = body.replace(/\n{3,}/g, "\n\n").trim();
+
+            if (title !== pr.title || body !== (pr.body || "")) {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                title,
+                body
+              });
+            }
+
+  check-commit-messages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Scan commit messages for AI attribution
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          matches=$(git log --format='--- %H %s%n%b' "$BASE_SHA".."$HEAD_SHA" \
+            | grep -inE '^Co-authored-by:.*(claude|anthropic|openai|chatgpt|gpt-|copilot|gemini|cursor)|^[[:space:]]*(Made|Generated) with[[:space:]]+\[?(Claude|Anthropic|OpenAI|ChatGPT|Copilot|Gemini|Cursor)\]?(\([^)]*\))?\.?[[:space:]]*$|^[[:space:]]*(Made-with:|Generated-by:)|^[[:space:]]*🤖.*generated' \
+            || true)
+
+          if [ -n "$matches" ]; then
+            echo "::error::Commit messages in this PR contain AI attribution (Co-Authored-By, 'Generated with', 'Made with', etc). Please amend or rebase to remove it, then force-push, before this can merge."
+            echo "$matches"
+            exit 1
+          fi
+
+          echo "No AI attribution found in commit messages."
