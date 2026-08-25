@@ -54,6 +54,8 @@ Merge the PR on GitHub, then delete the feature branch (remotely and locally).
 - Use product/feature-focused PR titles only.
 - Pull request titles must align with the branch naming convention in `CONTRIBUTING.md`.
 - If the branch uses `feat/`, `fix/`, `chore/`, or `refactor/`, use the same change type in the PR title, for example `fix/login-timeout` -> `fix: prevent login timeout loop`.
+- `.github/workflows/sanitize-pr.yml` strips tool-name footers and `Co-authored-by` trailers from PR title/body, and fails if commit messages still contain them.
+
 
 ---
 
