@@ -56,6 +56,10 @@ Merge the PR on GitHub, then delete the feature branch (remotely and locally).
 - If the branch uses `feat/`, `fix/`, `chore/`, or `refactor/`, use the same change type in the PR title, for example `fix/login-timeout` -> `fix: prevent login timeout loop`.
 - `.github/workflows/sanitize-pr.yml` strips tool-name footers and `Co-authored-by` trailers from PR title/body, and fails if commit messages still contain them.
 
+## Public site
+
+Opero Site DocTypes publish Markdown into `opero-con/opero-content` as a pull request. Set `opero_content_github_token` in `site_config.json` (optional `opero_content_repo`, `opero_content_base_branch`). Desk: Opero Site Settings → Publish to website. Do not put the token in git.
+
 
 ---
 
