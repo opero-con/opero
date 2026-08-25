@@ -77,28 +77,23 @@ No `--no-verify`. No co-author lines — never add `Co-Authored-By` or any AI to
 
 ## Versioning
 
-Stays on the `0.x.y` patch track. Bump `opero/__init__.py` (`__version__`) with each PR.
+`opero/__init__.py` (`__version__`) tracks the last git tag. Stay on the `0.x.y` patch track.
 
-After merging to `main`:
+Do not bump the version in feature PRs. Merge is not a release. Desk asset URLs cache-bust on this version, so cubenet picks up JS/CSS when you ship, not when you merge.
 
-1. Bump version and commit:
-   ```bash
-   # edit opero/__init__.py
-   git add opero/__init__.py
-   git commit -m "bump: release v<version>"
-   git push origin main
-   ```
+Cut a tag only when unreleased work on `main` has accumulated and you intend to install or deploy that snapshot. Then, in a `bump/` PR (never a direct push to `main`):
 
-2. Tag the release:
-   ```bash
-   git tag v<version>
-   git push origin v<version>
-   ```
+1. Set `__version__` to the new version
+2. Add one `CHANGELOG.md` section covering the whole batch since the last tag
+3. Merge the PR, then tag and GitHub-release:
 
-3. Create a GitHub release with notes:
-   ```bash
-   gh release create v<version> --title "v<version>" --notes "..."
-   ```
+```bash
+git tag v<version>
+git push origin v<version>
+gh release create v<version> --title "v<version>" --notes "..."
+```
+
+Do not tag, changelog, or GitHub-release after every merge. Do not ask to ship after a single "landed".
 
 ---
 
@@ -150,10 +145,7 @@ In the final response, explicitly confirm each command was run and whether it su
 
 After a PR merges to `main`:
 
-1. Sync local main:
-   ```bash
-   git checkout main
-   git pull origin main
-   ```
-2. Update `CHANGELOG.md` — add a new `## <version> — <date>` section at the top with `### Added`, `### Changed`, and/or `### Fixed` entries summarising the PR
-3. Follow the **Versioning** steps (bump `opero/__init__.py`, tag, GitHub release)
+1. Sync local main (`git fetch --prune`, fast-forward). Never push to `main`.
+2. Delete the topic branch locally and on origin.
+3. Run the post-landing scan and targeted tests.
+4. Report the last tag and how many commits sit on `main` since it. Suggest a ship only when that batch has accumulated (a handful of features, end of a working day, or something you will actually install on cubenet). Otherwise stop.
