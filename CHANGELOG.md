@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.52 — 2026-08-25
+
+### Added
+
+- Opero Site DocTypes for the public marketing site (Settings, Home, Team Member, Publication, Privacy), kept out of Frappe Website
+- Load from website content: upsert Markdown from `opero-con/opero-content` into those DocTypes
+- Publish to website: commit that Markdown to `opero-content` `main` (cubenet is the approval)
+- Opero Website desk workspace for System Managers
+
+### Changed
+
+- `__version__` tracks the last git tag; feature PRs no longer bump it
+- File and portrait URLs may be site paths such as `/downloads/file.pdf`
+- Pull request titles and bodies are sanitized of tool-name footers
+
+---
+
 ## 0.2.47 — 2026-08-13
 
 ### Removed
