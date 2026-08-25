@@ -1,0 +1,126 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"ow-s-home\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Home\",\"col\":3}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-privacy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Privacy\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "creation": "2026-08-25 23:44:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "website",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Opero Website",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Content",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Home",
+   "link_count": 0,
+   "link_to": "Opero Site Home",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Team",
+   "link_count": 0,
+   "link_to": "Opero Site Team Member",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Publications",
+   "link_count": 0,
+   "link_to": "Opero Site Publication",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Privacy",
+   "link_count": 0,
+   "link_to": "Opero Site Privacy",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Setup",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 0,
+   "link_to": "Opero Site Settings",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-08-25 23:44:00.000000",
+ "modified_by": "Administrator",
+ "module": "Opero Site",
+ "name": "Opero Website",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 15.0,
+ "shortcuts": [
+  {
+   "label": "Settings",
+   "link_to": "Opero Site Settings",
+   "type": "DocType"
+  },
+  {
+   "label": "Home",
+   "link_to": "Opero Site Home",
+   "type": "DocType"
+  },
+  {
+   "label": "Team",
+   "link_to": "Opero Site Team Member",
+   "type": "DocType"
+  },
+  {
+   "label": "Publications",
+   "link_to": "Opero Site Publication",
+   "type": "DocType"
+  },
+  {
+   "label": "Privacy",
+   "link_to": "Opero Site Privacy",
+   "type": "DocType"
+  }
+ ],
+ "title": "Opero Website"
+}
