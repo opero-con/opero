@@ -51,7 +51,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertIn("content/settings/general.md", paths)
 		self.assertIn("content/team/anita-onyango.md", paths)
 
-	def test_open_content_pr_creates_branch_commit_and_pull(self):
+	def test_commit_files_updates_main_without_a_pull_request(self):
 		calls = []
 
 		def transport(method, url, json=None):
@@ -64,19 +64,22 @@ class TestOperoSitePublish(FrappeTestCase):
 				return {"sha": "new-tree"}
 			if url.endswith("/git/commits") and method == "POST":
 				return {"sha": "commit-sha"}
-			if url.endswith("/git/refs"):
-				return {}
-			if url.endswith("/pulls"):
-				return {"html_url": "https://github.com/opero-con/opero-content/pull/1"}
-			raise AssertionError(url)
+			if method == "PATCH" and url.endswith("/git/refs/heads/main"):
+				return {"object": {"sha": "commit-sha"}}
+			raise AssertionError((method, url))
 
 		repo = ContentRepo("token", "opero-con/opero-content", transport=transport)
-		url = repo.open_content_pr(
+		result = repo.commit_files(
 			[("content/team/anita-onyango.md", "---\nname: Anita\n---\n")],
-			branch="desk/20260825-000000",
-			title="content: update public site from desk",
-			body="Published from Opero Site DocTypes.",
+			message="content: update public site from desk",
 		)
-		self.assertEqual(url, "https://github.com/opero-con/opero-content/pull/1")
-		self.assertTrue(any(call[1].endswith("/pulls") for call in calls))
-		self.assertTrue(any(call[1].endswith("/git/refs") for call in calls))
+		self.assertEqual(result["sha"], "commit-sha")
+		self.assertEqual(
+			result["html_url"],
+			"https://github.com/opero-con/opero-content/commit/commit-sha",
+		)
+		patch = next(call for call in calls if call[0] == "PATCH")
+		self.assertTrue(patch[1].endswith("/git/refs/heads/main"))
+		self.assertEqual(patch[2], {"sha": "commit-sha", "force": False})
+		self.assertFalse(any("/pulls" in call[1] for call in calls))
+		self.assertFalse(any(call[0] == "POST" and call[1].endswith("/git/refs") for call in calls))

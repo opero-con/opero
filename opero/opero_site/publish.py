@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files
 from opero.opero_site.markdown import to_markdown
@@ -52,19 +51,16 @@ def publish_to_website() -> dict:
 
 	planned = collect_content_files()
 	if not planned:
-		return {"pr_url": None, "message": _("Nothing to publish. Save Opero Site content first.")}
+		return {"commit_url": None, "message": _("Nothing to publish. Save Opero Site content first.")}
 
 	repo = content_repo_from_conf()
 	existing = repo.existing_files([path for path, _content in planned], repo.base_branch)
 	files = changed_files(existing, planned)
 	if not files:
-		return {"pr_url": None, "message": _("Public site content is already up to date.")}
+		return {"commit_url": None, "message": _("Public site content is already up to date.")}
 
-	branch = f"desk/{now_datetime().strftime('%Y%m%d-%H%M%S')}"
-	title = "content: update public site from desk"
-	body = "Published from Opero Site DocTypes on cubenet."
 	try:
-		pr_url = repo.open_content_pr(files, branch=branch, title=title, body=body)
+		commit = repo.commit_files(files, message="content: update public site from desk")
 	except GithubError as exc:
 		frappe.throw(str(exc))
-	return {"pr_url": pr_url, "files": len(files)}
+	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}
