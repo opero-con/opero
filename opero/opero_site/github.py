@@ -76,7 +76,7 @@ class ContentRepo:
 			and entry["path"].endswith(".md")
 		]
 
-	def open_content_pr(self, files: list[tuple[str, str]], branch: str, title: str, body: str) -> str:
+	def commit_files(self, files: list[tuple[str, str]], message: str) -> dict:
 		head = self._api("GET", f"/repos/{self.repo}/commits/{self.base_branch}")
 		base_sha = head["sha"]
 		entries = []
@@ -95,16 +95,12 @@ class ContentRepo:
 		commit = self._api(
 			"POST",
 			f"/repos/{self.repo}/git/commits",
-			json={"message": title, "tree": tree["sha"], "parents": [base_sha]},
+			json={"message": message, "tree": tree["sha"], "parents": [base_sha]},
 		)
 		self._api(
-			"POST",
-			f"/repos/{self.repo}/git/refs",
-			json={"ref": f"refs/heads/{branch}", "sha": commit["sha"]},
+			"PATCH",
+			f"/repos/{self.repo}/git/refs/heads/{quote(self.base_branch)}",
+			json={"sha": commit["sha"], "force": False},
 		)
-		pull = self._api(
-			"POST",
-			f"/repos/{self.repo}/pulls",
-			json={"title": title, "head": branch, "base": self.base_branch, "body": body},
-		)
-		return pull["html_url"]
+		sha = commit["sha"]
+		return {"sha": sha, "html_url": f"https://github.com/{self.repo}/commit/{sha}"}

@@ -32,17 +32,17 @@ frappe.ui.form.on("Opero Site Settings", {
 				frappe.call({
 					method: "opero.opero_site.publish.publish_to_website",
 					freeze: true,
-					freeze_message: __("Opening a content pull request..."),
+					freeze_message: __("Publishing to the public site..."),
 					callback(r) {
 						const payload = r.message || {};
-						if (payload.pr_url) {
+						if (payload.commit_url) {
 							frappe.msgprint({
-								title: __("Content pull request"),
+								title: __("Published to website"),
 								indicator: "green",
 								message: __(
-									"Opened {0}",
+									"Committed {0}",
 									[
-										`<a href="${frappe.utils.escape_html(payload.pr_url)}" target="_blank">${frappe.utils.escape_html(payload.pr_url)}</a>`,
+										`<a href="${frappe.utils.escape_html(payload.commit_url)}" target="_blank">${frappe.utils.escape_html(payload.commit_url)}</a>`,
 									]
 								),
 							});
