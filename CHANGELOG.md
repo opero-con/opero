@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.48 — 2026-08-25
+
+### Added
+
+- Opero Site module and Opero Site Team Member DocType for the public website roster (name, role, slug, order, portrait, LinkedIn), without colliding with Frappe Website Settings
+
+---
+
 ## 0.2.47 — 2026-08-13
 
 ### Removed
