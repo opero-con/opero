@@ -29,12 +29,12 @@
   {
    "fieldname": "section_history",
    "fieldtype": "Section Break",
-   "label": "Published"
+   "label": "History"
   },
   {
    "fieldname": "history_html",
    "fieldtype": "HTML",
-   "label": "History"
+   "label": ""
   },
   {
    "fieldname": "publish_log",
@@ -52,7 +52,7 @@
  "module": "Opero Site",
  "name": "Opero Site Publisher",
  "owner": "Administrator",
- "modified": "2026-08-26 23:20:00.000000",
+ "modified": "2026-08-26 23:30:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
