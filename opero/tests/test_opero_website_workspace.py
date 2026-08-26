@@ -16,20 +16,20 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(
 			links,
 			{
-				"Home": "Opero Site Home",
-				"Team": "Opero Site Team Member",
-				"Publications": "Opero Site Publication",
-				"Privacy": "Opero Site Privacy",
-				"Publisher": "Opero Site Publisher",
-				"Settings": "Opero Site Settings",
+				"Home": "Home Page",
+				"Team": "Team Member",
+				"Publications": "Publication",
+				"Privacy": "Privacy",
+				"Publisher": "Publisher",
+				"Settings": "Site Settings",
 			},
 		)
 		self.assertNotIn("Website Settings", links.values())
-		self.assertNotIn("Opero Site Office", links.values())
+		self.assertNotIn("Office", links.values())
 
 		shortcuts = {row.label: row.link_to for row in doc.shortcuts}
-		self.assertEqual(shortcuts["Publisher"], "Opero Site Publisher")
-		self.assertEqual(shortcuts["Settings"], "Opero Site Settings")
+		self.assertEqual(shortcuts["Publisher"], "Publisher")
+		self.assertEqual(shortcuts["Settings"], "Site Settings")
 		self.assertEqual(
 			set(shortcuts),
 			{"Publisher", "Settings", "Home", "Team", "Publications", "Privacy"},

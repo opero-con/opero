@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "allow_copy": 0,
+ "allow_import": 0,
+ "allow_rename": 0,
+ "creation": "2026-08-26 23:20:00.000000",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_pending",
+  "pending_html",
+  "section_history",
+  "history_html",
+  "publish_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_pending",
+   "fieldtype": "Section Break",
+   "label": "Due for publishing"
+  },
+  {
+   "fieldname": "pending_html",
+   "fieldtype": "HTML",
+   "label": "Pending"
+  },
+  {
+   "fieldname": "section_history",
+   "fieldtype": "Section Break",
+   "label": "History"
+  },
+  {
+   "fieldname": "history_html",
+   "fieldtype": "HTML",
+   "label": ""
+  },
+  {
+   "fieldname": "publish_log",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Publish log",
+   "options": "Publish Log",
+   "read_only": 1
+  }
+ ],
+ "issingle": 1,
+ "istable": 0,
+ "is_submittable": 0,
+ "has_web_view": 0,
+ "module": "Opero Site",
+ "name": "Publisher",
+ "owner": "Administrator",
+ "modified": "2026-08-26 23:30:00.000000",
+ "modified_by": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "track_changes": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "index_web_pages_for_search": 0,
+ "make_attachments_public": 0
+}

@@ -1,0 +1,185 @@
+{
+ "actions": [],
+ "allow_auto_repeat": 0,
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:slug",
+ "creation": "2026-08-25 08:12:00.000000",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_public",
+  "member_name",
+  "role",
+  "column_break_identity",
+  "slug",
+  "sort_order",
+  "show_on_website",
+  "section_portrait",
+  "portrait",
+  "portrait_alt",
+  "column_break_crop",
+  "portrait_position",
+  "portrait_scale",
+  "portrait_hover_scale",
+  "section_links",
+  "linkedin",
+  "wash_personnel"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_public",
+   "fieldtype": "Section Break",
+   "label": "Public profile"
+  },
+  {
+   "fieldname": "member_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Member Name",
+   "reqd": 1
+  },
+  {
+   "description": "Public label shown under the name, e.g. Water Specialist.",
+   "fieldname": "role",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Role",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "URL id and content filename (`content/team/<slug>.md`). Leave blank to generate from the name.",
+   "fieldname": "slug",
+   "fieldtype": "Data",
+   "label": "Slug",
+   "unique": 1
+  },
+  {
+   "default": "10",
+   "description": "Lower numbers appear first. Use 10, 20, 30 so someone can be inserted later.",
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Order"
+  },
+  {
+   "default": "1",
+   "description": "Uncheck to hide this person on the public site without deleting the record.",
+   "fieldname": "show_on_website",
+   "fieldtype": "Check",
+   "label": "Show on website"
+  },
+  {
+   "fieldname": "section_portrait",
+   "fieldtype": "Section Break",
+   "label": "Portrait"
+  },
+  {
+   "description": "A roughly square photo works best in the circular crop.",
+   "fieldname": "portrait",
+   "fieldtype": "Attach Image",
+   "label": "Portrait"
+  },
+  {
+   "description": "Describe the photo for screen readers.",
+   "fieldname": "portrait_alt",
+   "fieldtype": "Data",
+   "label": "Portrait alt text"
+  },
+  {
+   "fieldname": "column_break_crop",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Advanced: CSS object-position to crop the portrait, e.g. center top.",
+   "fieldname": "portrait_position",
+   "fieldtype": "Data",
+   "label": "Portrait position"
+  },
+  {
+   "description": "Advanced: zoom factor, e.g. 1.2.",
+   "fieldname": "portrait_scale",
+   "fieldtype": "Float",
+   "label": "Portrait scale",
+   "precision": "2"
+  },
+  {
+   "description": "Advanced: hover zoom, e.g. 1.08. Lower this if the crop clips the top of the head.",
+   "fieldname": "portrait_hover_scale",
+   "fieldtype": "Float",
+   "label": "Portrait hover scale",
+   "precision": "2"
+  },
+  {
+   "fieldname": "section_links",
+   "fieldtype": "Section Break",
+   "label": "Links"
+  },
+  {
+   "description": "Full URL, e.g. https://www.linkedin.com/in/nicolagreene",
+   "fieldname": "linkedin",
+   "fieldtype": "Data",
+   "label": "LinkedIn URL",
+   "options": "URL"
+  },
+  {
+   "description": "Optional internal roster link. Public fields above are the source of truth for the site.",
+   "fieldname": "wash_personnel",
+   "fieldtype": "Link",
+   "label": "WASH Personnel",
+   "options": "WASH Personnel"
+  }
+ ],
+ "grid_page_length": 50,
+ "has_web_view": 0,
+ "index_web_pages_for_search": 0,
+ "is_calendar_and_gantt": 0,
+ "is_submittable": 0,
+ "is_tree": 0,
+ "is_virtual": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "make_attachments_public": 0,
+ "max_attachments": 1,
+ "modified": "2026-08-25 08:12:00.000000",
+ "modified_by": "Administrator",
+ "module": "Opero Site",
+ "name": "Team Member",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
+ "search_fields": "member_name,role",
+ "show_name_in_global_search": 1,
+ "show_preview_popup": 0,
+ "show_title_field_in_link": 1,
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "member_name",
+ "track_changes": 1,
+ "track_seen": 0,
+ "track_views": 0
+}

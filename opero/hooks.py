@@ -86,8 +86,8 @@ doctype_js = {
 	"WASH Category": "public/js/custom/wash_category.js",
 	"WASH Personnel": "public/js/custom/wash_personnel.js",
 	"Work Hours Summary": "public/js/custom/work_hours_summary.js",
-	"Opero Site Settings": "public/js/opero_site_settings.js",
-	"Opero Site Publisher": "public/js/opero_site_publisher.js",
+	"Site Settings": "public/js/opero_site_settings.js",
+	"Publisher": "public/js/opero_site_publisher.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}

@@ -1,4 +1,4 @@
-frappe.ui.form.on("Opero Site Publisher", {
+frappe.ui.form.on("Publisher", {
 	refresh(frm) {
 		frm.disable_save();
 		renderHistory(frm);

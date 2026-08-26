@@ -99,8 +99,8 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 class TestOperoSiteLoad(FrappeTestCase):
 	def setUp(self):
-		frappe.db.delete("Opero Site Publication")
-		frappe.db.delete("Opero Site Team Member")
+		frappe.db.delete("Publication")
+		frappe.db.delete("Team Member")
 
 	def test_parse_frontmatter_and_slug_from_path(self):
 		self.assertEqual(parse_frontmatter(TEAM_MD)["name"], "Anita Onyango")
@@ -121,28 +121,28 @@ class TestOperoSiteLoad(FrappeTestCase):
 		)
 		self.assertEqual(counts, {"settings": 1, "home": 1, "privacy": 1, "publications": 1, "team": 1})
 
-		settings = frappe.get_single("Opero Site Settings")
+		settings = frappe.get_single("Site Settings")
 		self.assertEqual(settings.organization_name, "Opero Services Ltd")
 		self.assertEqual(settings.offices[0].office_label, "Nairobi Office")
 		self.assertEqual(settings.seo_title, "Opero | Scaling WASH Enterprise and Innovation")
 
-		home = frappe.get_single("Opero Site Home")
+		home = frappe.get_single("Home Page")
 		self.assertEqual(home.hero_title, "From idea to lasting WASH impact.")
 		self.assertEqual(home.about_paragraphs[0].paragraph, "Opero is a Kenyan WASH firm.")
 		self.assertEqual(home.impacts[0].metric_label, "WASH technologies designed")
-		self.assertEqual(len(frappe.get_all("Opero Site Team Member")), 1)
+		self.assertEqual(len(frappe.get_all("Team Member")), 1)
 
-		privacy = frappe.get_single("Opero Site Privacy")
+		privacy = frappe.get_single("Privacy")
 		self.assertEqual(str(privacy.last_reviewed), "2026-07-23")
 		self.assertIn("Privacy mail | https://opero-services.com/privacy", privacy.sections[0].links)
 		self.assertEqual(privacy.sections[1].bullets.splitlines()[0], "Deliver the website")
 
-		publication = frappe.get_doc("Opero Site Publication", "january-2025-update")
+		publication = frappe.get_doc("Publication", "january-2025-update")
 		self.assertEqual(publication.publication_type, "Newsletter")
 		self.assertEqual(publication.file_url, "/downloads/january-2025-update.pdf")
 		self.assertEqual(publication.body[0].paragraphs, "First paragraph.\n\nSecond paragraph.")
 
-		member = frappe.get_doc("Opero Site Team Member", "anita-onyango")
+		member = frappe.get_doc("Team Member", "anita-onyango")
 		self.assertEqual(member.member_name, "Anita Onyango")
 		self.assertEqual(member.portrait, "/media/team/anita.jpg")
 		self.assertEqual(member.sort_order, 10)
@@ -150,20 +150,20 @@ class TestOperoSiteLoad(FrappeTestCase):
 	def test_load_keeps_extra_local_team_members(self):
 		frappe.get_doc(
 			{
-				"doctype": "Opero Site Team Member",
+				"doctype": "Team Member",
 				"member_name": "Local Only",
 				"role": "Editor",
 				"show_on_website": 0,
 			}
 		).insert(ignore_permissions=True)
 		load_files({"content/team/anita-onyango.md": TEAM_MD})
-		names = set(frappe.get_all("Opero Site Team Member", pluck="name"))
+		names = set(frappe.get_all("Team Member", pluck="name"))
 		self.assertEqual(names, {"local-only", "anita-onyango"})
 
 	def test_load_roundtrip_matches_settings_frontmatter(self):
 		load_files({"content/settings/general.md": SETTINGS_MD})
 		self.assertEqual(
-			frappe.get_single("Opero Site Settings").to_site_frontmatter(),
+			frappe.get_single("Site Settings").to_site_frontmatter(),
 			parse_frontmatter(SETTINGS_MD),
 		)
 

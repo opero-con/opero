@@ -25,7 +25,7 @@
    "is_query_report": 0,
    "label": "Home",
    "link_count": 0,
-   "link_to": "Opero Site Home",
+   "link_to": "Home Page",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -35,7 +35,7 @@
    "is_query_report": 0,
    "label": "Team",
    "link_count": 0,
-   "link_to": "Opero Site Team Member",
+   "link_to": "Team Member",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -45,7 +45,7 @@
    "is_query_report": 0,
    "label": "Publications",
    "link_count": 0,
-   "link_to": "Opero Site Publication",
+   "link_to": "Publication",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -55,7 +55,7 @@
    "is_query_report": 0,
    "label": "Privacy",
    "link_count": 0,
-   "link_to": "Opero Site Privacy",
+   "link_to": "Privacy",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -73,7 +73,7 @@
    "is_query_report": 0,
    "label": "Publisher",
    "link_count": 0,
-   "link_to": "Opero Site Publisher",
+   "link_to": "Publisher",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -83,7 +83,7 @@
    "is_query_report": 0,
    "label": "Settings",
    "link_count": 0,
-   "link_to": "Opero Site Settings",
+   "link_to": "Site Settings",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -108,32 +108,32 @@
  "shortcuts": [
   {
    "label": "Publisher",
-   "link_to": "Opero Site Publisher",
+   "link_to": "Publisher",
    "type": "DocType"
   },
   {
    "label": "Settings",
-   "link_to": "Opero Site Settings",
+   "link_to": "Site Settings",
    "type": "DocType"
   },
   {
    "label": "Home",
-   "link_to": "Opero Site Home",
+   "link_to": "Home Page",
    "type": "DocType"
   },
   {
    "label": "Team",
-   "link_to": "Opero Site Team Member",
+   "link_to": "Team Member",
    "type": "DocType"
   },
   {
    "label": "Publications",
-   "link_to": "Opero Site Publication",
+   "link_to": "Publication",
    "type": "DocType"
   },
   {
    "label": "Privacy",
-   "link_to": "Opero Site Privacy",
+   "link_to": "Privacy",
    "type": "DocType"
   }
  ],

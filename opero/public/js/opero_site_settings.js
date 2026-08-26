@@ -1,4 +1,4 @@
-frappe.ui.form.on("Opero Site Settings", {
+frappe.ui.form.on("Site Settings", {
 	refresh(frm) {
 		if (!frappe.user.has_role("System Manager")) {
 			return;
