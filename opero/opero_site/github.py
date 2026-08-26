@@ -15,6 +15,19 @@ def changed_files(existing: dict[str, str], planned: list[tuple[str, str]]) -> l
 	return [(path, content) for path, content in planned if existing.get(path) != content]
 
 
+def deleted_managed_files(
+	planned_paths: list[str],
+	remote_paths: list[str],
+	prefixes: tuple[str, ...],
+) -> list[tuple[str, None]]:
+	planned = set(planned_paths)
+	return [
+		(path, None)
+		for path in remote_paths
+		if path not in planned and path.startswith(prefixes)
+	]
+
+
 class ContentRepo:
 	def __init__(self, token: str, repo: str, base_branch: str = "main", transport=None):
 		self.token = token
@@ -76,11 +89,14 @@ class ContentRepo:
 			and entry["path"].endswith(".md")
 		]
 
-	def commit_files(self, files: list[tuple[str, str]], message: str) -> dict:
+	def commit_files(self, files: list[tuple[str, str | None]], message: str) -> dict:
 		head = self._api("GET", f"/repos/{self.repo}/commits/{self.base_branch}")
 		base_sha = head["sha"]
 		entries = []
 		for path, content in files:
+			if content is None:
+				entries.append({"path": path, "mode": "100644", "type": "blob", "sha": None})
+				continue
 			blob = self._api(
 				"POST",
 				f"/repos/{self.repo}/git/blobs",

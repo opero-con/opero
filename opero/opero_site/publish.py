@@ -3,7 +3,7 @@ from __future__ import annotations
 import frappe
 from frappe import _
 
-from opero.opero_site.github import ContentRepo, GithubError, changed_files
+from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import to_markdown
 
 DEFAULT_REPO = "opero-con/opero-content"
@@ -54,8 +54,16 @@ def publish_to_website() -> dict:
 		return {"commit_url": None, "message": _("Nothing to publish. Save Opero Site content first.")}
 
 	repo = content_repo_from_conf()
-	existing = repo.existing_files([path for path, _content in planned], repo.base_branch)
+	planned_paths = [path for path, _content in planned]
+	existing = repo.existing_files(planned_paths, repo.base_branch)
 	files = changed_files(existing, planned)
+	files.extend(
+		deleted_managed_files(
+			planned_paths,
+			repo.list_markdown("content/", repo.base_branch),
+			("content/publications/", "content/team/"),
+		)
+	)
 	if not files:
 		return {"commit_url": None, "message": _("Public site content is already up to date.")}
 
