@@ -112,7 +112,7 @@ def preview_publish() -> dict:
 	if not planned:
 		return {
 			"files": [],
-			"message": _("Nothing to publish. Save Opero Site content first."),
+			"message": _("Nothing to publish. Save content first."),
 		}
 	try:
 		files = planned_content_changes(content_repo_from_conf())
@@ -128,7 +128,7 @@ def publish_to_website() -> dict:
 	_require_publisher()
 	planned = collect_content_files()
 	if not planned:
-		return {"commit_url": None, "message": _("Nothing to publish. Save Opero Site content first.")}
+		return {"commit_url": None, "message": _("Nothing to publish. Save content first.")}
 
 	repo = content_repo_from_conf()
 	files = planned_content_changes(repo)
