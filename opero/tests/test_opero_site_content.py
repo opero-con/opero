@@ -9,7 +9,7 @@ from opero.opero_site.utils import parse_links, slugify
 
 class TestOperoSiteContent(FrappeTestCase):
 	def setUp(self):
-		frappe.db.delete("Opero Site Publication")
+		frappe.db.delete("Publication")
 
 	def test_slugify_matches_content_filenames(self):
 		self.assertEqual(slugify("January 2025 Update"), "january-2025-update")
@@ -24,7 +24,7 @@ class TestOperoSiteContent(FrappeTestCase):
 			parse_links("https://example.com")
 
 	def test_settings_frontmatter_matches_general_collection(self):
-		doc = frappe.get_single("Opero Site Settings")
+		doc = frappe.get_single("Site Settings")
 		doc.update(
 			{
 				"organization_name": "Opero Services Ltd",
@@ -79,7 +79,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		)
 
 	def test_settings_reject_invalid_url(self):
-		doc = frappe.get_single("Opero Site Settings")
+		doc = frappe.get_single("Site Settings")
 		doc.organization_name = "Opero"
 		doc.email = "info@opero-services.com"
 		doc.communications_email = "comms@opero-services.com"
@@ -89,7 +89,7 @@ class TestOperoSiteContent(FrappeTestCase):
 			doc.save(ignore_permissions=True)
 
 	def test_home_frontmatter_omits_team_and_hides_inactive_partners(self):
-		doc = frappe.get_single("Opero Site Home")
+		doc = frappe.get_single("Home Page")
 		doc.hero_eyebrow = "Scaling WASH"
 		doc.hero_title = "From idea to lasting WASH impact."
 		doc.hero_description = "Practical support for WASH enterprises."
@@ -147,7 +147,7 @@ class TestOperoSiteContent(FrappeTestCase):
 	def test_publication_slug_and_body_frontmatter(self):
 		doc = frappe.get_doc(
 			{
-				"doctype": "Opero Site Publication",
+				"doctype": "Publication",
 				"title": "January 2025 Update",
 				"published_at": "2025-01-30",
 				"publication_type": "Newsletter",
@@ -198,7 +198,7 @@ class TestOperoSiteContent(FrappeTestCase):
 	def test_publication_rejects_invalid_file_url(self):
 		doc = frappe.get_doc(
 			{
-				"doctype": "Opero Site Publication",
+				"doctype": "Publication",
 				"title": "Bad File URL",
 				"published_at": "2025-02-01",
 				"publication_type": "Digest",
@@ -212,7 +212,7 @@ class TestOperoSiteContent(FrappeTestCase):
 	def test_publication_accepts_site_relative_file_url(self):
 		doc = frappe.get_doc(
 			{
-				"doctype": "Opero Site Publication",
+				"doctype": "Publication",
 				"title": "Portfolio Path",
 				"published_at": "2023-01-01",
 				"publication_type": "Portfolio",
@@ -224,7 +224,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(doc.file_url, "/downloads/opero-project-portfolio.pdf")
 
 	def test_privacy_frontmatter_matches_privacy_collection(self):
-		doc = frappe.get_single("Opero Site Privacy")
+		doc = frappe.get_single("Privacy")
 		doc.last_reviewed = "2026-07-23"
 		doc.set("sections", [])
 		doc.append(

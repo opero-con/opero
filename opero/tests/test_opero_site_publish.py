@@ -10,9 +10,9 @@ from opero.opero_site.publish import collect_content_files, pending_entries, rec
 
 class TestOperoSitePublish(FrappeTestCase):
 	def setUp(self):
-		frappe.db.delete("Opero Site Publication")
-		frappe.db.delete("Opero Site Team Member")
-		publisher = frappe.get_single("Opero Site Publisher")
+		frappe.db.delete("Publication")
+		frappe.db.delete("Team Member")
+		publisher = frappe.get_single("Publisher")
 		publisher.set("publish_log", [])
 		publisher.save(ignore_permissions=True)
 
@@ -37,7 +37,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				str(index),
 				[(f"content/team/{index}.md", "body")],
 			)
-		rows = frappe.get_single("Opero Site Publisher").publish_log
+		rows = frappe.get_single("Publisher").publish_log
 		self.assertEqual(len(rows), 10)
 		self.assertEqual(rows[0].sha, "11")
 		self.assertEqual(rows[0].commit_url, "https://github.com/opero-con/opero-content/commit/11")
@@ -59,7 +59,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		)
 
 	def test_collect_includes_team_and_settings_paths(self):
-		settings = frappe.get_single("Opero Site Settings")
+		settings = frappe.get_single("Site Settings")
 		settings.update(
 			{
 				"organization_name": "Opero Services Ltd",
@@ -71,7 +71,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		settings.save(ignore_permissions=True)
 		frappe.get_doc(
 			{
-				"doctype": "Opero Site Team Member",
+				"doctype": "Team Member",
 				"member_name": "Anita Onyango",
 				"role": "Communications",
 				"show_on_website": 1,
