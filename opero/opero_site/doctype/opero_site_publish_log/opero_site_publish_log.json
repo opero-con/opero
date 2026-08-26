@@ -1,0 +1,64 @@
+{
+ "actions": [],
+ "creation": "2026-08-26 23:20:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "published_on",
+  "published_by",
+  "commit_url",
+  "sha",
+  "file_count",
+  "paths"
+ ],
+ "fields": [
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Published on",
+   "reqd": 1
+  },
+  {
+   "fieldname": "published_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Published by",
+   "options": "User"
+  },
+  {
+   "fieldname": "commit_url",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Commit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sha",
+   "fieldtype": "Data",
+   "label": "SHA"
+  },
+  {
+   "fieldname": "file_count",
+   "fieldtype": "Int",
+   "label": "Files"
+  },
+  {
+   "fieldname": "paths",
+   "fieldtype": "Small Text",
+   "label": "Paths"
+  }
+ ],
+ "istable": 1,
+ "issingle": 0,
+ "is_submittable": 0,
+ "module": "Opero Site",
+ "name": "Opero Site Publish Log",
+ "owner": "Administrator",
+ "permissions": [],
+ "modified": "2026-08-26 23:20:00.000000",
+ "modified_by": "Administrator",
+ "track_changes": 0,
+ "has_web_view": 0
+}

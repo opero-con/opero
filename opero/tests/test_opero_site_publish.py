@@ -5,13 +5,44 @@ from frappe.tests.utils import FrappeTestCase
 
 from opero.opero_site.github import ContentRepo, changed_files, deleted_managed_files
 from opero.opero_site.markdown import to_markdown
-from opero.opero_site.publish import collect_content_files
+from opero.opero_site.publish import collect_content_files, pending_entries, record_publish
 
 
 class TestOperoSitePublish(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Opero Site Publication")
 		frappe.db.delete("Opero Site Team Member")
+		publisher = frappe.get_single("Opero Site Publisher")
+		publisher.set("publish_log", [])
+		publisher.save(ignore_permissions=True)
+
+	def test_pending_entries_marks_deletes(self):
+		self.assertEqual(
+			pending_entries(
+				[
+					("content/team/anita-onyango.md", "---\nname: Anita\n---\n"),
+					("content/publications/old-update.md", None),
+				]
+			),
+			[
+				{"path": "content/team/anita-onyango.md", "action": "update"},
+				{"path": "content/publications/old-update.md", "action": "delete"},
+			],
+		)
+
+	def test_record_publish_keeps_last_ten_newest_first(self):
+		for index in range(12):
+			record_publish(
+				f"https://github.com/opero-con/opero-content/commit/{index}",
+				str(index),
+				[(f"content/team/{index}.md", "body")],
+			)
+		rows = frappe.get_single("Opero Site Publisher").publish_log
+		self.assertEqual(len(rows), 10)
+		self.assertEqual(rows[0].sha, "11")
+		self.assertEqual(rows[0].commit_url, "https://github.com/opero-con/opero-content/commit/11")
+		self.assertEqual(rows[-1].sha, "2")
+		self.assertEqual(rows[0].file_count, 1)
 
 	def test_markdown_wraps_frontmatter(self):
 		text = to_markdown({"name": "Anita Onyango", "active": True, "order": 10})

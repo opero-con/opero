@@ -26,33 +26,5 @@ frappe.ui.form.on("Opero Site Settings", {
 			},
 			__("Website")
 		);
-		frm.add_custom_button(
-			__("Publish to website"),
-			() => {
-				frappe.call({
-					method: "opero.opero_site.publish.publish_to_website",
-					freeze: true,
-					freeze_message: __("Publishing to the public site..."),
-					callback(r) {
-						const payload = r.message || {};
-						if (payload.commit_url) {
-							frappe.msgprint({
-								title: __("Published to website"),
-								indicator: "green",
-								message: __(
-									"Committed {0}",
-									[
-										`<a href="${frappe.utils.escape_html(payload.commit_url)}" target="_blank">${frappe.utils.escape_html(payload.commit_url)}</a>`,
-									]
-								),
-							});
-							return;
-						}
-						frappe.msgprint(payload.message || __("No content changes."));
-					},
-				});
-			},
-			__("Website")
-		);
 	},
 });

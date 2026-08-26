@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
+from frappe.utils import now_datetime
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import to_markdown
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
+MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/")
+PUBLISH_LOG_LIMIT = 10
 
 
 def collect_content_files() -> list[tuple[str, str]]:
@@ -44,16 +47,10 @@ def content_repo_from_conf() -> ContentRepo:
 	return ContentRepo(token=token, repo=repo, base_branch=base_branch)
 
 
-@frappe.whitelist()
-def publish_to_website() -> dict:
-	if not frappe.has_permission("Opero Site Settings", "write"):
-		frappe.throw(_("Not permitted to publish Opero Site content."))
-
+def planned_content_changes(repo: ContentRepo) -> list[tuple[str, str | None]]:
 	planned = collect_content_files()
 	if not planned:
-		return {"commit_url": None, "message": _("Nothing to publish. Save Opero Site content first.")}
-
-	repo = content_repo_from_conf()
+		return []
 	planned_paths = [path for path, _content in planned]
 	existing = repo.existing_files(planned_paths, repo.base_branch)
 	files = changed_files(existing, planned)
@@ -61,9 +58,80 @@ def publish_to_website() -> dict:
 		deleted_managed_files(
 			planned_paths,
 			repo.list_markdown("content/", repo.base_branch),
-			("content/publications/", "content/team/"),
+			MANAGED_DELETE_PREFIXES,
 		)
 	)
+	return files
+
+
+def pending_entries(files: list[tuple[str, str | None]]) -> list[dict]:
+	return [
+		{"path": path, "action": "delete" if content is None else "update"}
+		for path, content in files
+	]
+
+
+def record_publish(commit_url: str, sha: str, files: list[tuple[str, str | None]]) -> None:
+	doc = frappe.get_single("Opero Site Publisher")
+	entries = [
+		{
+			"published_on": now_datetime(),
+			"published_by": frappe.session.user,
+			"commit_url": commit_url,
+			"sha": sha,
+			"file_count": len(files),
+			"paths": ", ".join(path for path, _content in files),
+		}
+	]
+	for row in doc.publish_log:
+		entries.append(
+			{
+				"published_on": row.published_on,
+				"published_by": row.published_by,
+				"commit_url": row.commit_url,
+				"sha": row.sha,
+				"file_count": row.file_count,
+				"paths": row.paths,
+			}
+		)
+	doc.set("publish_log", [])
+	for entry in entries[:PUBLISH_LOG_LIMIT]:
+		doc.append("publish_log", entry)
+	doc.save(ignore_permissions=True)
+
+
+def _require_publisher() -> None:
+	if not frappe.has_permission("Opero Site Settings", "write"):
+		frappe.throw(_("Not permitted to publish Opero Site content."))
+
+
+@frappe.whitelist()
+def preview_publish() -> dict:
+	_require_publisher()
+	planned = collect_content_files()
+	if not planned:
+		return {
+			"files": [],
+			"message": _("Nothing to publish. Save Opero Site content first."),
+		}
+	try:
+		files = planned_content_changes(content_repo_from_conf())
+	except GithubError as exc:
+		frappe.throw(str(exc))
+	if not files:
+		return {"files": [], "message": _("Public site content is already up to date.")}
+	return {"files": pending_entries(files), "message": None}
+
+
+@frappe.whitelist()
+def publish_to_website() -> dict:
+	_require_publisher()
+	planned = collect_content_files()
+	if not planned:
+		return {"commit_url": None, "message": _("Nothing to publish. Save Opero Site content first.")}
+
+	repo = content_repo_from_conf()
+	files = planned_content_changes(repo)
 	if not files:
 		return {"commit_url": None, "message": _("Public site content is already up to date.")}
 
@@ -71,4 +139,5 @@ def publish_to_website() -> dict:
 		commit = repo.commit_files(files, message="content: update public site from desk")
 	except GithubError as exc:
 		frappe.throw(str(exc))
+	record_publish(commit["html_url"], commit["sha"], files)
 	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}
