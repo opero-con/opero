@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "creation": "2026-08-25 12:35:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "partner_name",
+  "url",
+  "logo",
+  "show_on_website",
+  "sort_order"
+ ],
+ "fields": [
+  {
+   "fieldname": "partner_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "in_list_view": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "label": "URL",
+   "options": "URL"
+  },
+  {
+   "fieldname": "logo",
+   "fieldtype": "Attach Image",
+   "label": "Logo",
+   "description": "Transparent PNG or SVG works best."
+  },
+  {
+   "fieldname": "show_on_website",
+   "fieldtype": "Check",
+   "label": "Show on website",
+   "default": "1"
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "label": "Order",
+   "description": "Lower numbers appear first."
+  }
+ ],
+ "istable": 1,
+ "issingle": 0,
+ "is_submittable": 0,
+ "module": "Opero Site",
+ "name": "Site Partner",
+ "owner": "Administrator",
+ "permissions": [],
+ "modified": "2026-08-26 17:35:00.000000",
+ "modified_by": "Administrator",
+ "track_changes": 0,
+ "has_web_view": 0
+}

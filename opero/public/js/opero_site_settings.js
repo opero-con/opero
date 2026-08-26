@@ -1,4 +1,4 @@
-frappe.ui.form.on("Opero Site Settings", {
+frappe.ui.form.on("Site Settings", {
 	refresh(frm) {
 		if (!frappe.user.has_role("System Manager")) {
 			return;
@@ -8,7 +8,7 @@ frappe.ui.form.on("Opero Site Settings", {
 			() => {
 				frappe.confirm(
 					__(
-						"Replace Opero Site records with Markdown from the public content repository? Extra team members on this site are kept."
+						"Replace website records with Markdown from the public content repository? Extra team members on this site are kept."
 					),
 					() => {
 						frappe.call({

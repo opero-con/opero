@@ -195,35 +195,35 @@ def load_files(files: dict[str, str]) -> dict[str, int]:
 	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0}
 	for path, text in files.items():
 		if path == "content/settings/general.md":
-			doc = frappe.get_single("Opero Site Settings")
+			doc = frappe.get_single("Site Settings")
 			apply_settings(doc, parse_frontmatter(text))
 			doc.save(ignore_permissions=True)
 			counts["settings"] += 1
 		elif path == "content/homepage/home.md":
-			doc = frappe.get_single("Opero Site Home")
+			doc = frappe.get_single("Site Home")
 			apply_home(doc, parse_frontmatter(text))
 			doc.save(ignore_permissions=True)
 			counts["home"] += 1
 		elif path == "content/privacy/privacy.md":
-			doc = frappe.get_single("Opero Site Privacy")
+			doc = frappe.get_single("Site Privacy")
 			apply_privacy(doc, parse_frontmatter(text))
 			doc.save(ignore_permissions=True)
 			counts["privacy"] += 1
 		elif path.startswith("content/publications/") and path.endswith(".md"):
 			slug = slug_from_path(path)
-			if frappe.db.exists("Opero Site Publication", slug):
-				doc = frappe.get_doc("Opero Site Publication", slug)
+			if frappe.db.exists("Site Publication", slug):
+				doc = frappe.get_doc("Site Publication", slug)
 			else:
-				doc = frappe.new_doc("Opero Site Publication")
+				doc = frappe.new_doc("Site Publication")
 			apply_publication(doc, parse_frontmatter(text), slug)
 			doc.save(ignore_permissions=True)
 			counts["publications"] += 1
 		elif path.startswith("content/team/") and path.endswith(".md"):
 			slug = slug_from_path(path)
-			if frappe.db.exists("Opero Site Team Member", slug):
-				doc = frappe.get_doc("Opero Site Team Member", slug)
+			if frappe.db.exists("Site Team Member", slug):
+				doc = frappe.get_doc("Site Team Member", slug)
 			else:
-				doc = frappe.new_doc("Opero Site Team Member")
+				doc = frappe.new_doc("Site Team Member")
 			apply_team_member(doc, parse_frontmatter(text), slug)
 			doc.save(ignore_permissions=True)
 			counts["team"] += 1
@@ -232,8 +232,8 @@ def load_files(files: dict[str, str]) -> dict[str, int]:
 
 @frappe.whitelist()
 def load_from_website() -> dict:
-	if not frappe.has_permission("Opero Site Settings", "write"):
-		frappe.throw(_("Not permitted to load Opero Site content."))
+	if not frappe.has_permission("Site Settings", "write"):
+		frappe.throw(_("Not permitted to load website content."))
 	repo = content_repo_from_conf()
 	try:
 		paths = repo.list_markdown("content/", repo.base_branch)

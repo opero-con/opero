@@ -1,15 +1,15 @@
-"""Opero Site Team Member slug, URL, and content-frontmatter contract."""
+"""Site Team Member slug, URL, and content-frontmatter contract."""
 
 import frappe
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
 
-from opero.opero_site.doctype.opero_site_team_member.opero_site_team_member import slugify
+from opero.opero_site.utils import slugify
 
 
-class TestOperoSiteTeamMember(FrappeTestCase):
+class TestSiteTeamMember(FrappeTestCase):
 	def setUp(self):
-		frappe.db.delete("Opero Site Team Member")
+		frappe.db.delete("Site Team Member")
 
 	def test_slugify_matches_content_filenames(self):
 		self.assertEqual(slugify("Nicola Greene"), "nicola-greene")
@@ -51,7 +51,7 @@ class TestOperoSiteTeamMember(FrappeTestCase):
 
 	def _member(self, **fields):
 		payload = {
-			"doctype": "Opero Site Team Member",
+			"doctype": "Site Team Member",
 			"member_name": "Test Member",
 			"role": "Water Specialist",
 			"show_on_website": 1,

@@ -1,0 +1,57 @@
+{
+ "actions": [],
+ "creation": "2026-08-25 12:35:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "office_label",
+  "building",
+  "street",
+  "city",
+  "country"
+ ],
+ "fields": [
+  {
+   "fieldname": "office_label",
+   "fieldtype": "Data",
+   "label": "Label",
+   "description": "For example Head office or Regional office."
+  },
+  {
+   "fieldname": "building",
+   "fieldtype": "Data",
+   "label": "Building"
+  },
+  {
+   "fieldname": "street",
+   "fieldtype": "Data",
+   "label": "Street"
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City",
+   "in_list_view": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Data",
+   "label": "Country",
+   "in_list_view": 1,
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "issingle": 0,
+ "is_submittable": 0,
+ "module": "Opero Site",
+ "name": "Site Office",
+ "owner": "Administrator",
+ "permissions": [],
+ "modified": "2026-08-26 17:35:00.000000",
+ "modified_by": "Administrator",
+ "track_changes": 0,
+ "has_web_view": 0
+}

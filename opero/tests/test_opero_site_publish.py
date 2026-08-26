@@ -1,4 +1,4 @@
-"""Publish Opero Site DocTypes into opero-content Markdown."""
+"""Publish Site DocTypes into opero-content Markdown."""
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -8,10 +8,10 @@ from opero.opero_site.markdown import to_markdown
 from opero.opero_site.publish import collect_content_files
 
 
-class TestOperoSitePublish(FrappeTestCase):
+class TestSitePublish(FrappeTestCase):
 	def setUp(self):
-		frappe.db.delete("Opero Site Publication")
-		frappe.db.delete("Opero Site Team Member")
+		frappe.db.delete("Site Publication")
+		frappe.db.delete("Site Team Member")
 
 	def test_markdown_wraps_frontmatter(self):
 		text = to_markdown({"name": "Anita Onyango", "active": True, "order": 10})
@@ -28,7 +28,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		)
 
 	def test_collect_includes_team_and_settings_paths(self):
-		settings = frappe.get_single("Opero Site Settings")
+		settings = frappe.get_single("Site Settings")
 		settings.update(
 			{
 				"organization_name": "Opero Services Ltd",
@@ -40,7 +40,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		settings.save(ignore_permissions=True)
 		frappe.get_doc(
 			{
-				"doctype": "Opero Site Team Member",
+				"doctype": "Site Team Member",
 				"member_name": "Anita Onyango",
 				"role": "Communications",
 				"show_on_website": 1,

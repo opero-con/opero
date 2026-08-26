@@ -1,0 +1,39 @@
+{
+ "actions": [],
+ "creation": "2026-08-25 12:35:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "value",
+  "metric_label"
+ ],
+ "fields": [
+  {
+   "fieldname": "value",
+   "fieldtype": "Data",
+   "label": "Value",
+   "in_list_view": 1,
+   "reqd": 1,
+   "description": "Short figure, e.g. 10+ or East Africa."
+  },
+  {
+   "fieldname": "metric_label",
+   "fieldtype": "Data",
+   "label": "Label",
+   "in_list_view": 1,
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "issingle": 0,
+ "is_submittable": 0,
+ "module": "Opero Site",
+ "name": "Site Impact",
+ "owner": "Administrator",
+ "permissions": [],
+ "modified": "2026-08-26 17:35:00.000000",
+ "modified_by": "Administrator",
+ "track_changes": 0,
+ "has_web_view": 0
+}

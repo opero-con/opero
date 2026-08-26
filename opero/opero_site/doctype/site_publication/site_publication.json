@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "creation": "2026-08-25 12:35:00.000000",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "slug",
+  "published_at",
+  "year",
+  "publication_type",
+  "service_area",
+  "featured",
+  "summary",
+  "section_media",
+  "cover",
+  "cover_alt",
+  "file_url",
+  "external_url",
+  "section_video",
+  "video_embed_url",
+  "video_title",
+  "video_caption",
+  "section_topics",
+  "topics",
+  "section_body",
+  "body"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "slug",
+   "fieldtype": "Data",
+   "label": "Slug",
+   "unique": 1,
+   "description": "URL id; leave blank to generate from the title."
+  },
+  {
+   "fieldname": "published_at",
+   "fieldtype": "Datetime",
+   "label": "Publication date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "year",
+   "fieldtype": "Int",
+   "label": "Year"
+  },
+  {
+   "fieldname": "publication_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "Case study\nDigest\nNewsletter\nPortfolio"
+  },
+  {
+   "fieldname": "service_area",
+   "fieldtype": "Select",
+   "label": "Service area",
+   "options": "\nWASH enterprise\nWASH innovation\nMarket research",
+   "description": "Leave blank when a publication spans all three areas."
+  },
+  {
+   "fieldname": "featured",
+   "fieldtype": "Check",
+   "label": "Featured"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_media",
+   "fieldtype": "Section Break",
+   "label": "Media"
+  },
+  {
+   "fieldname": "cover",
+   "fieldtype": "Attach Image",
+   "label": "Cover image"
+  },
+  {
+   "fieldname": "cover_alt",
+   "fieldtype": "Data",
+   "label": "Cover alt text"
+  },
+  {
+   "fieldname": "file_url",
+   "fieldtype": "Data",
+   "label": "File URL",
+   "options": "URL",
+   "description": "Link to a downloadable file such as a PDF."
+  },
+  {
+   "fieldname": "external_url",
+   "fieldtype": "Data",
+   "label": "External URL",
+   "options": "URL"
+  },
+  {
+   "fieldname": "section_video",
+   "fieldtype": "Section Break",
+   "label": "Video"
+  },
+  {
+   "fieldname": "video_embed_url",
+   "fieldtype": "Data",
+   "label": "Embed URL",
+   "description": "Use a privacy-enhanced embed URL, such as youtube-nocookie.com/embed/..."
+  },
+  {
+   "fieldname": "video_title",
+   "fieldtype": "Data",
+   "label": "Accessible title"
+  },
+  {
+   "fieldname": "video_caption",
+   "fieldtype": "Small Text",
+   "label": "Caption"
+  },
+  {
+   "fieldname": "section_topics",
+   "fieldtype": "Section Break",
+   "label": "Topics"
+  },
+  {
+   "fieldname": "topics",
+   "fieldtype": "Table",
+   "label": "Topics",
+   "options": "Site Topic"
+  },
+  {
+   "fieldname": "section_body",
+   "fieldtype": "Section Break",
+   "label": "Body"
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Table",
+   "label": "Body",
+   "options": "Site Body Section"
+  }
+ ],
+ "issingle": 0,
+ "istable": 0,
+ "is_submittable": 0,
+ "has_web_view": 0,
+ "module": "Opero Site",
+ "name": "Site Publication",
+ "owner": "Administrator",
+ "modified": "2026-08-26 17:35:00.000000",
+ "modified_by": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "track_changes": 1,
+ "sort_field": "published_at",
+ "sort_order": "DESC",
+ "index_web_pages_for_search": 0,
+ "make_attachments_public": 0,
+ "autoname": "field:slug",
+ "naming_rule": "By fieldname",
+ "title_field": "title",
+ "show_title_field_in_link": 1,
+ "search_fields": "title,publication_type"
+}
