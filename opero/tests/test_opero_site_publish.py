@@ -3,7 +3,7 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from opero.opero_site.github import ContentRepo, changed_files
+from opero.opero_site.github import ContentRepo, changed_files, deleted_managed_files
 from opero.opero_site.markdown import to_markdown
 from opero.opero_site.publish import collect_content_files
 
@@ -83,3 +83,93 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertEqual(patch[2], {"sha": "commit-sha", "force": False})
 		self.assertFalse(any("/pulls" in call[1] for call in calls))
 		self.assertFalse(any(call[0] == "POST" and call[1].endswith("/git/refs") for call in calls))
+
+	def test_deleted_managed_files_plans_missing_publications_and_team(self):
+		planned = [
+			"content/settings/general.md",
+			"content/homepage/home.md",
+			"content/privacy/privacy.md",
+			"content/team/anita-onyango.md",
+			"content/publications/keep-me.md",
+		]
+		remote = [
+			"content/settings/general.md",
+			"content/homepage/home.md",
+			"content/privacy/privacy.md",
+			"content/team/anita-onyango.md",
+			"content/team/gone.md",
+			"content/publications/keep-me.md",
+			"content/publications/old-update.md",
+		]
+		self.assertEqual(
+			deleted_managed_files(
+				planned,
+				remote,
+				("content/publications/", "content/team/"),
+			),
+			[
+				("content/team/gone.md", None),
+				("content/publications/old-update.md", None),
+			],
+		)
+		self.assertEqual(
+			deleted_managed_files(
+				[],
+				[
+					"content/settings/general.md",
+					"content/homepage/home.md",
+					"content/privacy/privacy.md",
+					"content/publications/old-update.md",
+				],
+				("content/publications/", "content/team/"),
+			),
+			[("content/publications/old-update.md", None)],
+		)
+
+	def test_commit_files_sends_null_sha_to_delete(self):
+		calls = []
+
+		def transport(method, url, json=None):
+			calls.append((method, url, json))
+			if url.endswith("/commits/main"):
+				return {"sha": "base-sha", "commit": {"tree": {"sha": "tree-sha"}}}
+			if url.endswith("/git/blobs"):
+				return {"sha": "blob-sha"}
+			if url.endswith("/git/trees"):
+				return {"sha": "new-tree"}
+			if url.endswith("/git/commits") and method == "POST":
+				return {"sha": "commit-sha"}
+			if method == "PATCH" and url.endswith("/git/refs/heads/main"):
+				return {"object": {"sha": "commit-sha"}}
+			raise AssertionError((method, url))
+
+		repo = ContentRepo("token", "opero-con/opero-content", transport=transport)
+		result = repo.commit_files(
+			[
+				("content/team/anita-onyango.md", "---\nname: Anita\n---\n"),
+				("content/publications/old-update.md", None),
+			],
+			message="content: update public site from desk",
+		)
+		self.assertEqual(result["sha"], "commit-sha")
+		blob_posts = [call for call in calls if call[0] == "POST" and call[1].endswith("/git/blobs")]
+		self.assertEqual(len(blob_posts), 1)
+		self.assertEqual(blob_posts[0][2]["content"], "---\nname: Anita\n---\n")
+		tree_post = next(call for call in calls if call[0] == "POST" and call[1].endswith("/git/trees"))
+		self.assertEqual(
+			tree_post[2]["tree"],
+			[
+				{
+					"path": "content/team/anita-onyango.md",
+					"mode": "100644",
+					"type": "blob",
+					"sha": "blob-sha",
+				},
+				{
+					"path": "content/publications/old-update.md",
+					"mode": "100644",
+					"type": "blob",
+					"sha": None,
+				},
+			],
+		)
