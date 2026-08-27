@@ -7,6 +7,7 @@ frappe.ui.form.on("Publisher", {
 		}
 		loadPending(frm);
 		frm.page.set_primary_action(__("Publish to website"), () => publishWebsite(frm));
+		frm.page.set_secondary_action(__("Refresh"), () => loadPending(frm), "refresh");
 	},
 });
 
