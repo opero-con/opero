@@ -1,4 +1,4 @@
-name: Sanitize AI attribution
+name: Sanitize tool attribution
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - name: Strip AI attribution from PR title and body
+      - name: Strip tool attribution from PR title and body
         uses: actions/github-script@v9
         with:
           script: |
@@ -60,7 +60,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Scan commit messages for AI attribution
+      - name: Scan commit messages for tool attribution
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -70,9 +70,9 @@ jobs:
             || true)
 
           if [ -n "$matches" ]; then
-            echo "::error::Commit messages in this PR contain AI attribution (Co-Authored-By, 'Generated with', 'Made with', etc). Please amend or rebase to remove it, then force-push, before this can merge."
+            echo "::error::Commit messages in this PR contain tool attribution (Co-Authored-By, 'Generated with', 'Made with', etc). Please amend or rebase to remove it, then force-push, before this can merge."
             echo "$matches"
             exit 1
           fi
 
-          echo "No AI attribution found in commit messages."
+          echo "No tool attribution found in commit messages."
