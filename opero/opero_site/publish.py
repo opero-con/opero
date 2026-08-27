@@ -47,12 +47,12 @@ def content_repo_from_conf() -> ContentRepo:
 	return ContentRepo(token=token, repo=repo, base_branch=base_branch)
 
 
-def planned_content_changes(repo: ContentRepo) -> list[tuple[str, str | None]]:
+def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | None]]:
 	planned = collect_content_files()
 	if not planned:
 		return []
 	planned_paths = [path for path, _content in planned]
-	existing = repo.existing_files(planned_paths, repo.base_branch)
+	existing = repo.existing_files(planned_paths, repo.base_branch, on_progress=on_progress)
 	files = changed_files(existing, planned)
 	files.extend(
 		deleted_managed_files(
@@ -105,6 +105,14 @@ def _require_publisher() -> None:
 		frappe.throw(_("Not permitted to publish Opero Site content."))
 
 
+def _emit_progress(done: int, total: int, path: str = "") -> None:
+	frappe.publish_realtime(
+		"opero_site_progress",
+		{"done": done, "total": total, "path": path},
+		user=frappe.session.user,
+	)
+
+
 @frappe.whitelist()
 def preview_publish() -> dict:
 	_require_publisher()
@@ -115,7 +123,7 @@ def preview_publish() -> dict:
 			"message": _("Nothing to publish. Save content first."),
 		}
 	try:
-		files = planned_content_changes(content_repo_from_conf())
+		files = planned_content_changes(content_repo_from_conf(), on_progress=_emit_progress)
 	except GithubError as exc:
 		frappe.throw(str(exc))
 	if not files:
@@ -131,12 +139,14 @@ def publish_to_website() -> dict:
 		return {"commit_url": None, "message": _("Nothing to publish. Save content first.")}
 
 	repo = content_repo_from_conf()
-	files = planned_content_changes(repo)
+	files = planned_content_changes(repo, on_progress=_emit_progress)
 	if not files:
 		return {"commit_url": None, "message": _("Public site content is already up to date.")}
 
 	try:
-		commit = repo.commit_files(files, message="content: update public site from desk")
+		commit = repo.commit_files(
+			files, message="content: update public site from desk", on_progress=_emit_progress
+		)
 	except GithubError as exc:
 		frappe.throw(str(exc))
 	record_publish(commit["html_url"], commit["sha"], files)

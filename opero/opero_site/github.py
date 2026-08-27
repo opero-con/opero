@@ -65,12 +65,15 @@ class ContentRepo:
 			return None
 		return base64.b64decode(encoded.replace("\n", "")).decode("utf-8")
 
-	def existing_files(self, paths: list[str], ref: str) -> dict[str, str]:
+	def existing_files(self, paths: list[str], ref: str, on_progress=None) -> dict[str, str]:
 		out = {}
-		for path in paths:
+		total = len(paths)
+		for index, path in enumerate(paths, start=1):
 			content = self.get_file(path, ref)
 			if content is not None:
 				out[path] = content
+			if on_progress:
+				on_progress(index, total, path)
 		return out
 
 	def list_markdown(self, prefix: str, ref: str) -> list[str]:
@@ -89,20 +92,23 @@ class ContentRepo:
 			and entry["path"].endswith(".md")
 		]
 
-	def commit_files(self, files: list[tuple[str, str | None]], message: str) -> dict:
+	def commit_files(self, files: list[tuple[str, str | None]], message: str, on_progress=None) -> dict:
 		head = self._api("GET", f"/repos/{self.repo}/commits/{self.base_branch}")
 		base_sha = head["sha"]
 		entries = []
-		for path, content in files:
+		total = len(files)
+		for index, (path, content) in enumerate(files, start=1):
 			if content is None:
 				entries.append({"path": path, "mode": "100644", "type": "blob", "sha": None})
-				continue
-			blob = self._api(
-				"POST",
-				f"/repos/{self.repo}/git/blobs",
-				json={"content": content, "encoding": "utf-8"},
-			)
-			entries.append({"path": path, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+			else:
+				blob = self._api(
+					"POST",
+					f"/repos/{self.repo}/git/blobs",
+					json={"content": content, "encoding": "utf-8"},
+				)
+				entries.append({"path": path, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+			if on_progress:
+				on_progress(index, total, path)
 		tree = self._api(
 			"POST",
 			f"/repos/{self.repo}/git/trees",

@@ -1,9 +1,11 @@
 """Publish Opero Site DocTypes into opero-content Markdown."""
 
+import base64
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from opero.opero_site.github import ContentRepo, changed_files, deleted_managed_files
+from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import to_markdown
 from opero.opero_site.publish import collect_content_files, pending_entries, record_publish
 
@@ -81,6 +83,28 @@ class TestOperoSitePublish(FrappeTestCase):
 		paths = [path for path, _content in collect_content_files()]
 		self.assertIn("content/settings/general.md", paths)
 		self.assertIn("content/team/anita-onyango.md", paths)
+
+	def test_existing_files_reports_progress(self):
+		seen = []
+
+		def transport(method, url, json=None):
+			if "content%2Fteam%2Fa.md" in url or url.endswith("content/team/a.md?ref=main"):
+				return {"content": base64.b64encode(b"one").decode()}
+			if "content%2Fteam%2Fb.md" in url or url.endswith("content/team/b.md?ref=main"):
+				raise GithubError("GitHub GET failed (404).")
+			raise AssertionError(url)
+
+		repo = ContentRepo("token", "opero-con/opero-content", transport=transport)
+		found = repo.existing_files(
+			["content/team/a.md", "content/team/b.md"],
+			"main",
+			on_progress=lambda done, total, path: seen.append((done, total, path)),
+		)
+		self.assertEqual(found, {"content/team/a.md": "one"})
+		self.assertEqual(
+			seen,
+			[(1, 2, "content/team/a.md"), (2, 2, "content/team/b.md")],
+		)
 
 	def test_commit_files_updates_main_without_a_pull_request(self):
 		calls = []
