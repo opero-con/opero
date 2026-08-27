@@ -138,6 +138,8 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(privacy.sections[1].bullets.splitlines()[0], "Deliver the website")
 
 		publication = frappe.get_doc("Publication", "january-2025-update")
+		self.assertEqual(str(publication.published_on), "2025-01-30")
+		self.assertEqual(publication.year, 2025)
 		self.assertEqual(publication.publication_type, "Newsletter")
 		self.assertEqual(publication.file_url, "/downloads/january-2025-update.pdf")
 		self.assertEqual(publication.body[0].paragraphs, "First paragraph.\n\nSecond paragraph.")

@@ -143,7 +143,8 @@ def apply_publication(doc, data: dict, slug: str):
 	video = data.get("video") or {}
 	doc.title = _text(data.get("title"))
 	doc.slug = slug
-	doc.published_at = data.get("publishedAt")
+	published_on = data.get("publishedAt")
+	doc.published_on = getdate(published_on) if published_on else None
 	year = data.get("year")
 	doc.year = cint(year) if year not in (None, "") else None
 	doc.publication_type = _text(data.get("type"))

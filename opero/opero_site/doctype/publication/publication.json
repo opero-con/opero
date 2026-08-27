@@ -10,10 +10,15 @@
  "field_order": [
   "title",
   "slug",
-  "published_at",
+  "section_details",
+  "published_on",
+  "column_break_year",
   "year",
+  "column_break_type",
   "publication_type",
+  "column_break_service",
   "service_area",
+  "section_summary",
   "featured",
   "summary",
   "section_media",
@@ -46,16 +51,31 @@
    "description": "URL id; leave blank to generate from the title."
   },
   {
-   "fieldname": "published_at",
-   "fieldtype": "Datetime",
-   "label": "Publication date",
+   "fieldname": "section_details",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Date",
+   "label": "Published on",
    "reqd": 1,
    "in_list_view": 1
   },
   {
+   "fieldname": "column_break_year",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "year",
    "fieldtype": "Int",
-   "label": "Year"
+   "label": "Year",
+   "read_only": 1,
+   "description": "Derived from Published on."
+  },
+  {
+   "fieldname": "column_break_type",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "publication_type",
@@ -66,11 +86,20 @@
    "options": "Case study\nDigest\nNewsletter\nPortfolio"
   },
   {
+   "fieldname": "column_break_service",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "service_area",
    "fieldtype": "Select",
    "label": "Service area",
    "options": "\nWASH enterprise\nWASH innovation\nMarket research",
    "description": "Leave blank when a publication spans all three areas."
+  },
+  {
+   "fieldname": "section_summary",
+   "fieldtype": "Section Break",
+   "label": "Summary"
   },
   {
    "fieldname": "featured",
@@ -179,7 +208,7 @@
   }
  ],
  "track_changes": 1,
- "sort_field": "published_at",
+ "sort_field": "published_on",
  "sort_order": "DESC",
  "index_web_pages_for_search": 0,
  "make_attachments_public": 0,

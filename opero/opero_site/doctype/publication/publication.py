@@ -25,15 +25,15 @@ class Publication(Document):
 		self.video_embed_url = optional_url(self.video_embed_url, "Embed URL")
 		if self.video_embed_url and not cstr(self.video_title).strip():
 			frappe.throw(_("Accessible title is required when an embed URL is set."))
-		if self.published_at and not self.year:
-			self.year = getdate(self.published_at).year
+		if self.published_on:
+			self.year = getdate(self.published_on).year
 		body_sections(self.body)
 
 	def to_site_frontmatter(self) -> dict:
 		payload = {
 			"slug": self.slug,
 			"title": cstr(self.title).strip(),
-			"publishedAt": getdate(self.published_at).isoformat() if self.published_at else "",
+			"publishedAt": getdate(self.published_on).isoformat() if self.published_on else "",
 			"type": cstr(self.publication_type).strip(),
 			"summary": cstr(self.summary).strip(),
 			"topics": [cstr(row.topic).strip() for row in (self.topics or []) if row.topic],
