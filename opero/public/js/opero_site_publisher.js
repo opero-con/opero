@@ -11,6 +11,8 @@ frappe.ui.form.on("Publisher", {
 	},
 });
 
+const PROGRESS_EVENT = "opero_site_progress";
+
 function renderHistory(frm) {
 	const rows = frm.doc.publish_log || [];
 	const wrap = frm.get_field("history_html").$wrapper;
@@ -30,38 +32,102 @@ function renderHistory(frm) {
 	wrap.html(`<ol>${items}</ol>`);
 }
 
+function setBusy(frm, busy) {
+	frm._opero_busy = busy;
+	if (frm.page.btn_primary) {
+		frm.page.btn_primary.prop("disabled", busy);
+	}
+	if (frm.page.btn_secondary) {
+		frm.page.btn_secondary.prop("disabled", busy);
+	}
+}
+
+function showProgress(wrap, label) {
+	wrap.html(`<div class="opero-publish-progress">
+		<div class="progress" style="height: 8px;">
+			<div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%;"></div>
+		</div>
+		<p class="text-muted opero-publish-label" style="margin-top: 8px;">${frappe.utils.escape_html(label)}</p>
+	</div>`);
+}
+
+function bindProgress(wrap) {
+	if (!frappe.realtime || !frappe.realtime.on) {
+		return () => {};
+	}
+	if (frappe.realtime.off) {
+		frappe.realtime.off(PROGRESS_EVENT);
+	}
+	const handler = (data) => {
+		const total = Number(data.total || 0);
+		const done = Number(data.done || 0);
+		const pct = total ? Math.max(4, Math.round((done / total) * 100)) : 100;
+		const bar = wrap.find(".progress-bar");
+		bar.removeClass("progress-bar-striped progress-bar-animated");
+		bar.css("width", `${pct}%`);
+		if (data.path) {
+			wrap.find(".opero-publish-label").text(data.path);
+		}
+	};
+	frappe.realtime.on(PROGRESS_EVENT, handler);
+	return () => {
+		if (frappe.realtime.off) {
+			frappe.realtime.off(PROGRESS_EVENT);
+		}
+	};
+}
+
+function renderPending(wrap, payload) {
+	const files = (payload && payload.files) || [];
+	if (!files.length) {
+		wrap.html(`<p class="text-muted">${frappe.utils.escape_html(payload.message || __("Nothing due."))}</p>`);
+		return;
+	}
+	const items = files
+		.map((row) => {
+			const action = row.action === "delete" ? __("Remove") : __("Update");
+			return `<li><strong>${frappe.utils.escape_html(action)}</strong> ${frappe.utils.escape_html(row.path)}</li>`;
+		})
+		.join("");
+	wrap.html(`<ul>${items}</ul>`);
+}
+
 function loadPending(frm) {
+	if (frm._opero_busy) {
+		return;
+	}
 	const wrap = frm.get_field("pending_html").$wrapper;
-	wrap.html(`<p class="text-muted">${__("Checking the public site repository...")}</p>`);
+	showProgress(wrap, __("Checking the public site repository..."));
+	const stop = bindProgress(wrap);
+	setBusy(frm, true);
 	frappe.call({
 		method: "opero.opero_site.publish.preview_publish",
 		callback(r) {
-			const payload = r.message || {};
-			const files = payload.files || [];
-			if (!files.length) {
-				wrap.html(`<p class="text-muted">${frappe.utils.escape_html(payload.message || __("Nothing due."))}</p>`);
-				return;
-			}
-			const items = files
-				.map((row) => {
-					const action = row.action === "delete" ? __("Remove") : __("Update");
-					return `<li><strong>${frappe.utils.escape_html(action)}</strong> ${frappe.utils.escape_html(row.path)}</li>`;
-				})
-				.join("");
-			wrap.html(`<ul>${items}</ul>`);
+			stop();
+			setBusy(frm, false);
+			renderPending(wrap, r.message || {});
 		},
 		error() {
+			stop();
+			setBusy(frm, false);
 			wrap.html(`<p class="text-danger">${__("Could not compare Desk with GitHub.")}</p>`);
 		},
 	});
 }
 
 function publishWebsite(frm) {
+	if (frm._opero_busy) {
+		return;
+	}
+	const wrap = frm.get_field("pending_html").$wrapper;
+	showProgress(wrap, __("Publishing to the public site..."));
+	const stop = bindProgress(wrap);
+	setBusy(frm, true);
 	frappe.call({
 		method: "opero.opero_site.publish.publish_to_website",
-		freeze: true,
-		freeze_message: __("Publishing to the public site..."),
 		callback(r) {
+			stop();
+			setBusy(frm, false);
 			const payload = r.message || {};
 			if (payload.commit_url) {
 				frappe.msgprint({
@@ -79,6 +145,11 @@ function publishWebsite(frm) {
 			}
 			frappe.msgprint(payload.message || __("No content changes."));
 			loadPending(frm);
+		},
+		error() {
+			stop();
+			setBusy(frm, false);
+			wrap.html(`<p class="text-danger">${__("Could not publish to GitHub.")}</p>`);
 		},
 	});
 }
