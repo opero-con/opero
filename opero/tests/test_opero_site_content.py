@@ -149,7 +149,7 @@ class TestOperoSiteContent(FrappeTestCase):
 			{
 				"doctype": "Publication",
 				"title": "January 2025 Update",
-				"published_at": "2025-01-30",
+				"published_on": "2025-01-30",
 				"publication_type": "Newsletter",
 				"summary": "A recap of Opero's late-2024 work.",
 				"featured": 1,
@@ -195,12 +195,28 @@ class TestOperoSiteContent(FrappeTestCase):
 			},
 		)
 
+	def test_publication_year_derived_from_published_on(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Wrong Year Override",
+				"published_on": "2024-06-15",
+				"year": 1999,
+				"publication_type": "Digest",
+				"summary": "Year must come from published_on.",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.assertEqual(doc.year, 2024)
+		self.assertEqual(doc.to_site_frontmatter()["year"], 2024)
+		self.assertEqual(doc.to_site_frontmatter()["publishedAt"], "2024-06-15")
+
 	def test_publication_rejects_invalid_file_url(self):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Publication",
 				"title": "Bad File URL",
-				"published_at": "2025-02-01",
+				"published_on": "2025-02-01",
 				"publication_type": "Digest",
 				"summary": "Should not save.",
 				"file_url": "example.com/file.pdf",
@@ -214,7 +230,7 @@ class TestOperoSiteContent(FrappeTestCase):
 			{
 				"doctype": "Publication",
 				"title": "Portfolio Path",
-				"published_at": "2023-01-01",
+				"published_on": "2023-01-01",
 				"publication_type": "Portfolio",
 				"summary": "Relative download path from opero-content.",
 				"file_url": "/downloads/opero-project-portfolio.pdf",
