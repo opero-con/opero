@@ -5,7 +5,7 @@ from frappe import _
 from frappe.utils import now_datetime
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
-from opero.opero_site.markdown import to_markdown
+from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
@@ -53,7 +53,13 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 		return []
 	planned_paths = [path for path, _content in planned]
 	existing = repo.existing_files(planned_paths, repo.base_branch, on_progress=on_progress)
-	files = changed_files(existing, planned)
+	merged = []
+	for path, content in planned:
+		current = existing.get(path)
+		if current:
+			content = preserve_unmanaged_frontmatter(current, content)
+		merged.append((path, content))
+	files = changed_files(existing, merged)
 	files.extend(
 		deleted_managed_files(
 			planned_paths,
