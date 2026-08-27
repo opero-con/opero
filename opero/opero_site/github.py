@@ -6,13 +6,22 @@ from urllib.parse import quote
 import requests
 from frappe import _
 
+from opero.opero_site.markdown import same_managed_content
+
 
 class GithubError(Exception):
 	pass
 
 
 def changed_files(existing: dict[str, str], planned: list[tuple[str, str]]) -> list[tuple[str, str]]:
-	return [(path, content) for path, content in planned if existing.get(path) != content]
+	out = []
+	for path, content in planned:
+		current = existing.get(path)
+		if current is None:
+			out.append((path, content))
+		elif not same_managed_content(path, current, content):
+			out.append((path, content))
+	return out
 
 
 def deleted_managed_files(

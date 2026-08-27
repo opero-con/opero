@@ -6,8 +6,59 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
-from opero.opero_site.markdown import to_markdown
+from opero.opero_site.load import load_files
+from opero.opero_site.markdown import parse_frontmatter, preserve_unmanaged_frontmatter, to_markdown
 from opero.opero_site.publish import collect_content_files, pending_entries, record_publish
+from opero.tests.test_opero_site_load import HOME_MD, PRIVACY_MD, SETTINGS_MD, TEAM_MD
+
+HOME_WITH_TEAM_AND_PARTNERS = """---
+hero:
+  eyebrow: Scaling WASH
+  title: From idea to lasting WASH impact.
+  description: Practical support for WASH enterprises.
+  imageAlt: Aerial view of WASH work
+about:
+  title: Practical WASH solutions
+  paragraphs:
+    - Opero is a Kenyan WASH firm.
+pillars:
+  - title: Market research
+    description: Local market realities.
+impacts:
+  - value: "6"
+    label: WASH technologies designed
+partners:
+  - name: Hidden Partner
+    active: false
+    order: 1
+  - name: Practica Foundation
+    url: https://www.practica.org
+    active: true
+    order: 20
+team:
+  - name: Ignored Homepage Team
+    role: Should not be imported
+---
+"""
+
+PUBLICATION_WITH_YAML_NOISE = """---
+title: January 2025 Update
+publishedAt: 2025-01-30T00:00:00Z
+type: Newsletter
+topics:
+  - Company update
+summary: "A recap of Opero's late-2024 work."
+featured: true
+fileUrl: /downloads/january-2025-update.pdf
+year: "2025"
+draft: false
+body:
+  - heading: What we learned
+    paragraphs:
+      - First paragraph.
+      - Second paragraph.
+---
+"""
 
 
 class TestOperoSitePublish(FrappeTestCase):
@@ -59,6 +110,39 @@ class TestOperoSitePublish(FrappeTestCase):
 			changed_files({"content/team/a.md": "one"}, planned),
 			[("content/team/b.md", "two")],
 		)
+
+	def test_changed_files_skips_load_backup_noise(self):
+		github = {
+			"content/settings/general.md": SETTINGS_MD,
+			"content/homepage/home.md": HOME_WITH_TEAM_AND_PARTNERS,
+			"content/privacy/privacy.md": PRIVACY_MD,
+			"content/publications/january-2025-update.md": PUBLICATION_WITH_YAML_NOISE,
+			"content/team/anita-onyango.md": TEAM_MD,
+		}
+		load_files(github)
+		self.assertEqual(changed_files(github, collect_content_files()), [])
+
+	def test_changed_files_lists_real_desk_edits(self):
+		load_files({"content/homepage/home.md": HOME_MD})
+		home = frappe.get_single("Home Page")
+		home.hero_title = "Edited hero title"
+		home.save(ignore_permissions=True)
+		changed = changed_files(
+			{"content/homepage/home.md": HOME_MD},
+			collect_content_files(),
+		)
+		self.assertTrue(any(path == "content/homepage/home.md" for path, _content in changed))
+
+	def test_preserve_unmanaged_keeps_homepage_team_on_real_edit(self):
+		load_files({"content/homepage/home.md": HOME_MD})
+		home = frappe.get_single("Home Page")
+		home.hero_title = "Edited hero title"
+		home.save(ignore_permissions=True)
+		planned = dict(collect_content_files())["content/homepage/home.md"]
+		merged = preserve_unmanaged_frontmatter(HOME_MD, planned)
+		data = parse_frontmatter(merged)
+		self.assertEqual(data["hero"]["title"], "Edited hero title")
+		self.assertEqual(data["team"][0]["name"], "Ignored Homepage Team")
 
 	def test_collect_includes_team_and_settings_paths(self):
 		settings = frappe.get_single("Site Settings")
