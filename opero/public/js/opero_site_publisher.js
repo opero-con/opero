@@ -2,7 +2,7 @@ frappe.ui.form.on("Publisher", {
 	refresh(frm) {
 		frm.disable_save();
 		renderHistory(frm);
-		if (!frappe.user.has_role("System Manager")) {
+		if (!frm.has_perm("write")) {
 			return;
 		}
 		loadPending(frm);

@@ -69,3 +69,4 @@ opero.patches.v0_3.isolate_project_hours_summary_section
 opero.patches.v0_3.remove_item_custom_company
 opero.patches.v0_4.rename_publication_published_at_to_published_on
 opero.patches.v0_4.rename_publication_portfolio_to_overview
+opero.patches.v0_4.reload_opero_website_workspace

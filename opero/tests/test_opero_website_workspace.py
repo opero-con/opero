@@ -34,3 +34,23 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			set(shortcuts),
 			{"Publisher", "Settings", "Home", "Team", "Publications", "Privacy"},
 		)
+		self.assertEqual(
+			{row.role for row in doc.roles},
+			{"System Manager", "Website Manager"},
+		)
+
+	def test_website_manager_can_read_site_doctypes(self):
+		doctypes = [
+			"Home Page",
+			"Team Member",
+			"Publication",
+			"Privacy",
+			"Publisher",
+			"Site Settings",
+		]
+		for doctype in doctypes:
+			roles = {
+				row.role for row in frappe.get_meta(doctype).permissions if row.read
+			}
+			self.assertIn("System Manager", roles, doctype)
+			self.assertIn("Website Manager", roles, doctype)

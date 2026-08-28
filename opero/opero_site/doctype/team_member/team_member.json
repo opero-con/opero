@@ -149,7 +149,7 @@
  "links": [],
  "make_attachments_public": 0,
  "max_attachments": 1,
- "modified": "2026-08-25 08:12:00.000000",
+ "modified": "2026-08-28 09:15:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Team Member",
@@ -165,6 +165,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Website Manager",
    "share": 1,
    "write": 1
   }
