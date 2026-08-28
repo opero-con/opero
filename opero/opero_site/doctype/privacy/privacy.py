@@ -3,11 +3,13 @@ from __future__ import annotations
 from frappe.model.document import Document
 from frappe.utils import getdate
 
+from opero.opero_site.publish_status import PUBLISHED, apply_publish_status
 from opero.opero_site.utils import body_sections
 
 
 class Privacy(Document):
 	def validate(self):
+		apply_publish_status(self, default=PUBLISHED)
 		body_sections(self.sections)
 
 	def to_site_frontmatter(self) -> dict:

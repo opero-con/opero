@@ -3,11 +3,13 @@ from __future__ import annotations
 from frappe.model.document import Document
 from frappe.utils import cstr
 
+from opero.opero_site.publish_status import PUBLISHED, apply_publish_status
 from opero.opero_site.utils import optional_url
 
 
 class SiteSettings(Document):
 	def validate(self):
+		apply_publish_status(self, default=PUBLISHED)
 		self.linkedin_url = optional_url(self.linkedin_url, "LinkedIn URL")
 		self.twitter_url = optional_url(self.twitter_url, "Twitter/X URL")
 		self.canonical_url = optional_url(self.canonical_url, "Canonical URL")

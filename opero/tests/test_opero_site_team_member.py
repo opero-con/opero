@@ -21,6 +21,17 @@ class TestTeamMember(FrappeTestCase):
 		self.assertEqual(doc.slug, "nicola-greene")
 		self.assertEqual(doc.name, "nicola-greene")
 
+	def test_new_team_member_defaults_to_draft(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Team Member",
+				"member_name": "New Draft",
+				"role": "Editor",
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(doc.status, "Draft")
+		self.assertFalse(doc.unpublish)
+
 	def test_linkedin_must_be_full_url(self):
 		doc = self._member(linkedin="linkedin.com/in/nicolagreene")
 		with self.assertRaises(ValidationError):
@@ -32,7 +43,7 @@ class TestTeamMember(FrappeTestCase):
 			role="Director",
 			linkedin="https://www.linkedin.com/in/anita-onyango",
 			sort_order=10,
-			show_on_website=1,
+			status="Published",
 			portrait_alt="Portrait of Anita Onyango",
 		)
 		doc.insert(ignore_permissions=True)
@@ -54,7 +65,7 @@ class TestTeamMember(FrappeTestCase):
 			"doctype": "Team Member",
 			"member_name": "Test Member",
 			"role": "Water Specialist",
-			"show_on_website": 1,
+			"status": "Published",
 			"sort_order": 10,
 		}
 		payload.update(fields)

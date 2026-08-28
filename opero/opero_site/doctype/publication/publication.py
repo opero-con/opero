@@ -5,6 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, getdate
 
+from opero.opero_site.publish_status import apply_publish_status
 from opero.opero_site.utils import (
 	PUBLICATION_TYPES,
 	body_sections,
@@ -22,6 +23,7 @@ class Publication(Document):
 			frappe.throw(_("Slug must contain at least one letter or number."))
 
 	def validate(self):
+		apply_publish_status(self)
 		self.title = cstr(self.title).strip()
 		self.slug = slugify(self.slug or self.title)
 		if not self.slug:

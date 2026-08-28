@@ -49,6 +49,7 @@ app_include_css = f"/assets/opero/css/opero.css?v={_opero_asset_v}"
 app_include_js = [
 	f"/assets/opero/js/custom/resource_planner_reports.js?v={_opero_asset_v}",
 	f"/assets/opero/js/custom/entity_scope.js?v={_opero_asset_v}",
+	f"/assets/opero/js/opero_site_publish_status.js?v={_opero_asset_v}",
 ]
 
 # include js, css files in header of web template

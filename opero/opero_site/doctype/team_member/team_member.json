@@ -16,7 +16,8 @@
   "column_break_identity",
   "slug",
   "sort_order",
-  "show_on_website",
+  "status",
+  "unpublish",
   "section_portrait",
   "portrait",
   "portrait_alt",
@@ -70,11 +71,22 @@
    "label": "Order"
   },
   {
-   "default": "1",
-   "description": "Uncheck to hide this person on the public site without deleting the record.",
-   "fieldname": "show_on_website",
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nPublished\nUnpublished",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.status != 'Draft'",
+   "description": "Hide this person on the public site on the next Publish. The Cubenet record is kept.",
+   "fieldname": "unpublish",
    "fieldtype": "Check",
-   "label": "Show on website"
+   "label": "Unpublish"
   },
   {
    "fieldname": "section_portrait",
@@ -149,7 +161,7 @@
  "links": [],
  "make_attachments_public": 0,
  "max_attachments": 1,
- "modified": "2026-08-28 09:15:00.000000",
+ "modified": "2026-08-28 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Team Member",
@@ -189,7 +201,20 @@
  "show_title_field_in_link": 1,
  "sort_field": "sort_order",
  "sort_order": "ASC",
- "states": [],
+ "states": [
+  {
+   "color": "Orange",
+   "title": "Draft"
+  },
+  {
+   "color": "Green",
+   "title": "Published"
+  },
+  {
+   "color": "Gray",
+   "title": "Unpublished"
+  }
+ ],
  "title_field": "member_name",
  "track_changes": 1,
  "track_seen": 0,

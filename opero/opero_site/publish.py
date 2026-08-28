@@ -6,6 +6,7 @@ from frappe.utils import now_datetime
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
+from opero.opero_site.publish_status import is_published, is_unpublished
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
@@ -13,29 +14,46 @@ MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/")
 PUBLISH_LOG_LIMIT = 10
 
 
-def collect_content_files() -> list[tuple[str, str]]:
+def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
+	"""Published writes plus draft paths that must stay untouched on GitHub.
+
+	Unpublished publications are omitted so the next publish deletes them.
+	Unpublished team members are still written with `active: false`.
+	"""
 	files = []
+	keep = []
+
+	def consider(path: str, doc, ready: bool, *, hide_when_unpublished: bool = False) -> None:
+		if not ready:
+			return
+		if is_published(doc) or (hide_when_unpublished and is_unpublished(doc)):
+			files.append((path, to_markdown(doc.to_site_frontmatter())))
+		elif is_unpublished(doc):
+			return
+		else:
+			keep.append(path)
+
 	settings = frappe.get_single("Site Settings")
-	if settings.organization_name:
-		files.append(("content/settings/general.md", to_markdown(settings.to_site_frontmatter())))
-
+	consider(
+		"content/settings/general.md",
+		settings,
+		bool(settings.organization_name),
+	)
 	home = frappe.get_single("Home Page")
-	if home.hero_title:
-		files.append(("content/homepage/home.md", to_markdown(home.to_site_frontmatter())))
-
+	consider("content/homepage/home.md", home, bool(home.hero_title))
 	privacy = frappe.get_single("Privacy")
-	if privacy.last_reviewed:
-		files.append(("content/privacy/privacy.md", to_markdown(privacy.to_site_frontmatter())))
-
+	consider("content/privacy/privacy.md", privacy, bool(privacy.last_reviewed))
 	for name in frappe.get_all("Publication", pluck="name"):
 		doc = frappe.get_doc("Publication", name)
-		files.append((f"content/publications/{doc.slug}.md", to_markdown(doc.to_site_frontmatter())))
-
+		consider(f"content/publications/{doc.slug}.md", doc, True)
 	for name in frappe.get_all("Team Member", pluck="name"):
 		doc = frappe.get_doc("Team Member", name)
-		files.append((f"content/team/{doc.slug}.md", to_markdown(doc.to_site_frontmatter())))
+		consider(f"content/team/{doc.slug}.md", doc, True, hide_when_unpublished=True)
+	return files, keep
 
-	return files
+
+def collect_content_files() -> list[tuple[str, str]]:
+	return collect_content_plan()[0]
 
 
 def content_repo_from_conf() -> ContentRepo:
@@ -48,11 +66,11 @@ def content_repo_from_conf() -> ContentRepo:
 
 
 def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | None]]:
-	planned = collect_content_files()
-	if not planned:
-		return []
-	planned_paths = [path for path, _content in planned]
-	existing = repo.existing_files(planned_paths, repo.base_branch, on_progress=on_progress)
+	planned, keep = collect_content_plan()
+	write_paths = [path for path, _content in planned]
+	existing = (
+		repo.existing_files(write_paths, repo.base_branch, on_progress=on_progress) if write_paths else {}
+	)
 	merged = []
 	for path, content in planned:
 		current = existing.get(path)
@@ -62,7 +80,7 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 	files = changed_files(existing, merged)
 	files.extend(
 		deleted_managed_files(
-			planned_paths,
+			write_paths + keep,
 			repo.list_markdown("content/", repo.base_branch),
 			MANAGED_DELETE_PREFIXES,
 		)
@@ -122,12 +140,6 @@ def _emit_progress(done: int, total: int, path: str = "") -> None:
 @frappe.whitelist()
 def preview_publish() -> dict:
 	_require_publisher()
-	planned = collect_content_files()
-	if not planned:
-		return {
-			"files": [],
-			"message": _("Nothing to publish. Save content first."),
-		}
 	try:
 		files = planned_content_changes(content_repo_from_conf(), on_progress=_emit_progress)
 	except GithubError as exc:
@@ -140,10 +152,6 @@ def preview_publish() -> dict:
 @frappe.whitelist()
 def publish_to_website() -> dict:
 	_require_publisher()
-	planned = collect_content_files()
-	if not planned:
-		return {"commit_url": None, "message": _("Nothing to publish. Save content first.")}
-
 	repo = content_repo_from_conf()
 	files = planned_content_changes(repo, on_progress=_emit_progress)
 	if not files:

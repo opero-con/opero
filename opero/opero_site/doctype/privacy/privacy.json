@@ -8,10 +8,39 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
+  "section_publish",
+  "status",
+  "column_break_unpublish",
+  "unpublish",
   "last_reviewed",
   "sections"
  ],
  "fields": [
+  {
+   "fieldname": "section_publish",
+   "fieldtype": "Section Break",
+   "label": "Publish"
+  },
+  {
+   "default": "Published",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPublished\nUnpublished",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_unpublish",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.status != 'Draft'",
+   "description": "Keep Cubenet edits off the public site until the next time this is Published.",
+   "fieldname": "unpublish",
+   "fieldtype": "Check",
+   "label": "Unpublish"
+  },
   {
    "fieldname": "last_reviewed",
    "fieldtype": "Date",
@@ -32,7 +61,7 @@
  "module": "Opero Site",
  "name": "Privacy",
  "owner": "Administrator",
- "modified": "2026-08-28 09:15:00.000000",
+ "modified": "2026-08-28 11:00:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
@@ -63,6 +92,20 @@
  "track_changes": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Orange",
+   "title": "Draft"
+  },
+  {
+   "color": "Green",
+   "title": "Published"
+  },
+  {
+   "color": "Gray",
+   "title": "Unpublished"
+  }
+ ],
  "index_web_pages_for_search": 0,
  "make_attachments_public": 0
 }
