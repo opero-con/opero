@@ -16,6 +16,14 @@ from opero.opero_site.utils import (
 
 
 class Publication(Document):
+	def _validate_links(self):
+		for row in self.topics or []:
+			title = cstr(row.topic).strip()
+			if title:
+				row.topic = title
+				_ensure_publication_topic(title)
+		super()._validate_links()
+
 	def before_naming(self):
 		self.title = cstr(self.title).strip()
 		self.slug = slugify(self.slug or self.title)
@@ -76,3 +84,12 @@ class Publication(Document):
 		if body:
 			payload["body"] = body
 		return payload
+
+
+def _ensure_publication_topic(title: str) -> None:
+	if frappe.db.exists("Publication Topic", title):
+		return
+	frappe.get_doc({"doctype": "Publication Topic", "title": title}).insert(
+		ignore_permissions=True,
+		ignore_if_duplicate=True,
+	)

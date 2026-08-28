@@ -10,9 +10,10 @@
  "fields": [
   {
    "fieldname": "topic",
-   "fieldtype": "Data",
-   "label": "Topic",
+   "fieldtype": "Link",
    "in_list_view": 1,
+   "label": "Topic",
+   "options": "Publication Topic",
    "reqd": 1
   }
  ],
@@ -23,7 +24,7 @@
  "name": "Topic",
  "owner": "Administrator",
  "permissions": [],
- "modified": "2026-08-25 12:35:00.000000",
+ "modified": "2026-08-28 22:45:00.000000",
  "modified_by": "Administrator",
  "track_changes": 0,
  "has_web_view": 0

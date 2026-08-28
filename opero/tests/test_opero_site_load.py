@@ -167,6 +167,8 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(str(publication.published_on), "2025-01-30")
 		self.assertEqual(publication.year, 2025)
 		self.assertEqual(publication.publication_type, "Newsletter")
+		self.assertEqual([row.topic for row in publication.topics], ["Company update"])
+		self.assertTrue(frappe.db.exists("Publication Topic", "Company update"))
 		self.assertEqual(publication.file_url, "/downloads/january-2025-update.pdf")
 		self.assertEqual(
 			publication.body,
