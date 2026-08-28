@@ -8,7 +8,12 @@ from frappe.tests.utils import FrappeTestCase
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.load import load_files
 from opero.opero_site.markdown import parse_frontmatter, preserve_unmanaged_frontmatter, to_markdown
-from opero.opero_site.publish import collect_content_files, pending_entries, record_publish
+from opero.opero_site.publish import (
+	collect_content_files,
+	collect_content_plan,
+	pending_entries,
+	record_publish,
+)
 from opero.tests.test_opero_site_load import HOME_MD, PRIVACY_MD, SETTINGS_MD, TEAM_MD
 
 HOME_WITH_TEAM_AND_PARTNERS = """---
@@ -160,7 +165,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"doctype": "Team Member",
 				"member_name": "Anita Onyango",
 				"role": "Communications",
-				"show_on_website": 1,
+				"status": "Published",
 				"sort_order": 10,
 			}
 		).insert(ignore_permissions=True)
@@ -312,3 +317,71 @@ class TestOperoSitePublish(FrappeTestCase):
 				},
 			],
 		)
+
+	def test_new_publication_defaults_to_draft_and_is_kept(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Draft Newsletter",
+				"published_on": "2026-08-01",
+				"publication_type": "Newsletter",
+				"summary": "Still being written in Cubenet.",
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(doc.status, "Draft")
+		self.assertFalse(doc.unpublish)
+		files, keep = collect_content_plan()
+		path = "content/publications/draft-newsletter.md"
+		self.assertNotIn(path, dict(files))
+		self.assertIn(path, keep)
+
+	def test_unpublished_publication_is_omitted_for_delete(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Live Then Pulled",
+				"published_on": "2026-08-01",
+				"publication_type": "Newsletter",
+				"summary": "Was live, now unpublished.",
+				"status": "Published",
+			}
+		).insert(ignore_permissions=True)
+		doc.unpublish = 1
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "Unpublished")
+		files, keep = collect_content_plan()
+		path = "content/publications/live-then-pulled.md"
+		self.assertNotIn(path, dict(files))
+		self.assertNotIn(path, keep)
+
+	def test_unpublished_team_member_is_written_inactive(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Team Member",
+				"member_name": "Hidden Editor",
+				"role": "Editor",
+				"status": "Published",
+				"sort_order": 40,
+			}
+		).insert(ignore_permissions=True)
+		doc.unpublish = 1
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "Unpublished")
+		files, _keep = collect_content_plan()
+		path = "content/team/hidden-editor.md"
+		self.assertIn(path, dict(files))
+		self.assertFalse(parse_frontmatter(dict(files)[path])["active"])
+
+	def test_draft_home_edits_are_kept_not_written(self):
+		home = frappe.get_single("Home Page")
+		home.hero_title = "Draft hero title"
+		home.status = "Draft"
+		home.unpublish = 0
+		home.save(ignore_permissions=True)
+		try:
+			files, keep = collect_content_plan()
+			self.assertNotIn("content/homepage/home.md", dict(files))
+			self.assertIn("content/homepage/home.md", keep)
+		finally:
+			home.status = "Published"
+			home.save(ignore_permissions=True)

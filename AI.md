@@ -58,7 +58,7 @@ Merge the PR on GitHub, then delete the feature branch (remotely and locally).
 
 ## Public site
 
-Opero Site DocTypes load and publish Markdown in `opero-con/opero-content`. Set `opero_content_github_token` in `site_config.json` (optional `opero_content_repo`, `opero_content_base_branch`). Desk sidebar: Opero Website. Publisher lists files due for publish and the last ten GitHub commit links; Publish to website lives there. Load from website content stays on Site Settings. Load upserts by slug and does not delete extra local team members. Publish commits to `main`; cubenet is the approval. Token needs Contents read/write on `opero-content` (no Pull requests). Do not put the token in git.
+Opero Site DocTypes load and publish Markdown in `opero-con/opero-content`. Set `opero_content_github_token` in `site_config.json` (optional `opero_content_repo`, `opero_content_base_branch`). Desk sidebar: Opero Website. Publisher lists files due for publish and the last ten GitHub commit links; Publish to website lives there. Load from website content stays on Site Settings. Load upserts by slug and does not delete extra local team members. New publications and team members start as Draft so Cubenet can edit without pushing. Status Published includes the record in the next Publish; Unpublish takes it off the public site without deleting the Cubenet record. Drafts keep the live GitHub file unchanged. Publish commits to `main`; cubenet is the approval. Token needs Contents read/write on `opero-content` (no Pull requests). Do not put the token in git.
 
 
 ---

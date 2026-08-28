@@ -7,7 +7,6 @@ from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.load import load_files, slug_from_path
 from opero.opero_site.markdown import parse_frontmatter, to_markdown
 
-
 SETTINGS_MD = """---
 organizationName: Opero Services Ltd
 email: info@opero-services.com
@@ -175,6 +174,8 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(member.member_name, "Anita Onyango")
 		self.assertEqual(member.portrait, "/media/team/anita.jpg")
 		self.assertEqual(member.sort_order, 10)
+		self.assertEqual(member.status, "Published")
+		self.assertEqual(publication.status, "Published")
 
 	def test_load_maps_portfolio_type_to_overview(self):
 		load_files({"content/publications/opero-project-portfolio.md": PORTFOLIO_MD})
@@ -195,7 +196,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 				"doctype": "Team Member",
 				"member_name": "Local Only",
 				"role": "Editor",
-				"show_on_website": 0,
+				"status": "Draft",
 			}
 		).insert(ignore_permissions=True)
 		load_files({"content/team/anita-onyango.md": TEAM_MD})
@@ -247,3 +248,36 @@ class TestOperoSiteLoad(FrappeTestCase):
 	def test_markdown_roundtrip_parse(self):
 		text = to_markdown({"name": "Anita Onyango", "active": True, "order": 10})
 		self.assertEqual(parse_frontmatter(text), {"name": "Anita Onyango", "active": True, "order": 10})
+
+	def test_load_draft_publication_stays_draft(self):
+		load_files(
+			{
+				"content/publications/still-writing.md": """---
+title: Still Writing
+publishedAt: 2026-08-01
+type: Newsletter
+summary: Not ready for the public site.
+draft: true
+---
+"""
+			}
+		)
+		doc = frappe.get_doc("Publication", "still-writing")
+		self.assertEqual(doc.status, "Draft")
+		self.assertFalse(doc.unpublish)
+
+	def test_load_inactive_team_member_is_unpublished(self):
+		load_files(
+			{
+				"content/team/hidden-person.md": """---
+name: Hidden Person
+role: Editor
+order: 99
+active: false
+---
+"""
+			}
+		)
+		doc = frappe.get_doc("Team Member", "hidden-person")
+		self.assertEqual(doc.status, "Unpublished")
+		self.assertTrue(doc.unpublish)

@@ -5,6 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, flt
 
+from opero.opero_site.publish_status import PUBLISHED, apply_publish_status
 from opero.opero_site.utils import optional_url, slugify
 
 __all__ = ["TeamMember", "slugify"]
@@ -28,8 +29,7 @@ class TeamMember(Document):
 
 		self.role = cstr(self.role).strip()
 		self.linkedin = optional_url(self.linkedin, "LinkedIn URL")
-		if self.show_on_website is None:
-			self.show_on_website = 1
+		apply_publish_status(self)
 		self.sort_order = cint(self.sort_order)
 
 	def to_site_frontmatter(self) -> dict:
@@ -40,7 +40,7 @@ class TeamMember(Document):
 			"image": cstr(self.portrait),
 			"imageAlt": cstr(self.portrait_alt).strip(),
 			"order": cint(self.sort_order),
-			"active": bool(cint(self.show_on_website)),
+			"active": self.status == PUBLISHED,
 		}
 		if self.linkedin:
 			payload["linkedin"] = self.linkedin
