@@ -23,13 +23,33 @@ function renderHistory(frm) {
 	const items = rows
 		.map((row) => {
 			const when = frappe.datetime.str_to_user(row.published_on);
-			const url = frappe.utils.escape_html(row.commit_url || "");
 			const count = Number(row.file_count || 0);
 			const files = count === 1 ? __("1 file") : __("{0} files", [count]);
-			return `<li>${frappe.utils.escape_html(when)} · ${files} · <a href="${url}" target="_blank" rel="noopener">${url}</a></li>`;
+			return `<li>${frappe.utils.escape_html(when)} · ${files} · ${commitLink(row.commit_url, row.sha)}</li>`;
 		})
 		.join("");
 	wrap.html(`<ol>${items}</ol>`);
+}
+
+function shortSha(sha, url) {
+	const fromSha = String(sha || "").trim();
+	if (fromSha) {
+		return fromSha.slice(0, 7);
+	}
+	const path = String(url || "").split("/").pop() || "";
+	return path.slice(0, 7);
+}
+
+function commitLink(url, sha) {
+	const href = frappe.utils.escape_html(url || "");
+	const abbrev = shortSha(sha, url);
+	const label = frappe.utils.escape_html(
+		abbrev ? __("commit {0}", [abbrev]) : __("commit")
+	);
+	if (!href || !abbrev) {
+		return label;
+	}
+	return `<a href="${href}" target="_blank" rel="noopener">${label}</a>`;
 }
 
 function setBusy(frm, busy) {
@@ -133,12 +153,7 @@ function publishWebsite(frm) {
 				frappe.msgprint({
 					title: __("Published to website"),
 					indicator: "green",
-					message: __(
-						"Committed {0}",
-						[
-							`<a href="${frappe.utils.escape_html(payload.commit_url)}" target="_blank" rel="noopener">${frappe.utils.escape_html(payload.commit_url)}</a>`,
-						]
-					),
+					message: commitLink(payload.commit_url, payload.sha),
 				});
 				frm.reload_doc();
 				return;
