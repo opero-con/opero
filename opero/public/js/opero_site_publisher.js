@@ -23,12 +23,26 @@ function renderHistory(frm) {
 	const items = rows
 		.map((row) => {
 			const when = frappe.datetime.str_to_user(row.published_on);
+			const who = publishedByLabel(row.published_by);
 			const count = Number(row.file_count || 0);
 			const files = count === 1 ? __("1 file") : __("{0} files", [count]);
-			return `<li>${frappe.utils.escape_html(when)} · ${files} · ${commitLink(row.commit_url, row.sha)}</li>`;
+			const parts = [frappe.utils.escape_html(when)];
+			if (who) {
+				parts.push(frappe.utils.escape_html(who));
+			}
+			parts.push(frappe.utils.escape_html(files));
+			parts.push(commitLink(row.commit_url, row.sha));
+			return `<li>${parts.join(" · ")}</li>`;
 		})
 		.join("");
 	wrap.html(`<ol>${items}</ol>`);
+}
+
+function publishedByLabel(user) {
+	if (!user) {
+		return "";
+	}
+	return (frappe.user_info(user) || {}).fullname || user;
 }
 
 function shortSha(sha, url) {
