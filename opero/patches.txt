@@ -72,3 +72,4 @@ opero.patches.v0_4.rename_publication_portfolio_to_overview
 opero.patches.v0_4.reload_opero_website_workspace
 opero.patches.v0_4.backfill_opero_site_publish_status
 opero.patches.v0_4.convert_publication_body_to_html
+opero.patches.v0_4.seed_publication_topics

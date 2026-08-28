@@ -1,5 +1,9 @@
 frappe.ui.form.on("Publication", {
 	setup(frm) {
+		const topics = frm.get_field("topics");
+		if (topics) {
+			topics.df.ignore_link_validation = true;
+		}
 		const field = frm.get_field("body");
 		if (!field) {
 			return;

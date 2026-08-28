@@ -173,6 +173,9 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(doc.slug, "january-2025-update")
 		self.assertEqual(doc.name, "january-2025-update")
 		self.assertEqual(doc.year, 2025)
+		self.assertTrue(frappe.db.exists("Publication Topic", "Company update"))
+		self.assertTrue(frappe.db.exists("Publication Topic", "Projects"))
+		self.assertEqual([row.topic for row in doc.topics], ["Company update", "Projects"])
 		self.assertEqual(
 			doc.to_site_frontmatter(),
 			{

@@ -205,7 +205,7 @@
   },
   {
    "fieldname": "topics",
-   "fieldtype": "Table",
+   "fieldtype": "Table MultiSelect",
    "label": "Topics",
    "options": "Topic"
   },
@@ -228,7 +228,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-28 22:35:00.000000",
+ "modified": "2026-08-28 22:45:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
