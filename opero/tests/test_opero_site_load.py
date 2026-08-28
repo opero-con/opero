@@ -85,6 +85,33 @@ body:
 ---
 """
 
+PORTFOLIO_MD = """---
+slug: opero-project-portfolio
+title: Opero Project Portfolio
+publishedAt: 2023-01-01
+type: Portfolio
+topics:
+  - Enterprise support
+summary: A 22-page overview of Opero's programmes.
+featured: true
+fileUrl: /downloads/opero-project-portfolio.pdf
+---
+"""
+
+OVERVIEW_PAGE_MD = """---
+slug: pupu-pump
+title: PuPu Pump
+publishedAt: 2026-07-10
+type: Overview
+serviceArea: WASH innovation
+topics:
+  - PuPu Pump
+  - Pit emptying
+summary: A portable push-pull sanitation pump for pit-latrine emptying.
+pageUrl: /pupu-pump.html
+---
+"""
+
 TEAM_MD = """---
 name: Anita Onyango
 role: Communications
@@ -148,6 +175,19 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(member.member_name, "Anita Onyango")
 		self.assertEqual(member.portrait, "/media/team/anita.jpg")
 		self.assertEqual(member.sort_order, 10)
+
+	def test_load_maps_portfolio_type_to_overview(self):
+		load_files({"content/publications/opero-project-portfolio.md": PORTFOLIO_MD})
+		doc = frappe.get_doc("Publication", "opero-project-portfolio")
+		self.assertEqual(doc.publication_type, "Overview")
+		self.assertEqual(doc.to_site_frontmatter()["type"], "Overview")
+
+	def test_load_maps_overview_page_url(self):
+		load_files({"content/publications/pupu-pump.md": OVERVIEW_PAGE_MD})
+		doc = frappe.get_doc("Publication", "pupu-pump")
+		self.assertEqual(doc.publication_type, "Overview")
+		self.assertEqual(doc.page_url, "/pupu-pump.html")
+		self.assertEqual(doc.to_site_frontmatter()["pageUrl"], "/pupu-pump.html")
 
 	def test_load_keeps_extra_local_team_members(self):
 		frappe.get_doc(
