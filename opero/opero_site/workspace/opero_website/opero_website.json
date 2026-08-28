@@ -6,7 +6,7 @@
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
- "hide_custom": 0,
+ "hide_custom": 1,
  "icon": "website",
  "idx": 0,
  "is_hidden": 0,
@@ -89,7 +89,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-08-26 23:20:00.000000",
+ "modified": "2026-08-28 09:15:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Opero Website",
@@ -102,6 +102,9 @@
  "roles": [
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Website Manager"
   }
  ],
  "sequence_id": 15.0,

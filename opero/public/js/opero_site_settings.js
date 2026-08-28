@@ -1,6 +1,6 @@
 frappe.ui.form.on("Site Settings", {
 	refresh(frm) {
-		if (!frappe.user.has_role("System Manager")) {
+		if (!frm.has_perm("write")) {
 			return;
 		}
 		frm.add_custom_button(
