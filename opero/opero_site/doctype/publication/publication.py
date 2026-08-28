@@ -5,7 +5,13 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, getdate
 
-from opero.opero_site.utils import body_sections, optional_url, slugify
+from opero.opero_site.utils import (
+	PUBLICATION_TYPES,
+	body_sections,
+	normalize_publication_type,
+	optional_url,
+	slugify,
+)
 
 
 class Publication(Document):
@@ -20,7 +26,11 @@ class Publication(Document):
 		self.slug = slugify(self.slug or self.title)
 		if not self.slug:
 			frappe.throw(_("Slug must contain at least one letter or number."))
+		self.publication_type = normalize_publication_type(self.publication_type)
+		if self.publication_type not in PUBLICATION_TYPES:
+			frappe.throw(_("Type must be Case study, Digest, Newsletter, Overview, or Project."))
 		self.file_url = optional_url(self.file_url, "File URL")
+		self.page_url = optional_url(self.page_url, "Page URL")
 		self.external_url = optional_url(self.external_url, "External URL")
 		self.video_embed_url = optional_url(self.video_embed_url, "Embed URL")
 		if self.video_embed_url and not cstr(self.video_title).strip():
@@ -49,6 +59,8 @@ class Publication(Document):
 			payload["coverAlt"] = cstr(self.cover_alt).strip()
 		if self.file_url:
 			payload["fileUrl"] = self.file_url
+		if self.page_url:
+			payload["pageUrl"] = self.page_url
 		if self.external_url:
 			payload["externalUrl"] = self.external_url
 		if self.video_embed_url:

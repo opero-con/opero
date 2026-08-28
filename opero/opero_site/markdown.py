@@ -301,6 +301,8 @@ def _canonical_publication(data: dict, slug: str) -> dict:
 		payload["coverAlt"] = _text(data.get("coverAlt"))
 	if data.get("fileUrl"):
 		payload["fileUrl"] = _text(data.get("fileUrl"))
+	if data.get("pageUrl"):
+		payload["pageUrl"] = _text(data.get("pageUrl"))
 	if data.get("externalUrl"):
 		payload["externalUrl"] = _text(data.get("externalUrl"))
 	video_in = data.get("video") or {}

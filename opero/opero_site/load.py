@@ -7,6 +7,7 @@ from frappe.utils import cint, cstr, flt, getdate
 from opero.opero_site.github import GithubError
 from opero.opero_site.markdown import parse_frontmatter
 from opero.opero_site.publish import content_repo_from_conf
+from opero.opero_site.utils import normalize_publication_type
 
 
 def slug_from_path(path: str) -> str:
@@ -147,13 +148,14 @@ def apply_publication(doc, data: dict, slug: str):
 	doc.published_on = getdate(published_on) if published_on else None
 	year = data.get("year")
 	doc.year = cint(year) if year not in (None, "") else None
-	doc.publication_type = _text(data.get("type"))
+	doc.publication_type = normalize_publication_type(data.get("type"))
 	doc.service_area = _text(data.get("serviceArea"))
 	doc.featured = 1 if data.get("featured") else 0
 	doc.summary = _text(data.get("summary"))
 	doc.cover = _text(data.get("cover"))
 	doc.cover_alt = _text(data.get("coverAlt"))
 	doc.file_url = _text(data.get("fileUrl"))
+	doc.page_url = _text(data.get("pageUrl"))
 	doc.external_url = _text(data.get("externalUrl"))
 	doc.video_embed_url = _text(video.get("embedUrl"))
 	doc.video_title = _text(video.get("title"))

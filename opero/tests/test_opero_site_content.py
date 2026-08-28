@@ -4,7 +4,7 @@ import frappe
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
 
-from opero.opero_site.utils import parse_links, slugify
+from opero.opero_site.utils import normalize_publication_type, parse_links, slugify
 
 
 class TestOperoSiteContent(FrappeTestCase):
@@ -14,6 +14,11 @@ class TestOperoSiteContent(FrappeTestCase):
 	def test_slugify_matches_content_filenames(self):
 		self.assertEqual(slugify("January 2025 Update"), "january-2025-update")
 		self.assertEqual(slugify("PuPu Pump Digest: Tackling Trash"), "pupu-pump-digest-tackling-trash")
+
+	def test_normalize_publication_type_maps_portfolio_to_overview(self):
+		self.assertEqual(normalize_publication_type("Portfolio"), "Overview")
+		self.assertEqual(normalize_publication_type("Project"), "Project")
+		self.assertEqual(normalize_publication_type(" Case study "), "Case study")
 
 	def test_parse_links_requires_label_and_url(self):
 		self.assertEqual(
@@ -229,15 +234,102 @@ class TestOperoSiteContent(FrappeTestCase):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Publication",
-				"title": "Portfolio Path",
+				"title": "Overview Path",
 				"published_on": "2023-01-01",
-				"publication_type": "Portfolio",
+				"publication_type": "Overview",
 				"summary": "Relative download path from opero-content.",
 				"file_url": "/downloads/opero-project-portfolio.pdf",
 			}
 		)
 		doc.insert(ignore_permissions=True)
 		self.assertEqual(doc.file_url, "/downloads/opero-project-portfolio.pdf")
+		self.assertEqual(doc.publication_type, "Overview")
+		self.assertEqual(doc.to_site_frontmatter()["type"], "Overview")
+		self.assertNotIn("pageUrl", doc.to_site_frontmatter())
+
+	def test_publication_overview_page_url_opens_technology_page(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "PuPu Pump",
+				"published_on": "2026-07-10",
+				"publication_type": "Overview",
+				"service_area": "WASH innovation",
+				"summary": "A portable push-pull sanitation pump for pit-latrine emptying.",
+				"page_url": "/pupu-pump.html",
+				"topics": [{"topic": "PuPu Pump"}, {"topic": "Pit emptying"}],
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.assertEqual(doc.slug, "pupu-pump")
+		self.assertEqual(doc.page_url, "/pupu-pump.html")
+		self.assertEqual(
+			doc.to_site_frontmatter()["pageUrl"],
+			"/pupu-pump.html",
+		)
+
+	def test_publication_portfolio_alias_saves_as_overview(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Opero Project Portfolio",
+				"published_on": "2023-01-01",
+				"publication_type": "Portfolio",
+				"summary": "Shareable PDF previously typed Portfolio.",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.assertEqual(doc.publication_type, "Overview")
+		self.assertEqual(doc.to_site_frontmatter()["type"], "Overview")
+
+	def test_publication_rejects_unknown_type(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Unknown Type",
+				"published_on": "2025-01-01",
+				"publication_type": "White paper",
+				"summary": "Should not save.",
+			}
+		)
+		with self.assertRaises(ValidationError):
+			doc.insert(ignore_permissions=True)
+
+	def test_publication_project_with_results_body(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "WAKE UP Accelerator programme",
+				"published_on": "2022-12-15",
+				"publication_type": "Project",
+				"service_area": "WASH enterprise",
+				"summary": "A sector-specific accelerator for WASH businesses in Kenya.",
+				"body": [
+					{
+						"paragraphs": "This work ran from 2021 to 2022.",
+					},
+					{
+						"heading": "Results",
+						"bullets": "13 WASH businesses trained\n$500,000 raised to support the 2021 cohort",
+					},
+				],
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.assertEqual(doc.publication_type, "Project")
+		self.assertEqual(
+			doc.to_site_frontmatter()["body"],
+			[
+				{"paragraphs": ["This work ran from 2021 to 2022."]},
+				{
+					"heading": "Results",
+					"bullets": [
+						"13 WASH businesses trained",
+						"$500,000 raised to support the 2021 cohort",
+					],
+				},
+			],
+		)
 
 	def test_privacy_frontmatter_matches_privacy_collection(self):
 		doc = frappe.get_single("Privacy")

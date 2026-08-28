@@ -25,6 +25,7 @@
   "cover",
   "cover_alt",
   "file_url",
+  "page_url",
   "external_url",
   "section_video",
   "video_embed_url",
@@ -83,7 +84,8 @@
    "label": "Type",
    "reqd": 1,
    "in_list_view": 1,
-   "options": "Case study\nDigest\nNewsletter\nPortfolio"
+   "options": "Case study\nDigest\nNewsletter\nOverview\nProject",
+   "description": "Case study, Digest, Newsletter, Overview (product page or shareable PDF), or Project (short work record). Put outcome bullets in a body section headed Results."
   },
   {
    "fieldname": "column_break_service",
@@ -133,6 +135,13 @@
    "label": "File URL",
    "options": "URL",
    "description": "Link to a downloadable file such as a PDF."
+  },
+  {
+   "fieldname": "page_url",
+   "fieldtype": "Data",
+   "label": "Page URL",
+   "options": "URL",
+   "description": "Internal page this card should open instead of a publication article, such as /pupu-pump.html."
   },
   {
    "fieldname": "external_url",
@@ -191,7 +200,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-25 12:35:00.000000",
+ "modified": "2026-08-28 08:45:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

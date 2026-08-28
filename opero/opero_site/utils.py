@@ -8,6 +8,23 @@ from frappe.utils import cstr
 
 _PUBLIC_URL = re.compile(r"^https?://\S+\.\S+")
 
+PUBLICATION_TYPES = (
+	"Case study",
+	"Digest",
+	"Newsletter",
+	"Overview",
+	"Project",
+)
+
+PUBLICATION_TYPE_ALIASES = {
+	"Portfolio": "Overview",
+}
+
+
+def normalize_publication_type(value: str) -> str:
+	trimmed = cstr(value).strip()
+	return PUBLICATION_TYPE_ALIASES.get(trimmed, trimmed)
+
 
 def slugify(text: str) -> str:
 	value = cstr(text).strip().lower()
