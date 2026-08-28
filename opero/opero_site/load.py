@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, cstr, flt, getdate
 
+from opero.opero_site.body_html import body_sections_to_html
 from opero.opero_site.github import GithubError
 from opero.opero_site.markdown import parse_frontmatter
 from opero.opero_site.publish import content_repo_from_conf
@@ -177,17 +178,7 @@ def apply_publication(doc, data: dict, slug: str):
 	for topic in data.get("topics") or []:
 		if _text(topic):
 			doc.append("topics", {"topic": _text(topic)})
-	doc.set("body", [])
-	for row in data.get("body") or []:
-		doc.append(
-			"body",
-			{
-				"heading": _text(row.get("heading")),
-				"paragraphs": _join_paragraphs(row.get("paragraphs")),
-				"bullets": _join_lines(row.get("bullets")),
-				"links": _join_links(row.get("links")),
-			},
-		)
+	doc.body = body_sections_to_html(data.get("body"))
 
 
 def apply_team_member(doc, data: dict, slug: str):

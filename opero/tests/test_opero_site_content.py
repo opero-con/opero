@@ -4,6 +4,7 @@ import frappe
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
 
+from opero.opero_site.body_html import body_sections_to_html, html_to_body_sections
 from opero.opero_site.utils import normalize_publication_type, parse_links, slugify
 
 
@@ -159,14 +160,13 @@ class TestOperoSiteContent(FrappeTestCase):
 				"summary": "A recap of Opero's late-2024 work.",
 				"featured": 1,
 				"topics": [{"topic": "Company update"}, {"topic": "Projects"}],
-				"body": [
-					{
-						"heading": "What we learned",
-						"paragraphs": "First paragraph.\n\nSecond paragraph.",
-						"bullets": "Trash in pits\nThick sludge",
-						"links": "Portfolio PDF | https://opero-services.com/downloads/portfolio.pdf",
-					}
-				],
+				"body": (
+					"<h2>What we learned</h2>"
+					"<p>First paragraph.</p>"
+					"<p>Second paragraph.</p>"
+					"<ul><li>Trash in pits</li><li>Thick sludge</li></ul>"
+					'<p><a href="https://opero-services.com/downloads/portfolio.pdf">Portfolio PDF</a></p>'
+				),
 			}
 		)
 		doc.insert(ignore_permissions=True)
@@ -304,15 +304,12 @@ class TestOperoSiteContent(FrappeTestCase):
 				"publication_type": "Project",
 				"service_area": "WASH enterprise",
 				"summary": "A sector-specific accelerator for WASH businesses in Kenya.",
-				"body": [
-					{
-						"paragraphs": "This work ran from 2021 to 2022.",
-					},
-					{
-						"heading": "Results",
-						"bullets": "13 WASH businesses trained\n$500,000 raised to support the 2021 cohort",
-					},
-				],
+				"body": (
+					"<p>This work ran from 2021 to 2022.</p>"
+					"<h2>Results</h2>"
+					"<ul><li>13 WASH businesses trained</li>"
+					"<li>$500,000 raised to support the 2021 cohort</li></ul>"
+				),
 			}
 		)
 		doc.insert(ignore_permissions=True)
@@ -355,3 +352,53 @@ class TestOperoSiteContent(FrappeTestCase):
 				],
 			},
 		)
+
+
+class TestPublicationBodyHtml(FrappeTestCase):
+	def test_html_roundtrip_matches_frontmatter_body(self):
+		sections = [
+			{
+				"heading": "What we learned",
+				"paragraphs": ["First paragraph.", "Second paragraph."],
+				"bullets": ["Trash in pits", "Thick sludge"],
+				"links": [
+					{
+						"label": "Portfolio PDF",
+						"href": "https://opero-services.com/downloads/portfolio.pdf",
+					}
+				],
+			}
+		]
+		html = body_sections_to_html(sections)
+		self.assertEqual(html_to_body_sections(html), sections)
+
+	def test_html_empty_editor_is_omitted(self):
+		self.assertEqual(html_to_body_sections("<p><br></p>"), [])
+		self.assertEqual(body_sections_to_html([]), "")
+
+	def test_html_standalone_link_becomes_section_button(self):
+		html = (
+			"<h2>Takeaway</h2><p>Read more below.</p>"
+			'<p><a href="/pupu-pump.html">Explore the PuPu Pump</a></p>'
+		)
+		self.assertEqual(
+			html_to_body_sections(html),
+			[
+				{
+					"heading": "Takeaway",
+					"paragraphs": ["Read more below."],
+					"links": [{"label": "Explore the PuPu Pump", "href": "/pupu-pump.html"}],
+				}
+			],
+		)
+
+	def test_html_inline_link_stays_in_paragraph_text(self):
+		html = '<p>See the <a href="/pupu-pump.html">PuPu Pump</a> page.</p>'
+		self.assertEqual(
+			html_to_body_sections(html),
+			[{"paragraphs": ["See the PuPu Pump page."]}],
+		)
+
+	def test_html_rejects_invalid_link_url(self):
+		with self.assertRaises(ValidationError):
+			html_to_body_sections('<p><a href="example.com/file.pdf">Download</a></p>')

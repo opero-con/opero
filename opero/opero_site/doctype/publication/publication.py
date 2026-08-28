@@ -5,10 +5,10 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, getdate
 
+from opero.opero_site.body_html import html_to_body_sections
 from opero.opero_site.publish_status import apply_publish_status
 from opero.opero_site.utils import (
 	PUBLICATION_TYPES,
-	body_sections,
 	normalize_publication_type,
 	optional_url,
 	slugify,
@@ -39,7 +39,7 @@ class Publication(Document):
 			frappe.throw(_("Accessible title is required when an embed URL is set."))
 		if self.published_on:
 			self.year = getdate(self.published_on).year
-		body_sections(self.body)
+		html_to_body_sections(self.body)
 
 	def to_site_frontmatter(self) -> dict:
 		payload = {
@@ -72,7 +72,7 @@ class Publication(Document):
 			}
 			if self.video_caption:
 				payload["video"]["caption"] = cstr(self.video_caption).strip()
-		body = body_sections(self.body)
+		body = html_to_body_sections(self.body)
 		if body:
 			payload["body"] = body
 		return payload

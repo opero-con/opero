@@ -116,7 +116,7 @@
    "reqd": 1,
    "in_list_view": 1,
    "options": "Case study\nDigest\nNewsletter\nOverview\nProject",
-   "description": "Case study, Digest, Newsletter, Overview (product page or shareable PDF), or Project (short work record). Put outcome bullets in a body section headed Results."
+   "description": "Case study, Digest, Newsletter, Overview (product page or shareable PDF), or Project (short work record). Put outcome bullets under a heading named Results."
   },
   {
    "fieldname": "column_break_service",
@@ -218,10 +218,10 @@
    "label": "Body"
   },
   {
+   "description": "Use headings for sections, lists for bullets, and a link on its own line for a button on the public page.",
    "fieldname": "body",
-   "fieldtype": "Table",
-   "label": "Body",
-   "options": "Body Section"
+   "fieldtype": "Text Editor",
+   "label": "Body"
   }
  ],
  "issingle": 0,
@@ -231,7 +231,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-28 11:00:00.000000",
+ "modified": "2026-08-28 11:45:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

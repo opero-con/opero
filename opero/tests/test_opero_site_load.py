@@ -168,7 +168,19 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(publication.year, 2025)
 		self.assertEqual(publication.publication_type, "Newsletter")
 		self.assertEqual(publication.file_url, "/downloads/january-2025-update.pdf")
-		self.assertEqual(publication.body[0].paragraphs, "First paragraph.\n\nSecond paragraph.")
+		self.assertEqual(
+			publication.body,
+			"<h2>What we learned</h2><p>First paragraph.</p><p>Second paragraph.</p>",
+		)
+		self.assertEqual(
+			publication.to_site_frontmatter()["body"],
+			[
+				{
+					"heading": "What we learned",
+					"paragraphs": ["First paragraph.", "Second paragraph."],
+				}
+			],
+		)
 
 		member = frappe.get_doc("Team Member", "anita-onyango")
 		self.assertEqual(member.member_name, "Anita Onyango")
