@@ -76,8 +76,9 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
+   "description": "Takes effect on the next Publish to website.",
    "label": "Status",
-   "options": "Draft\nPublished\nUnpublished",
+   "options": "Draft\nTo publish\nTo unpublish",
    "reqd": 1
   },
   {
@@ -161,7 +162,7 @@
  "links": [],
  "make_attachments_public": 0,
  "max_attachments": 1,
- "modified": "2026-08-28 11:00:00.000000",
+ "modified": "2026-08-28 23:10:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Team Member",

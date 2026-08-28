@@ -43,7 +43,7 @@ class TestTeamMember(FrappeTestCase):
 			role="Director",
 			linkedin="https://www.linkedin.com/in/anita-onyango",
 			sort_order=10,
-			status="Published",
+			status="To publish",
 			portrait_alt="Portrait of Anita Onyango",
 		)
 		doc.insert(ignore_permissions=True)
@@ -65,7 +65,7 @@ class TestTeamMember(FrappeTestCase):
 			"doctype": "Team Member",
 			"member_name": "Test Member",
 			"role": "Water Specialist",
-			"status": "Published",
+			"status": "To publish",
 			"sort_order": 10,
 		}
 		payload.update(fields)

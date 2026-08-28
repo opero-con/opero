@@ -6,7 +6,7 @@ from frappe.utils import now_datetime
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
-from opero.opero_site.publish_status import is_published, is_unpublished
+from opero.opero_site.publish_status import is_to_publish, is_to_unpublish
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
@@ -15,10 +15,10 @@ PUBLISH_LOG_LIMIT = 10
 
 
 def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
-	"""Published writes plus draft paths that must stay untouched on GitHub.
+	"""To-publish writes plus draft paths that must stay untouched on GitHub.
 
-	Unpublished publications are omitted so the next publish deletes them.
-	Unpublished team members are still written with `active: false`.
+	To-unpublish publications are omitted so the next publish deletes them.
+	To-unpublish team members are still written with `active: false`.
 	"""
 	files = []
 	keep = []
@@ -26,9 +26,9 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	def consider(path: str, doc, ready: bool, *, hide_when_unpublished: bool = False) -> None:
 		if not ready:
 			return
-		if is_published(doc) or (hide_when_unpublished and is_unpublished(doc)):
+		if is_to_publish(doc) or (hide_when_unpublished and is_to_unpublish(doc)):
 			files.append((path, to_markdown(doc.to_site_frontmatter())))
-		elif is_unpublished(doc):
+		elif is_to_unpublish(doc):
 			return
 		else:
 			keep.append(path)

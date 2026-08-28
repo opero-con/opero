@@ -5,7 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, flt
 
-from opero.opero_site.publish_status import PUBLISHED, apply_publish_status
+from opero.opero_site.publish_status import TO_PUBLISH, apply_publish_status
 from opero.opero_site.utils import optional_url, slugify
 
 __all__ = ["TeamMember", "slugify"]
@@ -40,7 +40,7 @@ class TeamMember(Document):
 			"image": cstr(self.portrait),
 			"imageAlt": cstr(self.portrait_alt).strip(),
 			"order": cint(self.sort_order),
-			"active": self.status == PUBLISHED,
+			"active": self.status == TO_PUBLISH,
 		}
 		if self.linkedin:
 			payload["linkedin"] = self.linkedin
