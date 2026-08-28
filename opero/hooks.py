@@ -89,6 +89,7 @@ doctype_js = {
 	"Work Hours Summary": "public/js/custom/work_hours_summary.js",
 	"Site Settings": "public/js/opero_site_settings.js",
 	"Publisher": "public/js/opero_site_publisher.js",
+	"Publication": "public/js/opero_site_publication.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
