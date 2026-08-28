@@ -22,11 +22,12 @@
    "label": "Publish"
   },
   {
-   "default": "Published",
+   "default": "To publish",
    "fieldname": "status",
    "fieldtype": "Select",
+   "description": "Takes effect on the next Publish to website.",
    "label": "Status",
-   "options": "Draft\nPublished\nUnpublished",
+   "options": "Draft\nTo publish\nTo unpublish",
    "reqd": 1
   },
   {
@@ -36,7 +37,7 @@
   {
    "default": "0",
    "depends_on": "eval:doc.status != 'Draft'",
-   "description": "Keep Cubenet edits off the public site until the next time this is Published.",
+   "description": "Take Cubenet edits off the public site on the next Publish.",
    "fieldname": "unpublish",
    "fieldtype": "Check",
    "label": "Unpublish"
@@ -61,7 +62,7 @@
  "module": "Opero Site",
  "name": "Privacy",
  "owner": "Administrator",
- "modified": "2026-08-28 11:00:00.000000",
+ "modified": "2026-08-28 23:10:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

@@ -165,7 +165,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"doctype": "Team Member",
 				"member_name": "Anita Onyango",
 				"role": "Communications",
-				"status": "Published",
+				"status": "To publish",
 				"sort_order": 10,
 			}
 		).insert(ignore_permissions=True)
@@ -335,6 +335,20 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertNotIn(path, dict(files))
 		self.assertIn(path, keep)
 
+	def test_legacy_published_status_becomes_to_publish(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Legacy Status",
+				"published_on": "2026-08-01",
+				"publication_type": "Newsletter",
+				"summary": "Old Published label should queue for the next publish.",
+				"status": "Published",
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(doc.status, "To publish")
+		self.assertFalse(doc.unpublish)
+
 	def test_unpublished_publication_is_omitted_for_delete(self):
 		doc = frappe.get_doc(
 			{
@@ -343,12 +357,12 @@ class TestOperoSitePublish(FrappeTestCase):
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
 				"summary": "Was live, now unpublished.",
-				"status": "Published",
+				"status": "To publish",
 			}
 		).insert(ignore_permissions=True)
 		doc.unpublish = 1
 		doc.save(ignore_permissions=True)
-		self.assertEqual(doc.status, "Unpublished")
+		self.assertEqual(doc.status, "To unpublish")
 		files, keep = collect_content_plan()
 		path = "content/publications/live-then-pulled.md"
 		self.assertNotIn(path, dict(files))
@@ -360,13 +374,13 @@ class TestOperoSitePublish(FrappeTestCase):
 				"doctype": "Team Member",
 				"member_name": "Hidden Editor",
 				"role": "Editor",
-				"status": "Published",
+				"status": "To publish",
 				"sort_order": 40,
 			}
 		).insert(ignore_permissions=True)
 		doc.unpublish = 1
 		doc.save(ignore_permissions=True)
-		self.assertEqual(doc.status, "Unpublished")
+		self.assertEqual(doc.status, "To unpublish")
 		files, _keep = collect_content_plan()
 		path = "content/team/hidden-editor.md"
 		self.assertIn(path, dict(files))
@@ -383,5 +397,5 @@ class TestOperoSitePublish(FrappeTestCase):
 			self.assertNotIn("content/homepage/home.md", dict(files))
 			self.assertIn("content/homepage/home.md", keep)
 		finally:
-			home.status = "Published"
+			home.status = "To publish"
 			home.save(ignore_permissions=True)

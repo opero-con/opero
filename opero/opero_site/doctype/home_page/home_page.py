@@ -3,13 +3,13 @@ from __future__ import annotations
 from frappe.model.document import Document
 from frappe.utils import cint, cstr
 
-from opero.opero_site.publish_status import PUBLISHED, apply_publish_status
+from opero.opero_site.publish_status import TO_PUBLISH, apply_publish_status
 from opero.opero_site.utils import lines, optional_url
 
 
 class HomePage(Document):
 	def validate(self):
-		apply_publish_status(self, default=PUBLISHED)
+		apply_publish_status(self, default=TO_PUBLISH)
 		for row in self.projects or []:
 			row.detail_url = optional_url(row.detail_url, "Detail URL")
 		for row in self.partners or []:
