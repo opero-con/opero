@@ -74,3 +74,4 @@ opero.patches.v0_4.backfill_opero_site_publish_status
 opero.patches.v0_4.convert_publication_body_to_html
 opero.patches.v0_4.seed_publication_topics
 opero.patches.v0_4.rename_opero_site_publish_status
+opero.patches.v0_4.add_show_on_website

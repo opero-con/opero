@@ -9,9 +9,9 @@
  "engine": "InnoDB",
  "field_order": [
   "section_publish",
+  "show_on_website",
+  "column_break_status",
   "status",
-  "column_break_unpublish",
-  "unpublish",
   "section_hero",
   "hero_eyebrow",
   "hero_title",
@@ -38,25 +38,25 @@
    "label": "Publish"
   },
   {
-   "default": "To publish",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "description": "To publish and To unpublish take effect on the next Publish to website. Publisher then sets Published or Unpublished.",
-   "label": "Status",
-   "options": "Draft\nTo publish\nPublished\nTo unpublish\nUnpublished",
-   "reqd": 1
+   "default": "1",
+   "description": "Takes effect on the next Publish to website.",
+   "fieldname": "show_on_website",
+   "fieldtype": "Check",
+   "label": "Show on website"
   },
   {
-   "fieldname": "column_break_unpublish",
+   "fieldname": "column_break_status",
    "fieldtype": "Column Break"
   },
   {
-   "default": "0",
-   "depends_on": "eval:doc.status != 'Draft'",
-   "description": "Take Cubenet edits off the public site on the next Publish.",
-   "fieldname": "unpublish",
-   "fieldtype": "Check",
-   "label": "Unpublish"
+   "default": "To publish",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "description": "Set by Show on website and Publish to website.",
+   "label": "Status",
+   "options": "Draft\nTo publish\nPublished\nTo unpublish\nUnpublished",
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "section_hero",
@@ -163,7 +163,7 @@
  "module": "Opero Site",
  "name": "Home Page",
  "owner": "Administrator",
- "modified": "2026-08-29 10:10:00.000000",
+ "modified": "2026-08-29 11:10:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

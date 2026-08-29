@@ -16,8 +16,8 @@
   "column_break_identity",
   "slug",
   "sort_order",
+  "show_on_website",
   "status",
-  "unpublish",
   "section_portrait",
   "portrait",
   "portrait_alt",
@@ -71,23 +71,23 @@
    "label": "Order"
   },
   {
+   "default": "0",
+   "description": "Takes effect on the next Publish to website.",
+   "fieldname": "show_on_website",
+   "fieldtype": "Check",
+   "label": "Show on website"
+  },
+  {
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "description": "To publish and To unpublish take effect on the next Publish to website. Publisher then sets Published or Unpublished.",
+   "description": "Set by Show on website and Publish to website.",
    "label": "Status",
    "options": "Draft\nTo publish\nPublished\nTo unpublish\nUnpublished",
+   "read_only": 1,
    "reqd": 1
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.status != 'Draft'",
-   "description": "Hide this person on the public site on the next Publish. The Cubenet record is kept.",
-   "fieldname": "unpublish",
-   "fieldtype": "Check",
-   "label": "Unpublish"
   },
   {
    "fieldname": "section_portrait",
@@ -162,7 +162,7 @@
  "links": [],
  "make_attachments_public": 0,
  "max_attachments": 1,
- "modified": "2026-08-29 10:10:00.000000",
+ "modified": "2026-08-29 11:10:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Team Member",

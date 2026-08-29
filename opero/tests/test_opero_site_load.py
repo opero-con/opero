@@ -189,7 +189,9 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(member.portrait, "/media/team/anita.jpg")
 		self.assertEqual(member.sort_order, 10)
 		self.assertEqual(member.status, "Published")
+		self.assertTrue(member.show_on_website)
 		self.assertEqual(publication.status, "Published")
+		self.assertTrue(publication.show_on_website)
 
 	def test_load_maps_portfolio_type_to_overview(self):
 		load_files({"content/publications/opero-project-portfolio.md": PORTFOLIO_MD})
@@ -278,7 +280,7 @@ draft: true
 		)
 		doc = frappe.get_doc("Publication", "still-writing")
 		self.assertEqual(doc.status, "Draft")
-		self.assertFalse(doc.unpublish)
+		self.assertFalse(doc.show_on_website)
 
 	def test_load_inactive_team_member_is_unpublished(self):
 		load_files(
@@ -294,4 +296,4 @@ active: false
 		)
 		doc = frappe.get_doc("Team Member", "hidden-person")
 		self.assertEqual(doc.status, "Unpublished")
-		self.assertTrue(doc.unpublish)
+		self.assertFalse(doc.show_on_website)
