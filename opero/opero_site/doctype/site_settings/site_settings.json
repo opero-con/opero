@@ -37,9 +37,9 @@
    "default": "To publish",
    "fieldname": "status",
    "fieldtype": "Select",
-   "description": "Takes effect on the next Publish to website.",
+   "description": "To publish and To unpublish take effect on the next Publish to website. Publisher then sets Published or Unpublished.",
    "label": "Status",
-   "options": "Draft\nTo publish\nTo unpublish",
+   "options": "Draft\nTo publish\nPublished\nTo unpublish\nUnpublished",
    "reqd": 1
   },
   {
@@ -145,7 +145,7 @@
  "module": "Opero Site",
  "name": "Site Settings",
  "owner": "Administrator",
- "modified": "2026-08-28 23:10:00.000000",
+ "modified": "2026-08-29 10:10:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
@@ -182,8 +182,16 @@
    "title": "Draft"
   },
   {
+   "color": "Blue",
+   "title": "To publish"
+  },
+  {
    "color": "Green",
    "title": "Published"
+  },
+  {
+   "color": "Red",
+   "title": "To unpublish"
   },
   {
    "color": "Gray",

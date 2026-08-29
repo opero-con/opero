@@ -8,7 +8,7 @@ from opero.opero_site.body_html import body_sections_to_html
 from opero.opero_site.github import GithubError
 from opero.opero_site.markdown import parse_frontmatter
 from opero.opero_site.publish import content_repo_from_conf
-from opero.opero_site.publish_status import DRAFT, TO_PUBLISH, TO_UNPUBLISH
+from opero.opero_site.publish_status import DRAFT, PUBLISHED, UNPUBLISHED
 from opero.opero_site.utils import normalize_publication_type
 
 
@@ -60,7 +60,7 @@ def apply_settings(doc, data: dict):
 	doc.seo_description = _text(seo.get("description"))
 	doc.canonical_url = _text(seo.get("canonicalUrl"))
 	doc.og_image = _text(seo.get("ogImage"))
-	doc.status = TO_PUBLISH
+	doc.status = PUBLISHED
 	doc.unpublish = 0
 	doc.set("offices", [])
 	for office in data.get("offices") or []:
@@ -85,7 +85,7 @@ def apply_home(doc, data: dict):
 	doc.hero_image = _text(hero.get("image"))
 	doc.hero_image_alt = _text(hero.get("imageAlt"))
 	doc.about_title = _text(about.get("title"))
-	doc.status = TO_PUBLISH
+	doc.status = PUBLISHED
 	doc.unpublish = 0
 	doc.set("about_paragraphs", [])
 	for paragraph in about.get("paragraphs") or []:
@@ -133,7 +133,7 @@ def apply_home(doc, data: dict):
 def apply_privacy(doc, data: dict):
 	reviewed = data.get("lastReviewed")
 	doc.last_reviewed = getdate(reviewed) if reviewed else None
-	doc.status = TO_PUBLISH
+	doc.status = PUBLISHED
 	doc.unpublish = 0
 	doc.set("sections", [])
 	for row in data.get("sections") or []:
@@ -172,7 +172,7 @@ def apply_publication(doc, data: dict, slug: str):
 		doc.status = DRAFT
 		doc.unpublish = 0
 	else:
-		doc.status = TO_PUBLISH
+		doc.status = PUBLISHED
 		doc.unpublish = 0
 	doc.set("topics", [])
 	for topic in data.get("topics") or []:
@@ -188,10 +188,10 @@ def apply_team_member(doc, data: dict, slug: str):
 	doc.slug = slug
 	doc.sort_order = cint(data.get("order"))
 	if active is False:
-		doc.status = TO_UNPUBLISH
+		doc.status = UNPUBLISHED
 		doc.unpublish = 1
 	else:
-		doc.status = TO_PUBLISH
+		doc.status = PUBLISHED
 		doc.unpublish = 0
 	doc.portrait = _text(data.get("image"))
 	doc.portrait_alt = _text(data.get("imageAlt"))
