@@ -35,3 +35,8 @@
 .opero-hours-summary__meta strong {
   font-weight: 600;
 }
+
+select[data-fieldname="status"] option[value="Published"],
+select[data-fieldname="status"] option[value="Unpublished"] {
+  display: none;
+}

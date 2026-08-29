@@ -32,6 +32,11 @@ class TestTeamMember(FrappeTestCase):
 		self.assertEqual(doc.status, "Draft")
 		self.assertFalse(doc.unpublish)
 
+	def test_published_team_member_is_active(self):
+		doc = self._member(status="Published")
+		doc.insert(ignore_permissions=True)
+		self.assertTrue(doc.to_site_frontmatter()["active"])
+
 	def test_linkedin_must_be_full_url(self):
 		doc = self._member(linkedin="linkedin.com/in/nicolagreene")
 		with self.assertRaises(ValidationError):

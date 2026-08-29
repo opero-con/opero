@@ -13,6 +13,7 @@ from opero.opero_site.publish import (
 	collect_content_plan,
 	pending_entries,
 	record_publish,
+	settle_publish_statuses,
 )
 from opero.tests.test_opero_site_load import HOME_MD, PRIVACY_MD, SETTINGS_MD, TEAM_MD
 
@@ -335,19 +336,23 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertNotIn(path, dict(files))
 		self.assertIn(path, keep)
 
-	def test_legacy_published_status_becomes_to_publish(self):
+	def test_published_publication_is_written(self):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Publication",
-				"title": "Legacy Status",
+				"title": "Already Live",
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
-				"summary": "Old Published label should queue for the next publish.",
+				"summary": "Published stays on-site and is included in the next write.",
 				"status": "Published",
 			}
 		).insert(ignore_permissions=True)
-		self.assertEqual(doc.status, "To publish")
+		self.assertEqual(doc.status, "Published")
 		self.assertFalse(doc.unpublish)
+		files, keep = collect_content_plan()
+		path = "content/publications/already-live.md"
+		self.assertIn(path, dict(files))
+		self.assertNotIn(path, keep)
 
 	def test_unpublished_publication_is_omitted_for_delete(self):
 		doc = frappe.get_doc(
@@ -385,6 +390,45 @@ class TestOperoSitePublish(FrappeTestCase):
 		path = "content/team/hidden-editor.md"
 		self.assertIn(path, dict(files))
 		self.assertFalse(parse_frontmatter(dict(files)[path])["active"])
+
+	def test_publish_settles_to_publish_to_published(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Ready Newsletter",
+				"published_on": "2026-08-01",
+				"publication_type": "Newsletter",
+				"summary": "Queued, then Publisher marks it live.",
+				"status": "To publish",
+			}
+		).insert(ignore_permissions=True)
+		settle_publish_statuses()
+		doc.reload()
+		self.assertEqual(doc.status, "Published")
+		self.assertFalse(doc.unpublish)
+
+	def test_publish_settles_to_unpublish_to_unpublished(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Take Me Down",
+				"published_on": "2026-08-01",
+				"publication_type": "Newsletter",
+				"summary": "Queued to come off, then Publisher marks it unpublished.",
+				"status": "To publish",
+			}
+		).insert(ignore_permissions=True)
+		doc.unpublish = 1
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "To unpublish")
+		settle_publish_statuses()
+		doc.reload()
+		self.assertEqual(doc.status, "Unpublished")
+		self.assertTrue(doc.unpublish)
+		files, keep = collect_content_plan()
+		path = "content/publications/take-me-down.md"
+		self.assertNotIn(path, dict(files))
+		self.assertNotIn(path, keep)
 
 	def test_draft_home_edits_are_kept_not_written(self):
 		home = frappe.get_single("Home Page")

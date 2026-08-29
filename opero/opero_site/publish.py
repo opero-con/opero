@@ -6,19 +6,30 @@ from frappe.utils import now_datetime
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
-from opero.opero_site.publish_status import is_to_publish, is_to_unpublish
+from opero.opero_site.publish_status import (
+	PUBLISHED,
+	TO_PUBLISH,
+	TO_UNPUBLISH,
+	UNPUBLISHED,
+	is_off_site,
+	is_on_site,
+	is_to_publish,
+	is_to_unpublish,
+)
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
 MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/")
 PUBLISH_LOG_LIMIT = 10
+CONTENT_DOCTYPES = ("Publication", "Team Member")
+CONTENT_SINGLES = ("Home Page", "Privacy", "Site Settings")
 
 
 def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
-	"""To-publish writes plus draft paths that must stay untouched on GitHub.
+	"""On-site writes plus draft paths that must stay untouched on GitHub.
 
-	To-unpublish publications are omitted so the next publish deletes them.
-	To-unpublish team members are still written with `active: false`.
+	Off-site publications are omitted so the next publish deletes them.
+	Off-site team members are still written with `active: false`.
 	"""
 	files = []
 	keep = []
@@ -26,9 +37,9 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	def consider(path: str, doc, ready: bool, *, hide_when_unpublished: bool = False) -> None:
 		if not ready:
 			return
-		if is_to_publish(doc) or (hide_when_unpublished and is_to_unpublish(doc)):
+		if is_on_site(doc) or (hide_when_unpublished and is_off_site(doc)):
 			files.append((path, to_markdown(doc.to_site_frontmatter())))
-		elif is_to_unpublish(doc):
+		elif is_off_site(doc):
 			return
 		else:
 			keep.append(path)
@@ -124,6 +135,30 @@ def record_publish(commit_url: str, sha: str, files: list[tuple[str, str | None]
 	doc.save(ignore_permissions=True)
 
 
+def settle_publish_statuses() -> None:
+	"""After a Publisher run, queued intents become live or off-site states."""
+	for doctype in CONTENT_DOCTYPES:
+		for name in frappe.get_all(
+			doctype,
+			filters={"status": ["in", [TO_PUBLISH, TO_UNPUBLISH]]},
+			pluck="name",
+		):
+			_settle_doc(frappe.get_doc(doctype, name))
+	for name in CONTENT_SINGLES:
+		doc = frappe.get_single(name)
+		if is_to_publish(doc) or is_to_unpublish(doc):
+			_settle_doc(doc)
+
+
+def _settle_doc(doc) -> None:
+	if is_to_publish(doc):
+		doc.db_set("status", PUBLISHED)
+		doc.db_set("unpublish", 0, update_modified=False)
+	elif is_to_unpublish(doc):
+		doc.db_set("status", UNPUBLISHED)
+		doc.db_set("unpublish", 1, update_modified=False)
+
+
 def _require_publisher() -> None:
 	if not frappe.has_permission("Site Settings", "write"):
 		frappe.throw(_("Not permitted to publish Opero Site content."))
@@ -155,6 +190,7 @@ def publish_to_website() -> dict:
 	repo = content_repo_from_conf()
 	files = planned_content_changes(repo, on_progress=_emit_progress)
 	if not files:
+		settle_publish_statuses()
 		return {"commit_url": None, "message": _("Public site content is already up to date.")}
 
 	try:
@@ -164,4 +200,5 @@ def publish_to_website() -> dict:
 	except GithubError as exc:
 		frappe.throw(str(exc))
 	record_publish(commit["html_url"], commit["sha"], files)
+	settle_publish_statuses()
 	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}
