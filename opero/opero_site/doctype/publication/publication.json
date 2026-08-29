@@ -12,7 +12,6 @@
   "slug",
   "section_publish",
   "show_on_website",
-  "column_break_status",
   "status",
   "section_details",
   "published_on",
@@ -68,16 +67,11 @@
    "label": "Show on website"
   },
   {
-   "fieldname": "column_break_status",
-   "fieldtype": "Column Break"
-  },
-  {
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
-   "in_list_view": 1,
+   "hidden": 1,
    "in_standard_filter": 1,
-   "description": "Set by Show on website and Publish to website.",
    "label": "Status",
    "options": "Draft\nTo publish\nPublished\nTo unpublish\nUnpublished",
    "read_only": 1,
@@ -229,7 +223,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-29 11:10:00.000000",
+ "modified": "2026-08-29 11:40:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

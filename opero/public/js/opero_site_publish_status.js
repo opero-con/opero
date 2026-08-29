@@ -56,7 +56,6 @@ function bindPublishStatus(doctype) {
 			frm._syncing_publish_status = true;
 			const saved = frm._saved_publish_status || frm.doc.status;
 			frm.doc.status = statusFromCheckbox(frm.doc.show_on_website, saved);
-			frm.refresh_field("status");
 			frm._syncing_publish_status = false;
 			setPublishStatusPill(frm);
 		},
