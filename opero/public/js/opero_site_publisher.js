@@ -6,7 +6,7 @@ frappe.ui.form.on("Publisher", {
 			return;
 		}
 		loadPending(frm);
-		frm.page.set_primary_action(__("Publish to website"), () => publishWebsite(frm));
+		frm.page.set_primary_action(__("Deploy to website"), () => deployWebsite(frm));
 		frm.page.set_secondary_action(__("Refresh"), () => loadPending(frm), "refresh");
 	},
 });
@@ -14,16 +14,16 @@ frappe.ui.form.on("Publisher", {
 const PROGRESS_EVENT = "opero_site_progress";
 
 function renderHistory(frm) {
-	const rows = frm.doc.publish_log || [];
+	const rows = frm.doc.deploy_log || [];
 	const wrap = frm.get_field("history_html").$wrapper;
 	if (!rows.length) {
-		wrap.html(`<p class="text-muted">${__("No publishes yet.")}</p>`);
+		wrap.html(`<p class="text-muted">${__("No deploys yet.")}</p>`);
 		return;
 	}
 	const items = rows
 		.map((row) => {
-			const when = frappe.datetime.str_to_user(row.published_on);
-			const who = publishedByLabel(row.published_by);
+			const when = frappe.datetime.str_to_user(row.deployed_on);
+			const who = deployedByLabel(row.deployed_by);
 			const count = Number(row.file_count || 0);
 			const files = count === 1 ? __("1 file") : __("{0} files", [count]);
 			const parts = [frappe.utils.escape_html(when)];
@@ -38,7 +38,7 @@ function renderHistory(frm) {
 	wrap.html(`<ol>${items}</ol>`);
 }
 
-function publishedByLabel(user) {
+function deployedByLabel(user) {
 	if (!user) {
 		return "";
 	}
@@ -77,11 +77,11 @@ function setBusy(frm, busy) {
 }
 
 function showProgress(wrap, label) {
-	wrap.html(`<div class="opero-publish-progress">
+	wrap.html(`<div class="opero-deploy-progress">
 		<div class="progress" style="height: 8px;">
 			<div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%;"></div>
 		</div>
-		<p class="text-muted opero-publish-label" style="margin-top: 8px;">${frappe.utils.escape_html(label)}</p>
+		<p class="text-muted opero-deploy-label" style="margin-top: 8px;">${frappe.utils.escape_html(label)}</p>
 	</div>`);
 }
 
@@ -100,7 +100,7 @@ function bindProgress(wrap) {
 		bar.removeClass("progress-bar-striped progress-bar-animated");
 		bar.css("width", `${pct}%`);
 		if (data.path) {
-			wrap.find(".opero-publish-label").text(data.path);
+			wrap.find(".opero-deploy-label").text(data.path);
 		}
 	};
 	frappe.realtime.on(PROGRESS_EVENT, handler);
@@ -135,7 +135,7 @@ function loadPending(frm) {
 	const stop = bindProgress(wrap);
 	setBusy(frm, true);
 	frappe.call({
-		method: "opero.opero_site.publish.preview_publish",
+		method: "opero.opero_site.publish.preview_deploy",
 		callback(r) {
 			stop();
 			setBusy(frm, false);
@@ -149,23 +149,23 @@ function loadPending(frm) {
 	});
 }
 
-function publishWebsite(frm) {
+function deployWebsite(frm) {
 	if (frm._opero_busy) {
 		return;
 	}
 	const wrap = frm.get_field("pending_html").$wrapper;
-	showProgress(wrap, __("Publishing to the public site..."));
+	showProgress(wrap, __("Deploying to the public site..."));
 	const stop = bindProgress(wrap);
 	setBusy(frm, true);
 	frappe.call({
-		method: "opero.opero_site.publish.publish_to_website",
+		method: "opero.opero_site.publish.deploy_to_website",
 		callback(r) {
 			stop();
 			setBusy(frm, false);
 			const payload = r.message || {};
 			if (payload.commit_url) {
 				frappe.msgprint({
-					title: __("Published to website"),
+					title: __("Deployed to website"),
 					indicator: "green",
 					message: commitLink(payload.commit_url, payload.sha),
 				});
@@ -178,7 +178,7 @@ function publishWebsite(frm) {
 		error() {
 			stop();
 			setBusy(frm, false);
-			wrap.html(`<p class="text-danger">${__("Could not publish to GitHub.")}</p>`);
+			wrap.html(`<p class="text-danger">${__("Could not deploy to GitHub.")}</p>`);
 		},
 	});
 }

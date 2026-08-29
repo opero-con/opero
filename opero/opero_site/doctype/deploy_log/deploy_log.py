@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class PublishLog(Document):
+class DeployLog(Document):
 	pass

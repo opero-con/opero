@@ -13,13 +13,13 @@
   "pending_html",
   "section_history",
   "history_html",
-  "publish_log"
+  "deploy_log"
  ],
  "fields": [
   {
    "fieldname": "section_pending",
    "fieldtype": "Section Break",
-   "label": "Due for publishing"
+   "label": "Pending website changes"
   },
   {
    "fieldname": "pending_html",
@@ -37,11 +37,11 @@
    "label": ""
   },
   {
-   "fieldname": "publish_log",
+   "fieldname": "deploy_log",
    "fieldtype": "Table",
    "hidden": 1,
-   "label": "Publish log",
-   "options": "Publish Log",
+   "label": "Deploy log",
+   "options": "Deploy Log",
    "read_only": 1
   }
  ],

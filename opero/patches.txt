@@ -5,6 +5,7 @@ opero.patches.v0_0.restore_todo_allocatee_custom_field
 opero.patches.v0_0.restore_todo_assignee_custom_field
 opero.patches.v0_2.rename_wash_doctypes_to_all_caps
 opero.patches.v0_4.rename_opero_site_doctypes
+opero.patches.v0_4.rename_publish_log_to_deploy_log
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
@@ -75,3 +76,5 @@ opero.patches.v0_4.convert_publication_body_to_html
 opero.patches.v0_4.seed_publication_topics
 opero.patches.v0_4.rename_opero_site_publish_status
 opero.patches.v0_4.add_show_on_website
+opero.patches.v0_4.rename_publisher_publish_log_field
+opero.patches.v0_4.rename_deploy_log_published_fields
