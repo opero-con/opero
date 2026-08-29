@@ -29,7 +29,7 @@
   {
    "fieldname": "section_history",
    "fieldtype": "Section Break",
-   "label": "History"
+   "label": "Recent deploys"
   },
   {
    "fieldname": "history_html",
@@ -50,7 +50,7 @@
  "is_submittable": 0,
  "has_web_view": 0,
  "module": "Opero Site",
- "name": "Publisher",
+ "name": "Deploy Center",
  "owner": "Administrator",
  "modified": "2026-08-28 09:15:00.000000",
  "modified_by": "Administrator",

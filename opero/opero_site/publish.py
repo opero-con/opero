@@ -107,7 +107,7 @@ def pending_entries(files: list[tuple[str, str | None]]) -> list[dict]:
 
 
 def record_deploy(commit_url: str, sha: str, files: list[tuple[str, str | None]]) -> None:
-	doc = frappe.get_single("Publisher")
+	doc = frappe.get_single("Deploy Center")
 	entries = [
 		{
 			"deployed_on": now_datetime(),
@@ -136,7 +136,7 @@ def record_deploy(commit_url: str, sha: str, files: list[tuple[str, str | None]]
 
 
 def settle_publish_statuses() -> None:
-	"""After a Publisher run, queued intents become live or off-site states."""
+	"""After a deploy, queued intents become live or off-site states."""
 	for doctype in CONTENT_DOCTYPES:
 		for name in frappe.get_all(
 			doctype,

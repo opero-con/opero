@@ -71,7 +71,7 @@ class TestOperoSitePublish(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
 		frappe.db.delete("Team Member")
-		publisher = frappe.get_single("Publisher")
+		publisher = frappe.get_single("Deploy Center")
 		publisher.set("deploy_log", [])
 		publisher.save(ignore_permissions=True)
 
@@ -96,7 +96,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				str(index),
 				[(f"content/team/{index}.md", "body")],
 			)
-		rows = frappe.get_single("Publisher").deploy_log
+		rows = frappe.get_single("Deploy Center").deploy_log
 		self.assertEqual(len(rows), 10)
 		self.assertEqual(rows[0].sha, "11")
 		self.assertEqual(rows[0].commit_url, "https://github.com/opero-con/opero-content/commit/11")
@@ -401,7 +401,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"title": "Ready Newsletter",
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
-				"summary": "Queued, then Publisher marks it live.",
+				"summary": "Queued, then the deploy marks it live.",
 				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
@@ -418,7 +418,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"title": "Take Me Down",
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
-				"summary": "Queued to come off, then Publisher marks it unpublished.",
+				"summary": "Queued to come off, then the deploy marks it unpublished.",
 				"status": "Published",
 				"show_on_website": 1,
 			}
@@ -458,7 +458,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"title": "Checkbox Flow",
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
-				"summary": "Checkbox queues publish; Publisher settles the result.",
+				"summary": "Checkbox queues publish; the deploy settles the result.",
 			}
 		).insert(ignore_permissions=True)
 		self.assertEqual(doc.status, "Draft")
