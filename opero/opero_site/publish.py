@@ -20,7 +20,7 @@ from opero.opero_site.publish_status import (
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
 MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/")
-PUBLISH_LOG_LIMIT = 10
+DEPLOY_LOG_LIMIT = 10
 CONTENT_DOCTYPES = ("Publication", "Team Member")
 CONTENT_SINGLES = ("Home Page", "Privacy", "Site Settings")
 
@@ -28,7 +28,7 @@ CONTENT_SINGLES = ("Home Page", "Privacy", "Site Settings")
 def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	"""On-site writes plus draft paths that must stay untouched on GitHub.
 
-	Off-site publications are omitted so the next publish deletes them.
+	Off-site publications are omitted so the next deploy deletes them.
 	Off-site team members are still written with `active: false`.
 	"""
 	files = []
@@ -106,32 +106,32 @@ def pending_entries(files: list[tuple[str, str | None]]) -> list[dict]:
 	]
 
 
-def record_publish(commit_url: str, sha: str, files: list[tuple[str, str | None]]) -> None:
+def record_deploy(commit_url: str, sha: str, files: list[tuple[str, str | None]]) -> None:
 	doc = frappe.get_single("Publisher")
 	entries = [
 		{
-			"published_on": now_datetime(),
-			"published_by": frappe.session.user,
+			"deployed_on": now_datetime(),
+			"deployed_by": frappe.session.user,
 			"commit_url": commit_url,
 			"sha": sha,
 			"file_count": len(files),
 			"paths": ", ".join(path for path, _content in files),
 		}
 	]
-	for row in doc.publish_log:
+	for row in doc.deploy_log:
 		entries.append(
 			{
-				"published_on": row.published_on,
-				"published_by": row.published_by,
+				"deployed_on": row.deployed_on,
+				"deployed_by": row.deployed_by,
 				"commit_url": row.commit_url,
 				"sha": row.sha,
 				"file_count": row.file_count,
 				"paths": row.paths,
 			}
 		)
-	doc.set("publish_log", [])
-	for entry in entries[:PUBLISH_LOG_LIMIT]:
-		doc.append("publish_log", entry)
+	doc.set("deploy_log", [])
+	for entry in entries[:DEPLOY_LOG_LIMIT]:
+		doc.append("deploy_log", entry)
 	doc.save(ignore_permissions=True)
 
 
@@ -157,9 +157,9 @@ def _settle_doc(doc) -> None:
 		doc.db_set("status", UNPUBLISHED)
 
 
-def _require_publisher() -> None:
+def _require_deploy_permission() -> None:
 	if not frappe.has_permission("Site Settings", "write"):
-		frappe.throw(_("Not permitted to publish Opero Site content."))
+		frappe.throw(_("Not permitted to deploy Opero Site content."))
 
 
 def _emit_progress(done: int, total: int, path: str = "") -> None:
@@ -171,8 +171,8 @@ def _emit_progress(done: int, total: int, path: str = "") -> None:
 
 
 @frappe.whitelist()
-def preview_publish() -> dict:
-	_require_publisher()
+def preview_deploy() -> dict:
+	_require_deploy_permission()
 	try:
 		files = planned_content_changes(content_repo_from_conf(), on_progress=_emit_progress)
 	except GithubError as exc:
@@ -183,8 +183,8 @@ def preview_publish() -> dict:
 
 
 @frappe.whitelist()
-def publish_to_website() -> dict:
-	_require_publisher()
+def deploy_to_website() -> dict:
+	_require_deploy_permission()
 	repo = content_repo_from_conf()
 	files = planned_content_changes(repo, on_progress=_emit_progress)
 	if not files:
@@ -197,6 +197,6 @@ def publish_to_website() -> dict:
 		)
 	except GithubError as exc:
 		frappe.throw(str(exc))
-	record_publish(commit["html_url"], commit["sha"], files)
+	record_deploy(commit["html_url"], commit["sha"], files)
 	settle_publish_statuses()
 	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}

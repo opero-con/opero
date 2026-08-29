@@ -12,7 +12,7 @@ from opero.opero_site.publish import (
 	collect_content_files,
 	collect_content_plan,
 	pending_entries,
-	record_publish,
+	record_deploy,
 	settle_publish_statuses,
 )
 from opero.tests.test_opero_site_load import HOME_MD, PRIVACY_MD, SETTINGS_MD, TEAM_MD
@@ -72,7 +72,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		frappe.db.delete("Publication")
 		frappe.db.delete("Team Member")
 		publisher = frappe.get_single("Publisher")
-		publisher.set("publish_log", [])
+		publisher.set("deploy_log", [])
 		publisher.save(ignore_permissions=True)
 
 	def test_pending_entries_marks_deletes(self):
@@ -89,14 +89,14 @@ class TestOperoSitePublish(FrappeTestCase):
 			],
 		)
 
-	def test_record_publish_keeps_last_ten_newest_first(self):
+	def test_record_deploy_keeps_last_ten_newest_first(self):
 		for index in range(12):
-			record_publish(
+			record_deploy(
 				f"https://github.com/opero-con/opero-content/commit/{index}",
 				str(index),
 				[(f"content/team/{index}.md", "body")],
 			)
-		rows = frappe.get_single("Publisher").publish_log
+		rows = frappe.get_single("Publisher").deploy_log
 		self.assertEqual(len(rows), 10)
 		self.assertEqual(rows[0].sha, "11")
 		self.assertEqual(rows[0].commit_url, "https://github.com/opero-con/opero-content/commit/11")
