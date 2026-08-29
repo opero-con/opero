@@ -20,7 +20,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Team": "Team Member",
 				"Publications": "Publication",
 				"Privacy": "Privacy",
-				"Publisher": "Publisher",
+				"Deploy Center": "Deploy Center",
 				"Settings": "Site Settings",
 			},
 		)
@@ -28,11 +28,11 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertNotIn("Office", links.values())
 
 		shortcuts = {row.label: row.link_to for row in doc.shortcuts}
-		self.assertEqual(shortcuts["Publisher"], "Publisher")
+		self.assertEqual(shortcuts["Deploy Center"], "Deploy Center")
 		self.assertEqual(shortcuts["Settings"], "Site Settings")
 		self.assertEqual(
 			set(shortcuts),
-			{"Publisher", "Settings", "Home", "Team", "Publications", "Privacy"},
+			{"Deploy Center", "Settings", "Home", "Team", "Publications", "Privacy"},
 		)
 		self.assertEqual(
 			{row.role for row in doc.roles},
@@ -45,7 +45,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			"Team Member",
 			"Publication",
 			"Privacy",
-			"Publisher",
+			"Deploy Center",
 			"Site Settings",
 		]
 		for doctype in doctypes:

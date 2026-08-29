@@ -1,4 +1,4 @@
-frappe.ui.form.on("Publisher", {
+frappe.ui.form.on("Deploy Center", {
 	refresh(frm) {
 		frm.disable_save();
 		renderHistory(frm);
