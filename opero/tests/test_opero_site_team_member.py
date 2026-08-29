@@ -30,10 +30,10 @@ class TestTeamMember(FrappeTestCase):
 			}
 		).insert(ignore_permissions=True)
 		self.assertEqual(doc.status, "Draft")
-		self.assertFalse(doc.unpublish)
+		self.assertFalse(doc.show_on_website)
 
 	def test_published_team_member_is_active(self):
-		doc = self._member(status="Published")
+		doc = self._member(status="Published", show_on_website=1)
 		doc.insert(ignore_permissions=True)
 		self.assertTrue(doc.to_site_frontmatter()["active"])
 
@@ -48,7 +48,7 @@ class TestTeamMember(FrappeTestCase):
 			role="Director",
 			linkedin="https://www.linkedin.com/in/anita-onyango",
 			sort_order=10,
-			status="To publish",
+			show_on_website=1,
 			portrait_alt="Portrait of Anita Onyango",
 		)
 		doc.insert(ignore_permissions=True)
@@ -70,7 +70,7 @@ class TestTeamMember(FrappeTestCase):
 			"doctype": "Team Member",
 			"member_name": "Test Member",
 			"role": "Water Specialist",
-			"status": "To publish",
+			"show_on_website": 1,
 			"sort_order": 10,
 		}
 		payload.update(fields)

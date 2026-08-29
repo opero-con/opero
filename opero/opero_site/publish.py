@@ -153,10 +153,8 @@ def settle_publish_statuses() -> None:
 def _settle_doc(doc) -> None:
 	if is_to_publish(doc):
 		doc.db_set("status", PUBLISHED)
-		doc.db_set("unpublish", 0, update_modified=False)
 	elif is_to_unpublish(doc):
 		doc.db_set("status", UNPUBLISHED)
-		doc.db_set("unpublish", 1, update_modified=False)
 
 
 def _require_publisher() -> None:

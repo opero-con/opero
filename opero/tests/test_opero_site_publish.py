@@ -166,7 +166,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"doctype": "Team Member",
 				"member_name": "Anita Onyango",
 				"role": "Communications",
-				"status": "To publish",
+				"show_on_website": 1,
 				"sort_order": 10,
 			}
 		).insert(ignore_permissions=True)
@@ -330,7 +330,7 @@ class TestOperoSitePublish(FrappeTestCase):
 			}
 		).insert(ignore_permissions=True)
 		self.assertEqual(doc.status, "Draft")
-		self.assertFalse(doc.unpublish)
+		self.assertFalse(doc.show_on_website)
 		files, keep = collect_content_plan()
 		path = "content/publications/draft-newsletter.md"
 		self.assertNotIn(path, dict(files))
@@ -345,10 +345,11 @@ class TestOperoSitePublish(FrappeTestCase):
 				"publication_type": "Newsletter",
 				"summary": "Published stays on-site and is included in the next write.",
 				"status": "Published",
+				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
 		self.assertEqual(doc.status, "Published")
-		self.assertFalse(doc.unpublish)
+		self.assertTrue(doc.show_on_website)
 		files, keep = collect_content_plan()
 		path = "content/publications/already-live.md"
 		self.assertIn(path, dict(files))
@@ -362,10 +363,11 @@ class TestOperoSitePublish(FrappeTestCase):
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
 				"summary": "Was live, now unpublished.",
-				"status": "To publish",
+				"status": "Published",
+				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
-		doc.unpublish = 1
+		doc.show_on_website = 0
 		doc.save(ignore_permissions=True)
 		self.assertEqual(doc.status, "To unpublish")
 		files, keep = collect_content_plan()
@@ -379,11 +381,12 @@ class TestOperoSitePublish(FrappeTestCase):
 				"doctype": "Team Member",
 				"member_name": "Hidden Editor",
 				"role": "Editor",
-				"status": "To publish",
+				"status": "Published",
+				"show_on_website": 1,
 				"sort_order": 40,
 			}
 		).insert(ignore_permissions=True)
-		doc.unpublish = 1
+		doc.show_on_website = 0
 		doc.save(ignore_permissions=True)
 		self.assertEqual(doc.status, "To unpublish")
 		files, _keep = collect_content_plan()
@@ -399,13 +402,14 @@ class TestOperoSitePublish(FrappeTestCase):
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
 				"summary": "Queued, then Publisher marks it live.",
-				"status": "To publish",
+				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
+		self.assertEqual(doc.status, "To publish")
 		settle_publish_statuses()
 		doc.reload()
 		self.assertEqual(doc.status, "Published")
-		self.assertFalse(doc.unpublish)
+		self.assertTrue(doc.show_on_website)
 
 	def test_publish_settles_to_unpublish_to_unpublished(self):
 		doc = frappe.get_doc(
@@ -415,16 +419,17 @@ class TestOperoSitePublish(FrappeTestCase):
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
 				"summary": "Queued to come off, then Publisher marks it unpublished.",
-				"status": "To publish",
+				"status": "Published",
+				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
-		doc.unpublish = 1
+		doc.show_on_website = 0
 		doc.save(ignore_permissions=True)
 		self.assertEqual(doc.status, "To unpublish")
 		settle_publish_statuses()
 		doc.reload()
 		self.assertEqual(doc.status, "Unpublished")
-		self.assertTrue(doc.unpublish)
+		self.assertFalse(doc.show_on_website)
 		files, keep = collect_content_plan()
 		path = "content/publications/take-me-down.md"
 		self.assertNotIn(path, dict(files))
@@ -432,14 +437,42 @@ class TestOperoSitePublish(FrappeTestCase):
 
 	def test_draft_home_edits_are_kept_not_written(self):
 		home = frappe.get_single("Home Page")
+		home.db_set("status", "Draft")
+		home.db_set("show_on_website", 0)
+		home.reload()
 		home.hero_title = "Draft hero title"
-		home.status = "Draft"
-		home.unpublish = 0
+		home.show_on_website = 0
 		home.save(ignore_permissions=True)
 		try:
 			files, keep = collect_content_plan()
 			self.assertNotIn("content/homepage/home.md", dict(files))
 			self.assertIn("content/homepage/home.md", keep)
 		finally:
-			home.status = "To publish"
+			home.show_on_website = 1
 			home.save(ignore_permissions=True)
+
+	def test_show_on_website_sets_status(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Checkbox Flow",
+				"published_on": "2026-08-01",
+				"publication_type": "Newsletter",
+				"summary": "Checkbox queues publish; Publisher settles the result.",
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(doc.status, "Draft")
+		doc.show_on_website = 1
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "To publish")
+		settle_publish_statuses()
+		doc.reload()
+		self.assertEqual(doc.status, "Published")
+		self.assertTrue(doc.show_on_website)
+		doc.show_on_website = 0
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "To unpublish")
+		settle_publish_statuses()
+		doc.reload()
+		self.assertEqual(doc.status, "Unpublished")
+		self.assertFalse(doc.show_on_website)

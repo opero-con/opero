@@ -61,7 +61,7 @@ def apply_settings(doc, data: dict):
 	doc.canonical_url = _text(seo.get("canonicalUrl"))
 	doc.og_image = _text(seo.get("ogImage"))
 	doc.status = PUBLISHED
-	doc.unpublish = 0
+	doc.show_on_website = 1
 	doc.set("offices", [])
 	for office in data.get("offices") or []:
 		doc.append(
@@ -86,7 +86,7 @@ def apply_home(doc, data: dict):
 	doc.hero_image_alt = _text(hero.get("imageAlt"))
 	doc.about_title = _text(about.get("title"))
 	doc.status = PUBLISHED
-	doc.unpublish = 0
+	doc.show_on_website = 1
 	doc.set("about_paragraphs", [])
 	for paragraph in about.get("paragraphs") or []:
 		if _text(paragraph):
@@ -134,7 +134,7 @@ def apply_privacy(doc, data: dict):
 	reviewed = data.get("lastReviewed")
 	doc.last_reviewed = getdate(reviewed) if reviewed else None
 	doc.status = PUBLISHED
-	doc.unpublish = 0
+	doc.show_on_website = 1
 	doc.set("sections", [])
 	for row in data.get("sections") or []:
 		doc.append(
@@ -170,10 +170,10 @@ def apply_publication(doc, data: dict, slug: str):
 	doc.video_caption = _text(video.get("caption"))
 	if data.get("draft") is True:
 		doc.status = DRAFT
-		doc.unpublish = 0
+		doc.show_on_website = 0
 	else:
 		doc.status = PUBLISHED
-		doc.unpublish = 0
+		doc.show_on_website = 1
 	doc.set("topics", [])
 	for topic in data.get("topics") or []:
 		if _text(topic):
@@ -189,10 +189,10 @@ def apply_team_member(doc, data: dict, slug: str):
 	doc.sort_order = cint(data.get("order"))
 	if active is False:
 		doc.status = UNPUBLISHED
-		doc.unpublish = 1
+		doc.show_on_website = 0
 	else:
 		doc.status = PUBLISHED
-		doc.unpublish = 0
+		doc.show_on_website = 1
 	doc.portrait = _text(data.get("image"))
 	doc.portrait_alt = _text(data.get("imageAlt"))
 	doc.portrait_position = _text(data.get("imagePosition"))
