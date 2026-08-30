@@ -36,7 +36,6 @@
   },
   {
    "default": "1",
-   "description": "Takes effect on the next Publish to website.",
    "fieldname": "show_on_website",
    "fieldtype": "Check",
    "label": "Show on website"
@@ -64,6 +63,7 @@
   {
    "fieldname": "hero_title",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Title",
    "reqd": 1
   },
@@ -73,10 +73,9 @@
    "label": "Description"
   },
   {
-   "description": "First row is the main hero image. Extra rows cycle after it. Row order is the cycle order.",
    "fieldname": "hero_images",
    "fieldtype": "Table",
-   "label": "Images",
+   "label": "Hero images",
    "options": "Hero Image"
   },
   {
