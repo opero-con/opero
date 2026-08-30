@@ -82,10 +82,10 @@
   {
    "fieldname": "section_offices",
    "fieldtype": "Section Break",
-   "label": "Offices",
-   "description": "The first office is the head office used for structured data."
+   "label": ""
   },
   {
+   "description": "The first office is the head office used for structured data.",
    "fieldname": "offices",
    "fieldtype": "Table",
    "label": "Offices",
@@ -126,7 +126,7 @@
  "module": "Opero Site",
  "name": "Site Settings",
  "owner": "Administrator",
- "modified": "2026-08-30 21:40:00.000000",
+ "modified": "2026-08-30 22:16:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

@@ -82,6 +82,30 @@ function setPublishStatusPill(frm) {
 	if (indicator) {
 		frm.page.set_indicator(indicator[0], indicator[1]);
 	}
+	if (frm.doctype === "Publication") {
+		setPublicationDeployRibbon(frm);
+	}
+}
+
+function setPublicationDeployRibbon(frm) {
+	if (!frm.layout) {
+		return;
+	}
+	frm.layout.show_message();
+	if (frm.doc.status !== "To publish" && frm.doc.status !== "To unpublish") {
+		return;
+	}
+	const link = frappe.utils.get_form_link(
+		"Deploy Center",
+		"Deploy Center",
+		true,
+		__("Deploy to website")
+	);
+	const queued_off = frm.doc.status === "To unpublish";
+	const text = queued_off
+		? __("This publication is queued to come off the website. {0}", [link])
+		: __("This publication is queued for the next website deploy. {0}", [link]);
+	frm.layout.show_message(`<span>${text}</span>`, queued_off ? "red" : "blue", true);
 }
 
 function bindStatusPill(doctype) {

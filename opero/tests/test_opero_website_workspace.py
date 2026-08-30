@@ -60,3 +60,22 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			self.assertFalse(frappe.get_meta(doctype).has_field("show_on_website"), doctype)
 		self.assertTrue(frappe.get_meta("Publication").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Team Member").has_field("show_on_website"))
+
+	def test_lone_section_children_do_not_repeat_the_section_title(self):
+		cases = (
+			("Publication", "section_topics", "topics", "Topics"),
+			("Publication", "section_body", "body", "Body"),
+			("Home Page", "section_pillars", "pillars", "Service pillars"),
+			("Home Page", "section_impacts", "impacts", "Impact metrics"),
+			("Home Page", "section_projects", "projects", "Projects"),
+			("Home Page", "section_partners", "partners", "Partners"),
+			("Site Settings", "section_offices", "offices", "Offices"),
+		)
+		for doctype, section, child, title in cases:
+			meta = frappe.get_meta(doctype)
+			self.assertFalse(meta.get_field(section).label, f"{doctype}.{section}")
+			self.assertEqual(meta.get_field(child).label, title, f"{doctype}.{child}")
+
+	def test_publication_show_on_website_has_no_deploy_helper(self):
+		field = frappe.get_meta("Publication").get_field("show_on_website")
+		self.assertFalse(field.description)
