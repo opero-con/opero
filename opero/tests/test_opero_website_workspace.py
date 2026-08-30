@@ -16,7 +16,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(
 			links,
 			{
-				"Home": "Home Page",
+				"Home Page": "Home Page",
 				"Team": "Team Member",
 				"Publications": "Publication",
 				"Privacy": "Privacy",
@@ -32,7 +32,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(shortcuts["Settings"], "Site Settings")
 		self.assertEqual(
 			set(shortcuts),
-			{"Deploy Center", "Settings", "Home", "Team", "Publications", "Privacy"},
+			{"Deploy Center", "Settings", "Home Page", "Team", "Publications", "Privacy"},
 		)
 		self.assertEqual(
 			{row.role for row in doc.roles},

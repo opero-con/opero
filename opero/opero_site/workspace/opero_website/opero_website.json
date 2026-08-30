@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-deploy-center\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deploy Center\",\"col\":3}},{\"id\":\"ow-s-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"ow-s-home\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Home\",\"col\":3}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-privacy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Privacy\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-deploy-center\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deploy Center\",\"col\":3}},{\"id\":\"ow-s-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"ow-s-home\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Home Page\",\"col\":3}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-privacy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Privacy\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
  "creation": "2026-08-25 23:44:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -23,7 +23,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Home",
+   "label": "Home Page",
    "link_count": 0,
    "link_to": "Home Page",
    "link_type": "DocType",
@@ -120,7 +120,7 @@
    "type": "DocType"
   },
   {
-   "label": "Home",
+   "label": "Home Page",
    "link_to": "Home Page",
    "type": "DocType"
   },
