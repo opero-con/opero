@@ -84,7 +84,7 @@
   {
    "fieldname": "section_pillars",
    "fieldtype": "Section Break",
-   "label": "Service pillars"
+   "label": ""
   },
   {
    "fieldname": "pillars",
@@ -95,7 +95,7 @@
   {
    "fieldname": "section_impacts",
    "fieldtype": "Section Break",
-   "label": "Impact metrics"
+   "label": ""
   },
   {
    "fieldname": "impacts",
@@ -106,10 +106,10 @@
   {
    "fieldname": "section_projects",
    "fieldtype": "Section Break",
-   "label": "Projects",
-   "description": "Team members are Team Member records, not this form."
+   "label": ""
   },
   {
+   "description": "Team members are Team Member records, not this form.",
    "fieldname": "projects",
    "fieldtype": "Table",
    "label": "Projects",
@@ -118,7 +118,7 @@
   {
    "fieldname": "section_partners",
    "fieldtype": "Section Break",
-   "label": "Partners"
+   "label": ""
   },
   {
    "fieldname": "partners",
@@ -134,7 +134,7 @@
  "module": "Opero Site",
  "name": "Home Page",
  "owner": "Administrator",
- "modified": "2026-08-30 21:40:00.000000",
+ "modified": "2026-08-30 22:16:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

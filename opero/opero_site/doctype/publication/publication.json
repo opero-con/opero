@@ -10,7 +10,7 @@
  "field_order": [
   "title",
   "slug",
-  "section_publish",
+  "column_break_publish",
   "show_on_website",
   "status",
   "section_details",
@@ -55,13 +55,11 @@
    "unique": 1
   },
   {
-   "fieldname": "section_publish",
-   "fieldtype": "Section Break",
-   "label": "Publish"
+   "fieldname": "column_break_publish",
+   "fieldtype": "Column Break"
   },
   {
    "default": "0",
-   "description": "Takes effect on the next Publish to website.",
    "fieldname": "show_on_website",
    "fieldtype": "Check",
    "label": "Show on website"
@@ -196,7 +194,7 @@
   {
    "fieldname": "section_topics",
    "fieldtype": "Section Break",
-   "label": "Topics"
+   "label": ""
   },
   {
    "fieldname": "topics",
@@ -207,7 +205,7 @@
   {
    "fieldname": "section_body",
    "fieldtype": "Section Break",
-   "label": "Body"
+   "label": ""
   },
   {
    "description": "Use headings for sections, lists for bullets, and a link on its own line for a button on the public page.",
@@ -223,7 +221,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-29 11:40:00.000000",
+ "modified": "2026-08-30 22:24:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
