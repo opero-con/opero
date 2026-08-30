@@ -43,6 +43,7 @@ class ContentRepo:
 		self.repo = repo
 		self.base_branch = base_branch
 		self._transport = transport or self._http
+		self._tree_blobs: dict[str, dict[str, str]] = {}
 
 	def _headers(self) -> dict:
 		return {
@@ -85,7 +86,10 @@ class ContentRepo:
 				on_progress(index, total, path)
 		return out
 
-	def list_markdown(self, prefix: str, ref: str) -> list[str]:
+	def tree_blobs(self, ref: str) -> dict[str, str]:
+		cached = self._tree_blobs.get(ref)
+		if cached is not None:
+			return cached
 		head = self._api("GET", f"/repos/{self.repo}/commits/{ref}")
 		tree = self._api(
 			"GET",
@@ -93,15 +97,22 @@ class ContentRepo:
 		)
 		if tree.get("truncated"):
 			raise GithubError(_("GitHub tree listing was truncated."))
-		return [
-			entry["path"]
+		blobs = {
+			entry["path"]: entry.get("sha") or ""
 			for entry in tree.get("tree", [])
-			if entry.get("type") == "blob"
-			and entry.get("path", "").startswith(prefix)
-			and entry["path"].endswith(".md")
+			if entry.get("type") == "blob" and entry.get("path")
+		}
+		self._tree_blobs[ref] = blobs
+		return blobs
+
+	def list_markdown(self, prefix: str, ref: str) -> list[str]:
+		return [
+			path
+			for path in self.tree_blobs(ref)
+			if path.startswith(prefix) and path.endswith(".md")
 		]
 
-	def commit_files(self, files: list[tuple[str, str | None]], message: str, on_progress=None) -> dict:
+	def commit_files(self, files: list[tuple[str, str | bytes | None]], message: str, on_progress=None) -> dict:
 		head = self._api("GET", f"/repos/{self.repo}/commits/{self.base_branch}")
 		base_sha = head["sha"]
 		entries = []
@@ -110,11 +121,7 @@ class ContentRepo:
 			if content is None:
 				entries.append({"path": path, "mode": "100644", "type": "blob", "sha": None})
 			else:
-				blob = self._api(
-					"POST",
-					f"/repos/{self.repo}/git/blobs",
-					json={"content": content, "encoding": "utf-8"},
-				)
+				blob = self._api("POST", f"/repos/{self.repo}/git/blobs", json=_blob_payload(content))
 				entries.append({"path": path, "mode": "100644", "type": "blob", "sha": blob["sha"]})
 			if on_progress:
 				on_progress(index, total, path)
@@ -135,3 +142,9 @@ class ContentRepo:
 		)
 		sha = commit["sha"]
 		return {"sha": sha, "html_url": f"https://github.com/{self.repo}/commit/{sha}"}
+
+
+def _blob_payload(content: str | bytes) -> dict:
+	if isinstance(content, bytes):
+		return {"content": base64.b64encode(content).decode("ascii"), "encoding": "base64"}
+	return {"content": content, "encoding": "utf-8"}

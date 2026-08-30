@@ -8,10 +8,12 @@ from frappe.tests.utils import FrappeTestCase
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.load import load_files
 from opero.opero_site.markdown import parse_frontmatter, preserve_unmanaged_frontmatter, to_markdown
+from opero.opero_site.media import export_markdown_media, export_planned_media, git_blob_sha
 from opero.opero_site.publish import (
 	collect_content_files,
 	collect_content_plan,
 	pending_entries,
+	planned_content_changes,
 	record_deploy,
 	settle_publish_statuses,
 )
@@ -477,3 +479,117 @@ class TestOperoSitePublish(FrappeTestCase):
 		doc.reload()
 		self.assertEqual(doc.status, "Unpublished")
 		self.assertFalse(doc.show_on_website)
+
+
+class _FakeContentRepo:
+	base_branch = "main"
+
+	def __init__(self, existing=None, blobs=None):
+		self._existing = existing or {}
+		self._blobs = blobs or {}
+
+	def existing_files(self, paths, ref, on_progress=None):
+		return {path: self._existing[path] for path in paths if path in self._existing}
+
+	def tree_blobs(self, ref):
+		return dict(self._blobs)
+
+	def list_markdown(self, prefix, ref):
+		return [path for path in self._blobs if path.startswith(prefix) and path.endswith(".md")]
+
+
+class TestOperoSitePublishMedia(FrappeTestCase):
+	def setUp(self):
+		frappe.db.delete("Publication")
+		frappe.db.delete("Team Member")
+		load_files(
+			{
+				"content/settings/general.md": SETTINGS_MD,
+				"content/homepage/home.md": HOME_MD,
+				"content/privacy/privacy.md": PRIVACY_MD,
+			}
+		)
+
+	def test_git_blob_sha_matches_git_hash_object(self):
+		self.assertEqual(git_blob_sha(b"test"), "30d74d258442c7c65512eafab474568dd706c430")
+
+	def test_export_rewrites_desk_hero_image_and_keeps_media_paths(self):
+		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
+		home = frappe.get_single("Home Page")
+		home.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
+		home.save(ignore_permissions=True)
+		text, media = export_markdown_media(
+			"content/homepage/home.md",
+			dict(collect_content_files())["content/homepage/home.md"],
+		)
+		hero = parse_frontmatter(text)["hero"]
+		public = f"/media/homepage/{file_doc.file_name}"
+		self.assertEqual(hero["image"], "/media/homepage/opero-wash-hub.jpg")
+		self.assertEqual(hero["carousel"][-1]["image"], public)
+		self.assertEqual(media, [(public.lstrip("/"), b"fake-png-bytes")])
+
+	def test_planned_changes_commits_new_desk_image(self):
+		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
+		home = frappe.get_single("Home Page")
+		home.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
+		home.save(ignore_permissions=True)
+		files = dict(
+			planned_content_changes(
+				_FakeContentRepo(
+					existing={
+						"content/settings/general.md": SETTINGS_MD,
+						"content/homepage/home.md": HOME_MD,
+						"content/privacy/privacy.md": PRIVACY_MD,
+					}
+				)
+			)
+		)
+		repo_path = f"media/homepage/{file_doc.file_name}"
+		self.assertEqual(files[repo_path], b"fake-png-bytes")
+		self.assertIn(f"/{repo_path}", files["content/homepage/home.md"])
+		self.assertNotIn("/private/files/", files["content/homepage/home.md"])
+		self.assertNotIn("/files/", files["content/homepage/home.md"])
+
+	def test_planned_changes_skips_identical_media_blob(self):
+		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
+		home = frappe.get_single("Home Page")
+		home.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
+		home.save(ignore_permissions=True)
+		rewritten, media = export_planned_media(collect_content_files())
+		repo_path, blob = media[0]
+		files = planned_content_changes(
+			_FakeContentRepo(existing=dict(rewritten), blobs={repo_path: git_blob_sha(blob)})
+		)
+		self.assertEqual(files, [])
+
+	def test_commit_files_sends_base64_for_binary(self):
+		calls = []
+
+		def transport(method, url, json=None):
+			calls.append((method, url, json))
+			if url.endswith("/commits/main"):
+				return {"sha": "base-sha", "commit": {"tree": {"sha": "tree-sha"}}}
+			if url.endswith("/git/blobs"):
+				return {"sha": "blob-sha"}
+			if url.endswith("/git/trees"):
+				return {"sha": "new-tree"}
+			if url.endswith("/git/commits") and method == "POST":
+				return {"sha": "commit-sha"}
+			if method == "PATCH" and url.endswith("/git/refs/heads/main"):
+				return {"object": {"sha": "commit-sha"}}
+			raise AssertionError((method, url))
+
+		repo = ContentRepo("token", "opero-con/opero-content", transport=transport)
+		repo.commit_files(
+			[("media/homepage/logo.png", b"fake-png-bytes")],
+			message="content: update public site from desk",
+		)
+		blob_post = next(call for call in calls if call[0] == "POST" and call[1].endswith("/git/blobs"))
+		self.assertEqual(blob_post[2]["encoding"], "base64")
+		self.assertEqual(blob_post[2]["content"], base64.b64encode(b"fake-png-bytes").decode("ascii"))
+
+
+def _attach_png(file_name: str, content: bytes):
+	from frappe.utils.file_manager import save_file
+
+	return save_file(file_name, content, "Home Page", "Home Page", is_private=1)

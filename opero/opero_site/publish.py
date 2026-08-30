@@ -6,6 +6,7 @@ from frappe.utils import now_datetime
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
+from opero.opero_site.media import export_planned_media, git_blob_sha
 from opero.opero_site.publish_status import (
 	PUBLISHED,
 	TO_PUBLISH,
@@ -76,8 +77,9 @@ def content_repo_from_conf() -> ContentRepo:
 	return ContentRepo(token=token, repo=repo, base_branch=base_branch)
 
 
-def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | None]]:
+def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | bytes | None]]:
 	planned, keep = collect_content_plan()
+	planned, media = export_planned_media(planned)
 	write_paths = [path for path, _content in planned]
 	existing = (
 		repo.existing_files(write_paths, repo.base_branch, on_progress=on_progress) if write_paths else {}
@@ -96,6 +98,10 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 			MANAGED_DELETE_PREFIXES,
 		)
 	)
+	blobs = repo.tree_blobs(repo.base_branch)
+	for path, content in media:
+		if blobs.get(path) != git_blob_sha(content):
+			files.append((path, content))
 	return files
 
 
