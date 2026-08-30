@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "creation": "2026-08-30 10:46:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "image",
+  "note",
+  "image_alt"
+ ],
+ "fields": [
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "in_list_view": 1,
+   "label": "Image",
+   "reqd": 1
+  },
+  {
+   "default": "Kenya · East Africa",
+   "description": "Shown on this image, e.g. Kenya · East Africa.",
+   "fieldname": "note",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Location"
+  },
+  {
+   "description": "Used for the first row (the main image).",
+   "fieldname": "image_alt",
+   "fieldtype": "Data",
+   "label": "Image alt text"
+  }
+ ],
+ "istable": 1,
+ "issingle": 0,
+ "is_submittable": 0,
+ "module": "Opero Site",
+ "name": "Hero Image",
+ "owner": "Administrator",
+ "permissions": [],
+ "modified": "2026-08-30 12:00:00.000000",
+ "modified_by": "Administrator",
+ "track_changes": 0,
+ "has_web_view": 0
+}

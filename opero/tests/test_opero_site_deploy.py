@@ -22,6 +22,7 @@ hero:
   eyebrow: Scaling WASH
   title: From idea to lasting WASH impact.
   description: Practical support for WASH enterprises.
+  image: /media/homepage/opero-wash-hub.jpg
   imageAlt: Aerial view of WASH work
 about:
   title: Practical WASH solutions

@@ -15,9 +15,7 @@
   "hero_eyebrow",
   "hero_title",
   "hero_description",
-  "column_hero",
-  "hero_image",
-  "hero_image_alt",
+  "hero_images",
   "section_about",
   "about_title",
   "about_paragraphs",
@@ -56,7 +54,7 @@
   {
    "fieldname": "section_hero",
    "fieldtype": "Section Break",
-   "label": "Hero"
+   "label": "Hero section"
   },
   {
    "fieldname": "hero_eyebrow",
@@ -75,19 +73,11 @@
    "label": "Description"
   },
   {
-   "fieldname": "column_hero",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "hero_image",
-   "fieldtype": "Attach Image",
-   "label": "Image",
-   "description": "Large banner image at the top of the homepage."
-  },
-  {
-   "fieldname": "hero_image_alt",
-   "fieldtype": "Data",
-   "label": "Image alt text"
+   "description": "First row is the main hero image. Extra rows cycle after it. Row order is the cycle order.",
+   "fieldname": "hero_images",
+   "fieldtype": "Table",
+   "label": "Images",
+   "options": "Hero Image"
   },
   {
    "fieldname": "section_about",
@@ -158,7 +148,7 @@
  "module": "Opero Site",
  "name": "Home Page",
  "owner": "Administrator",
- "modified": "2026-08-29 11:40:00.000000",
+ "modified": "2026-08-30 12:00:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

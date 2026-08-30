@@ -100,6 +100,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		doc.hero_title = "From idea to lasting WASH impact."
 		doc.hero_description = "Practical support for WASH enterprises."
 		doc.about_title = "Practical WASH solutions"
+		doc.set("hero_images", [])
 		doc.set("about_paragraphs", [])
 		doc.append("about_paragraphs", {"paragraph": "Opero is a Kenyan WASH firm."})
 		doc.set("pillars", [])
@@ -142,6 +143,9 @@ class TestOperoSiteContent(FrappeTestCase):
 		doc.save(ignore_permissions=True)
 		payload = doc.to_site_frontmatter()
 		self.assertNotIn("team", payload)
+		self.assertNotIn("image", payload["hero"])
+		self.assertNotIn("carousel", payload["hero"])
+		self.assertNotIn("note", payload["hero"])
 		self.assertEqual(payload["hero"]["title"], "From idea to lasting WASH impact.")
 		self.assertEqual(payload["about"]["paragraphs"], ["Opero is a Kenyan WASH firm."])
 		self.assertEqual(payload["pillars"][0]["title"], "Market research")
@@ -149,6 +153,39 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(payload["projects"][0]["highlights"], ["Trash handling", "Thick sludge"])
 		self.assertEqual(payload["projects"][0]["metricValue"], "3")
 		self.assertEqual(payload["partners"], [{"name": "Practica Foundation", "url": "https://www.practica.org"}])
+
+	def test_home_frontmatter_includes_hero_carousel(self):
+		doc = frappe.get_single("Home Page")
+		doc.hero_title = "From idea to lasting WASH impact."
+		doc.set("hero_images", [])
+		doc.append(
+			"hero_images",
+			{
+				"image": "/media/homepage/opero-wash-hub.jpg",
+				"image_alt": "Aerial view of WASH work",
+				"note": "Kenya · East Africa",
+			},
+		)
+		doc.append(
+			"hero_images",
+			{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya"},
+		)
+		doc.append(
+			"hero_images",
+			{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg", "note": ""},
+		)
+		doc.save(ignore_permissions=True)
+		hero = doc.to_site_frontmatter()["hero"]
+		self.assertEqual(hero["image"], "/media/homepage/opero-wash-hub.jpg")
+		self.assertEqual(hero["imageAlt"], "Aerial view of WASH work")
+		self.assertEqual(hero["note"], "Kenya · East Africa")
+		self.assertEqual(
+			hero["carousel"],
+			[
+				{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya"},
+				{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg"},
+			],
+		)
 
 	def test_publication_slug_and_body_frontmatter(self):
 		doc = frappe.get_doc(

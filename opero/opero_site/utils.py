@@ -54,6 +54,29 @@ def paragraphs(value: str) -> list[str]:
 	return [block.strip() for block in blocks if block.strip()]
 
 
+def hero_carousel_entry(image: str, note: str = "") -> dict | None:
+	path = cstr(image).strip()
+	if not path:
+		return None
+	entry = {"image": path}
+	label = cstr(note).strip()
+	if label:
+		entry["note"] = label
+	return entry
+
+
+def parse_hero_carousel_item(item) -> tuple[str, str] | None:
+	if isinstance(item, str):
+		path = cstr(item).strip()
+		return (path, "") if path else None
+	if isinstance(item, dict):
+		path = cstr(item.get("image")).strip()
+		if not path:
+			return None
+		return path, cstr(item.get("note")).strip()
+	return None
+
+
 def parse_links(value: str) -> list[dict]:
 	out = []
 	for line in lines(value):

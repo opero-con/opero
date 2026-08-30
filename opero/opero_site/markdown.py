@@ -6,6 +6,7 @@ from datetime import date, datetime
 import yaml
 from frappe.utils import cint, cstr, flt, getdate
 
+from opero.opero_site.utils import hero_carousel_entry, parse_hero_carousel_item
 from opero.opero_site.utils import lines as split_lines
 from opero.opero_site.utils import paragraphs as split_paragraphs
 
@@ -170,6 +171,18 @@ def _canonical_home(data: dict) -> dict:
 		hero["image"] = cstr(hero_in.get("image"))
 	if _text(hero_in.get("imageAlt")):
 		hero["imageAlt"] = _text(hero_in.get("imageAlt"))
+	if _text(hero_in.get("note")):
+		hero["note"] = _text(hero_in.get("note"))
+	carousel = []
+	for item in hero_in.get("carousel") or []:
+		parsed = parse_hero_carousel_item(item)
+		if not parsed:
+			continue
+		entry = hero_carousel_entry(*parsed)
+		if entry:
+			carousel.append(entry)
+	if carousel:
+		hero["carousel"] = carousel
 
 	about_in = data.get("about") or {}
 	projects = []
