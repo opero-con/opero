@@ -4,7 +4,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, cstr
 
 from opero.opero_site.publish_status import TO_PUBLISH, apply_publish_status
-from opero.opero_site.utils import lines, optional_url
+from opero.opero_site.utils import hero_carousel_entry, lines, optional_url
 
 
 class HomePage(Document):
@@ -25,10 +25,21 @@ class HomePage(Document):
 			"title": cstr(self.hero_title).strip(),
 			"description": cstr(self.hero_description).strip(),
 		}
-		if self.hero_image:
-			hero["image"] = cstr(self.hero_image)
-		if self.hero_image_alt:
-			hero["imageAlt"] = cstr(self.hero_image_alt).strip()
+		frames = [row for row in (self.hero_images or []) if cstr(row.image).strip()]
+		if frames:
+			primary = frames[0]
+			hero["image"] = cstr(primary.image)
+			if cstr(primary.image_alt).strip():
+				hero["imageAlt"] = cstr(primary.image_alt).strip()
+			if cstr(primary.note).strip():
+				hero["note"] = cstr(primary.note).strip()
+			carousel = []
+			for row in frames[1:]:
+				entry = hero_carousel_entry(row.image, row.note)
+				if entry:
+					carousel.append(entry)
+			if carousel:
+				hero["carousel"] = carousel
 
 		projects = []
 		for row in self.projects or []:

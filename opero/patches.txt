@@ -7,6 +7,7 @@ opero.patches.v0_2.rename_wash_doctypes_to_all_caps
 opero.patches.v0_4.rename_opero_site_doctypes
 opero.patches.v0_4.rename_publish_log_to_deploy_log
 opero.patches.v0_4.rename_publisher_to_deploy_center
+opero.patches.v0_4.move_home_hero_image_into_table
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
