@@ -8,8 +8,6 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
-  "section_publish",
-  "show_on_website",
   "status",
   "organization_name",
   "email",
@@ -27,18 +25,6 @@
   "og_image"
  ],
  "fields": [
-  {
-   "fieldname": "section_publish",
-   "fieldtype": "Section Break",
-   "label": "Publish"
-  },
-  {
-   "default": "1",
-   "description": "Takes effect on the next Publish to website.",
-   "fieldname": "show_on_website",
-   "fieldtype": "Check",
-   "label": "Show on website"
-  },
   {
    "default": "To publish",
    "fieldname": "status",
@@ -140,7 +126,7 @@
  "module": "Opero Site",
  "name": "Site Settings",
  "owner": "Administrator",
- "modified": "2026-08-29 11:40:00.000000",
+ "modified": "2026-08-30 21:40:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

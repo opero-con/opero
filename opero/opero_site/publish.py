@@ -8,6 +8,7 @@ from opero.opero_site.github import ContentRepo, GithubError, changed_files, del
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
 from opero.opero_site.media import export_planned_media, git_blob_sha
 from opero.opero_site.publish_status import (
+	ALWAYS_ON_SITE,
 	PUBLISHED,
 	TO_PUBLISH,
 	TO_UNPUBLISH,
@@ -152,11 +153,14 @@ def settle_publish_statuses() -> None:
 			_settle_doc(frappe.get_doc(doctype, name))
 	for name in CONTENT_SINGLES:
 		doc = frappe.get_single(name)
-		if is_to_publish(doc) or is_to_unpublish(doc):
+		if doc.status != PUBLISHED:
 			_settle_doc(doc)
 
 
 def _settle_doc(doc) -> None:
+	if doc.doctype in ALWAYS_ON_SITE:
+		doc.db_set("status", PUBLISHED)
+		return
 	if is_to_publish(doc):
 		doc.db_set("status", PUBLISHED)
 	elif is_to_unpublish(doc):

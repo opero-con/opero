@@ -1,10 +1,6 @@
-const SITE_CONTENT_DOCTYPES = [
-	"Publication",
-	"Team Member",
-	"Home Page",
-	"Privacy",
-	"Site Settings",
-];
+const OPTIONAL_SITE_DOCTYPES = ["Publication", "Team Member"];
+const ALWAYS_ON_SITE_DOCTYPES = ["Home Page", "Privacy", "Site Settings"];
+const SITE_CONTENT_DOCTYPES = OPTIONAL_SITE_DOCTYPES.concat(ALWAYS_ON_SITE_DOCTYPES);
 
 if (!window._opero_publish_status_bound) {
 	window._opero_publish_status_bound = true;
@@ -42,14 +38,16 @@ function wrapGetIndicator() {
 }
 
 function bindPublishStatus(doctype) {
-	frappe.ui.form.on(doctype, {
+	const handlers = {
 		refresh(frm) {
 			if (!frm.is_dirty()) {
 				frm._saved_publish_status = frm.doc.status;
 			}
 			setPublishStatusPill(frm);
 		},
-		show_on_website(frm) {
+	};
+	if (OPTIONAL_SITE_DOCTYPES.includes(doctype)) {
+		handlers.show_on_website = function (frm) {
 			if (frm._syncing_publish_status) {
 				return;
 			}
@@ -58,8 +56,9 @@ function bindPublishStatus(doctype) {
 			frm.doc.status = statusFromCheckbox(frm.doc.show_on_website, saved);
 			frm._syncing_publish_status = false;
 			setPublishStatusPill(frm);
-		},
-	});
+		};
+	}
+	frappe.ui.form.on(doctype, handlers);
 }
 
 function statusFromCheckbox(show, status) {

@@ -61,7 +61,6 @@ def apply_settings(doc, data: dict):
 	doc.canonical_url = _text(seo.get("canonicalUrl"))
 	doc.og_image = _text(seo.get("ogImage"))
 	doc.status = PUBLISHED
-	doc.show_on_website = 1
 	doc.set("offices", [])
 	for office in data.get("offices") or []:
 		doc.append(
@@ -83,7 +82,6 @@ def apply_home(doc, data: dict):
 	doc.hero_title = _text(hero.get("title"))
 	doc.hero_description = _text(hero.get("description"))
 	doc.status = PUBLISHED
-	doc.show_on_website = 1
 	doc.set("hero_images", [])
 	primary = _text(hero.get("image"))
 	if primary:
@@ -148,7 +146,6 @@ def apply_privacy(doc, data: dict):
 	reviewed = data.get("lastReviewed")
 	doc.last_reviewed = getdate(reviewed) if reviewed else None
 	doc.status = PUBLISHED
-	doc.show_on_website = 1
 	doc.set("sections", [])
 	for row in data.get("sections") or []:
 		doc.append(
