@@ -8,8 +8,6 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
-  "section_publish",
-  "show_on_website",
   "status",
   "section_hero",
   "hero_eyebrow",
@@ -29,17 +27,6 @@
   "partners"
  ],
  "fields": [
-  {
-   "fieldname": "section_publish",
-   "fieldtype": "Section Break",
-   "label": "Publish"
-  },
-  {
-   "default": "1",
-   "fieldname": "show_on_website",
-   "fieldtype": "Check",
-   "label": "Show on website"
-  },
   {
    "default": "To publish",
    "fieldname": "status",
@@ -147,7 +134,7 @@
  "module": "Opero Site",
  "name": "Home Page",
  "owner": "Administrator",
- "modified": "2026-08-30 12:00:00.000000",
+ "modified": "2026-08-30 21:40:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

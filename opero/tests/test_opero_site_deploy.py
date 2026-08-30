@@ -438,21 +438,25 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertNotIn(path, dict(files))
 		self.assertNotIn(path, keep)
 
-	def test_draft_home_edits_are_kept_not_written(self):
+	def test_home_page_is_always_written(self):
 		home = frappe.get_single("Home Page")
 		home.db_set("status", "Draft")
-		home.db_set("show_on_website", 0)
 		home.reload()
-		home.hero_title = "Draft hero title"
-		home.show_on_website = 0
+		home.hero_title = "Always on the public site"
 		home.save(ignore_permissions=True)
-		try:
-			files, keep = collect_content_plan()
-			self.assertNotIn("content/homepage/home.md", dict(files))
-			self.assertIn("content/homepage/home.md", keep)
-		finally:
-			home.show_on_website = 1
-			home.save(ignore_permissions=True)
+		self.assertEqual(home.status, "To publish")
+		self.assertFalse(home.meta.has_field("show_on_website"))
+		home.db_set("status", "Unpublished")
+		files, keep = collect_content_plan()
+		self.assertIn("content/homepage/home.md", dict(files))
+		self.assertNotIn("content/homepage/home.md", keep)
+
+	def test_always_on_site_singles_have_no_show_on_website(self):
+		for doctype in ("Home Page", "Privacy", "Site Settings"):
+			self.assertFalse(frappe.get_meta(doctype).has_field("show_on_website"), doctype)
+		self.assertTrue(frappe.get_meta("Publication").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Team Member").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Partner").has_field("show_on_website"))
 
 	def test_show_on_website_sets_status(self):
 		doc = frappe.get_doc(
