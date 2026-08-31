@@ -151,11 +151,10 @@
    "label": "Cover alt text"
   },
   {
+   "description": "Upload a PDF, or paste a web link if the file already lives elsewhere.",
    "fieldname": "file_url",
-   "fieldtype": "Data",
-   "label": "File URL",
-   "options": "URL",
-   "description": "Link to a downloadable file such as a PDF."
+   "fieldtype": "Attach",
+   "label": "PDF"
   },
   {
    "fieldname": "page_url",
@@ -221,7 +220,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-30 22:24:00.000000",
+ "modified": "2026-08-31 23:22:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {

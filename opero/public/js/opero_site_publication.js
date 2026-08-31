@@ -4,6 +4,14 @@ frappe.ui.form.on("Publication", {
 		if (topics) {
 			topics.df.ignore_link_validation = true;
 		}
+		const pdf = frm.get_field("file_url");
+		if (pdf) {
+			pdf.df.options = {
+				restrictions: {
+					allowed_file_types: [".pdf", "application/pdf"],
+				},
+			};
+		}
 		const field = frm.get_field("body");
 		if (!field) {
 			return;
