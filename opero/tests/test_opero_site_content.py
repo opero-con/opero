@@ -287,6 +287,25 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(doc.to_site_frontmatter()["type"], "Overview")
 		self.assertNotIn("pageUrl", doc.to_site_frontmatter())
 
+	def test_publication_accepts_desk_file_url(self):
+		for title, file_url in (
+			("Desk Public Pdf", "/files/january-update.pdf"),
+			("Desk Private Pdf", "/private/files/january-update.pdf"),
+		):
+			doc = frappe.get_doc(
+				{
+					"doctype": "Publication",
+					"title": title,
+					"published_on": "2025-02-01",
+					"publication_type": "Digest",
+					"summary": "Attached from Desk.",
+					"file_url": file_url,
+				}
+			)
+			doc.insert(ignore_permissions=True)
+			self.assertEqual(doc.file_url, file_url)
+			self.assertEqual(doc.to_site_frontmatter()["fileUrl"], file_url)
+
 	def test_publication_overview_page_url_opens_technology_page(self):
 		doc = frappe.get_doc(
 			{

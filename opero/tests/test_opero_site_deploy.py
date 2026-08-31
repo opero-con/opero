@@ -532,6 +532,32 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		self.assertEqual(hero["carousel"][-1]["image"], public)
 		self.assertEqual(media, [(public.lstrip("/"), b"fake-png-bytes")])
 
+	def test_export_rewrites_publication_pdf(self):
+		from frappe.utils.file_manager import save_file
+
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "January PDF",
+				"published_on": "2025-01-30",
+				"publication_type": "Newsletter",
+				"summary": "Has an attached PDF.",
+			}
+		).insert(ignore_permissions=True)
+		content = _minimal_pdf()
+		file_doc = save_file("january-update.pdf", content, "Publication", doc.name, is_private=1)
+		doc.file_url = file_doc.file_url
+		doc.save(ignore_permissions=True)
+		text, media = export_markdown_media(
+			f"content/publications/{doc.slug}.md",
+			to_markdown(doc.to_site_frontmatter()),
+		)
+		public = f"/media/publications/{file_doc.file_name}"
+		self.assertEqual(parse_frontmatter(text)["fileUrl"], public)
+		self.assertEqual(media, [(public.lstrip("/"), content)])
+		self.assertNotIn("/private/files/", text)
+		self.assertNotIn("/files/", text)
+
 	def test_planned_changes_commits_new_desk_image(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
 		home = frappe.get_single("Home Page")
@@ -597,3 +623,15 @@ def _attach_png(file_name: str, content: bytes):
 	from frappe.utils.file_manager import save_file
 
 	return save_file(file_name, content, "Home Page", "Home Page", is_private=1)
+
+
+def _minimal_pdf() -> bytes:
+	from io import BytesIO
+
+	from pypdf import PdfWriter
+
+	buffer = BytesIO()
+	writer = PdfWriter()
+	writer.add_blank_page(width=72, height=72)
+	writer.write(buffer)
+	return buffer.getvalue()
