@@ -83,3 +83,53 @@ class TestWebsiteEnquiry(FrappeTestCase):
 				message="Hello Opero",
 				consent="yes",
 			)
+
+	def test_website_manager_can_close_a_website_enquiry(self):
+		result = create_website_enquiry(
+			full_name="Jane Doe",
+			email="jane@example.org",
+			subject="Training",
+			message="Hello Opero",
+			consent="yes",
+		)
+		frappe.set_user(_website_manager())
+		from frappe.email.inbox import mark_as_closed_open
+
+		mark_as_closed_open(result["name"], "Closed")
+		doc = frappe.get_doc("Communication", result["name"])
+		self.assertEqual(doc.status, "Closed")
+
+	def test_website_manager_cannot_write_other_communications(self):
+		other = frappe.get_doc(
+			{
+				"doctype": "Communication",
+				"subject": "Internal note",
+				"communication_type": "Communication",
+				"sent_or_received": "Received",
+				"status": "Open",
+			}
+		).insert(ignore_permissions=True)
+		frappe.set_user(_website_manager())
+		from frappe.email.inbox import mark_as_closed_open
+
+		with self.assertRaises(frappe.PermissionError):
+			mark_as_closed_open(other.name, "Closed")
+
+
+def _website_manager() -> str:
+	email = "website.manager@example.com"
+	if not frappe.db.exists("User", email):
+		user = frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": email,
+				"first_name": "Website",
+				"last_name": "Manager",
+				"send_welcome_email": 0,
+			}
+		)
+		user.insert(ignore_permissions=True)
+	else:
+		user = frappe.get_doc("User", email)
+	user.add_roles("Website Manager")
+	return email

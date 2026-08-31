@@ -84,3 +84,4 @@ opero.patches.v0_4.reload_opero_website_workspace_for_deploy_center
 opero.patches.v0_4.reload_opero_website_workspace_home_page_label
 opero.patches.v0_4.remove_show_on_website_from_always_on_singles
 opero.patches.v0_4.add_website_enquiries
+opero.patches.v0_4.allow_website_manager_communication

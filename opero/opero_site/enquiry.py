@@ -110,3 +110,26 @@ def _notify_recipients() -> list[str]:
 		if address and address not in out:
 			out.append(address)
 	return out
+
+
+def communication_permission_query(user=None) -> str | None:
+	user = user or frappe.session.user
+	roles = set(frappe.get_roles(user))
+	if roles & {"System Manager", "Inbox User"}:
+		return None
+	if "Website Manager" in roles:
+		return "`tabCommunication`.`custom_source` = 'Website'"
+	return None
+
+
+def communication_has_permission(doc, ptype=None, user=None) -> bool | None:
+	user = user or frappe.session.user
+	roles = set(frappe.get_roles(user))
+	if roles & {"System Manager", "Inbox User"}:
+		return None
+	if "Website Manager" not in roles:
+		return None
+	is_website = cstr(getattr(doc, "custom_source", None)) == SOURCE_WEBSITE
+	if ptype in (None, "read", "write", "print", "email"):
+		return is_website
+	return False
