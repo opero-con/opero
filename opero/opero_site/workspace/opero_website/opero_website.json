@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-deploy-center\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deploy Center\",\"col\":3}},{\"id\":\"ow-s-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"ow-s-home\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Home Page\",\"col\":3}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-privacy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Privacy\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-deploy-center\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deploy Center\",\"col\":3}},{\"id\":\"ow-s-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"ow-s-home\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Home Page\",\"col\":3}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-privacy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Privacy\",\"col\":3}},{\"id\":\"ow-s-enquiries\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Website Enquiries\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
  "creation": "2026-08-25 23:44:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -89,7 +89,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-08-28 09:15:00.000000",
+ "modified": "2026-08-31 20:20:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Opero Website",
@@ -137,6 +137,13 @@
   {
    "label": "Privacy",
    "link_to": "Privacy",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "List",
+   "label": "Website Enquiries",
+   "link_to": "Communication",
+   "stats_filter": "{\"custom_source\":\"Website\"}",
    "type": "DocType"
   }
  ],

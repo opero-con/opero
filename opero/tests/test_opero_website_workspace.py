@@ -32,8 +32,20 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(shortcuts["Settings"], "Site Settings")
 		self.assertEqual(
 			set(shortcuts),
-			{"Deploy Center", "Settings", "Home Page", "Team", "Publications", "Privacy"},
+			{
+				"Deploy Center",
+				"Settings",
+				"Home Page",
+				"Team",
+				"Publications",
+				"Privacy",
+				"Website Enquiries",
+			},
 		)
+		enquiries = next(row for row in doc.shortcuts if row.label == "Website Enquiries")
+		self.assertEqual(enquiries.link_to, "Communication")
+		self.assertEqual(enquiries.doc_view, "List")
+		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
 		self.assertEqual(
 			{row.role for row in doc.roles},
 			{"System Manager", "Website Manager"},
