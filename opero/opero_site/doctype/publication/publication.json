@@ -12,6 +12,7 @@
   "slug",
   "column_break_publish",
   "show_on_website",
+  "featured",
   "status",
   "section_details",
   "published_on",
@@ -22,7 +23,6 @@
   "column_break_service",
   "service_area",
   "section_summary",
-  "featured",
   "summary",
   "section_media",
   "cover",
@@ -65,6 +65,11 @@
    "label": "Show on website"
   },
   {
+   "fieldname": "featured",
+   "fieldtype": "Check",
+   "label": "Featured"
+  },
+  {
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -78,7 +83,7 @@
   {
    "fieldname": "section_details",
    "fieldtype": "Section Break",
-   "label": "Details"
+   "label": ""
   },
   {
    "fieldname": "published_on",
@@ -122,12 +127,7 @@
   {
    "fieldname": "section_summary",
    "fieldtype": "Section Break",
-   "label": "Summary"
-  },
-  {
-   "fieldname": "featured",
-   "fieldtype": "Check",
-   "label": "Featured"
+   "label": ""
   },
   {
    "fieldname": "summary",
@@ -220,7 +220,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-31 23:22:00.000000",
+ "modified": "2026-08-31 23:57:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
