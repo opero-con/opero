@@ -7,7 +7,7 @@ from frappe.utils import cint, cstr, flt, getdate
 from opero.opero_site.body_html import body_sections_to_html
 from opero.opero_site.github import GithubError
 from opero.opero_site.markdown import parse_frontmatter
-from opero.opero_site.publish import content_repo_from_conf
+from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
 from opero.opero_site.publish_status import DRAFT, PUBLISHED, UNPUBLISHED
 from opero.opero_site.utils import normalize_publication_type, parse_hero_carousel_item
 
@@ -216,40 +216,45 @@ def apply_team_member(doc, data: dict, slug: str):
 
 def load_files(files: dict[str, str]) -> dict[str, int]:
 	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0}
-	for path, text in files.items():
-		if path == "content/settings/general.md":
-			doc = frappe.get_single("Site Settings")
-			apply_settings(doc, parse_frontmatter(text))
-			doc.save(ignore_permissions=True)
-			counts["settings"] += 1
-		elif path == "content/homepage/home.md":
-			doc = frappe.get_single("Home Page")
-			apply_home(doc, parse_frontmatter(text))
-			doc.save(ignore_permissions=True)
-			counts["home"] += 1
-		elif path == "content/privacy/privacy.md":
-			doc = frappe.get_single("Privacy")
-			apply_privacy(doc, parse_frontmatter(text))
-			doc.save(ignore_permissions=True)
-			counts["privacy"] += 1
-		elif path.startswith("content/publications/") and path.endswith(".md"):
-			slug = slug_from_path(path)
-			if frappe.db.exists("Publication", slug):
-				doc = frappe.get_doc("Publication", slug)
-			else:
-				doc = frappe.new_doc("Publication")
-			apply_publication(doc, parse_frontmatter(text), slug)
-			doc.save(ignore_permissions=True)
-			counts["publications"] += 1
-		elif path.startswith("content/team/") and path.endswith(".md"):
-			slug = slug_from_path(path)
-			if frappe.db.exists("Team Member", slug):
-				doc = frappe.get_doc("Team Member", slug)
-			else:
-				doc = frappe.new_doc("Team Member")
-			apply_team_member(doc, parse_frontmatter(text), slug)
-			doc.save(ignore_permissions=True)
-			counts["team"] += 1
+	frappe.flags.opero_site_syncing = True
+	try:
+		for path, text in files.items():
+			if path == "content/settings/general.md":
+				doc = frappe.get_single("Site Settings")
+				apply_settings(doc, parse_frontmatter(text))
+				doc.save(ignore_permissions=True)
+				counts["settings"] += 1
+			elif path == "content/homepage/home.md":
+				doc = frappe.get_single("Home Page")
+				apply_home(doc, parse_frontmatter(text))
+				doc.save(ignore_permissions=True)
+				counts["home"] += 1
+			elif path == "content/privacy/privacy.md":
+				doc = frappe.get_single("Privacy")
+				apply_privacy(doc, parse_frontmatter(text))
+				doc.save(ignore_permissions=True)
+				counts["privacy"] += 1
+			elif path.startswith("content/publications/") and path.endswith(".md"):
+				slug = slug_from_path(path)
+				if frappe.db.exists("Publication", slug):
+					doc = frappe.get_doc("Publication", slug)
+				else:
+					doc = frappe.new_doc("Publication")
+				apply_publication(doc, parse_frontmatter(text), slug)
+				doc.save(ignore_permissions=True)
+				counts["publications"] += 1
+			elif path.startswith("content/team/") and path.endswith(".md"):
+				slug = slug_from_path(path)
+				if frappe.db.exists("Team Member", slug):
+					doc = frappe.get_doc("Team Member", slug)
+				else:
+					doc = frappe.new_doc("Team Member")
+				apply_team_member(doc, parse_frontmatter(text), slug)
+				doc.save(ignore_permissions=True)
+				counts["team"] += 1
+	finally:
+		frappe.flags.opero_site_syncing = False
+		clear_pending_cache()
 	return counts
 
 

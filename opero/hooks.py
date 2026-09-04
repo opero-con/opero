@@ -231,6 +231,25 @@ doc_events = {
 	"Comment": {
 		"on_update": "opero.events.comment.on_update_comment",
 	},
+	"Publication": {
+		"after_insert": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
+	},
+	"Team Member": {
+		"after_insert": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
+	},
+	"Home Page": {
+		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
+	},
+	"Privacy": {
+		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
+	},
+	"Site Settings": {
+		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
+	},
 }
 
 # Scheduled Tasks
