@@ -25,6 +25,163 @@ MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/")
 DEPLOY_LOG_LIMIT = 10
 CONTENT_DOCTYPES = ("Publication", "Team Member")
 CONTENT_SINGLES = ("Home Page", "Privacy", "Site Settings")
+SITE_CONTENT_DOCTYPES = CONTENT_DOCTYPES + CONTENT_SINGLES
+PENDING_EVENT = "opero_site_pending"
+PENDING_CACHE_KEY = "opero_site_pending_files"
+
+CONTENT_PATHS = {
+	"Site Settings": "content/settings/general.md",
+	"Home Page": "content/homepage/home.md",
+	"Privacy": "content/privacy/privacy.md",
+}
+
+
+def content_path_for(doc) -> str | None:
+	fixed = CONTENT_PATHS.get(doc.doctype)
+	if fixed:
+		return fixed
+	slug = getattr(doc, "slug", None)
+	if not slug:
+		return None
+	if doc.doctype == "Publication":
+		return f"content/publications/{slug}.md"
+	if doc.doctype == "Team Member":
+		return f"content/team/{slug}.md"
+	return None
+
+
+def _doc_is_ready(doc) -> bool:
+	if doc.doctype == "Site Settings":
+		return bool(doc.organization_name)
+	if doc.doctype == "Home Page":
+		return bool(doc.hero_title)
+	if doc.doctype == "Privacy":
+		return bool(doc.last_reviewed)
+	return True
+
+
+def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
+	"""Desk-side pending rows for one content save (no GitHub round-trip)."""
+	entries: list[dict] = []
+	previous = None if deleted or doc.is_new() else doc.get_doc_before_save()
+	if previous and getattr(previous, "slug", None) and previous.slug != getattr(doc, "slug", None):
+		old_path = content_path_for(previous)
+		if old_path and doc.doctype == "Publication" and (
+			is_on_site(previous) or is_off_site(previous) or is_on_site(doc) or is_off_site(doc)
+		):
+			entries.append({"path": old_path, "action": "delete"})
+		elif old_path and doc.doctype == "Team Member" and (
+			is_on_site(previous) or is_off_site(previous)
+		):
+			entries.append({"path": old_path, "action": "delete"})
+
+	path = content_path_for(doc)
+	if not path:
+		return entries
+
+	if deleted:
+		if doc.doctype in CONTENT_DOCTYPES:
+			entries.append({"path": path, "action": "delete"})
+		return _unique_pending(entries)
+
+	if doc.doctype in ALWAYS_ON_SITE:
+		if _doc_is_ready(doc):
+			entries.append({"path": path, "action": "update"})
+		return _unique_pending(entries)
+
+	if doc.doctype == "Publication":
+		if is_on_site(doc):
+			entries.append({"path": path, "action": "update"})
+		elif is_off_site(doc):
+			entries.append({"path": path, "action": "delete"})
+		return _unique_pending(entries)
+
+	if doc.doctype == "Team Member":
+		if is_on_site(doc) or is_off_site(doc):
+			entries.append({"path": path, "action": "update"})
+		return _unique_pending(entries)
+
+	return _unique_pending(entries)
+
+
+def _unique_pending(entries: list[dict]) -> list[dict]:
+	by_path: dict[str, str] = {}
+	for row in entries:
+		by_path[row["path"]] = row["action"]
+	return [{"path": path, "action": action} for path, action in by_path.items()]
+
+
+def _pending_cache() -> dict[str, str]:
+	return dict(frappe.cache.get_value(PENDING_CACHE_KEY) or {})
+
+
+def _set_pending_cache(by_path: dict[str, str]) -> None:
+	frappe.cache.set_value(PENDING_CACHE_KEY, by_path)
+
+
+def merge_pending_cache(files: list[dict]) -> list[dict]:
+	by_path = _pending_cache()
+	for row in files:
+		by_path[row["path"]] = row["action"]
+	_set_pending_cache(by_path)
+	return [{"path": path, "action": action} for path, action in sorted(by_path.items())]
+
+
+def replace_pending_cache(files: list[dict]) -> None:
+	_set_pending_cache({row["path"]: row["action"] for row in files})
+
+
+def clear_pending_cache() -> None:
+	frappe.cache.delete_value(PENDING_CACHE_KEY)
+
+
+def pending_from_status() -> list[dict]:
+	"""Queued publish intents that should appear even before a GitHub compare."""
+	entries: list[dict] = []
+	for doctype in CONTENT_DOCTYPES:
+		for row in frappe.get_all(
+			doctype,
+			filters={"status": ["in", [TO_PUBLISH, TO_UNPUBLISH]]},
+			fields=["slug", "status"],
+		):
+			path = content_path_for(frappe._dict(doctype=doctype, slug=row.slug))
+			if not path:
+				continue
+			if doctype == "Publication" and row.status == TO_UNPUBLISH:
+				entries.append({"path": path, "action": "delete"})
+			else:
+				entries.append({"path": path, "action": "update"})
+	for name in CONTENT_SINGLES:
+		doc = frappe.get_single(name)
+		if is_to_publish(doc) and _doc_is_ready(doc):
+			path = content_path_for(doc)
+			if path:
+				entries.append({"path": path, "action": "update"})
+	return _unique_pending(entries)
+
+
+def desk_pending_entries() -> list[dict]:
+	by_path = {row["path"]: row["action"] for row in pending_from_status()}
+	by_path.update(_pending_cache())
+	return [{"path": path, "action": action} for path, action in sorted(by_path.items())]
+
+
+def notify_pending_website_changes(doc, method: str | None = None) -> None:
+	"""Push this save into the Deploy Center pending list (cache + realtime)."""
+	if frappe.flags.get("opero_site_syncing"):
+		return
+	if doc.doctype not in SITE_CONTENT_DOCTYPES:
+		return
+	files = pending_push_for_doc(doc, deleted=method == "on_trash")
+	if not files:
+		return
+	merge_pending_cache(files)
+	frappe.publish_realtime(
+		PENDING_EVENT,
+		{"files": files},
+		user=frappe.session.user,
+		after_commit=True,
+	)
 
 
 def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
@@ -181,15 +338,27 @@ def _emit_progress(done: int, total: int, path: str = "") -> None:
 
 
 @frappe.whitelist()
+def preview_pending() -> dict:
+	"""Fast pending list from Desk saves and publish status (no GitHub)."""
+	_require_deploy_permission()
+	files = desk_pending_entries()
+	if not files:
+		return {"files": [], "message": _("Nothing due.")}
+	return {"files": files, "message": None}
+
+
+@frappe.whitelist()
 def preview_deploy() -> dict:
 	_require_deploy_permission()
 	try:
 		files = planned_content_changes(content_repo_from_conf(), on_progress=_emit_progress)
 	except GithubError as exc:
 		frappe.throw(str(exc))
-	if not files:
+	rows = pending_entries(files)
+	replace_pending_cache(rows)
+	if not rows:
 		return {"files": [], "message": _("Public site content is already up to date.")}
-	return {"files": pending_entries(files), "message": None}
+	return {"files": rows, "message": None}
 
 
 @frappe.whitelist()
@@ -199,6 +368,7 @@ def deploy_to_website() -> dict:
 	files = planned_content_changes(repo, on_progress=_emit_progress)
 	if not files:
 		settle_publish_statuses()
+		clear_pending_cache()
 		return {"commit_url": None, "message": _("Public site content is already up to date.")}
 
 	try:
@@ -209,4 +379,5 @@ def deploy_to_website() -> dict:
 		frappe.throw(str(exc))
 	record_deploy(commit["html_url"], commit["sha"], files)
 	settle_publish_statuses()
+	clear_pending_cache()
 	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}

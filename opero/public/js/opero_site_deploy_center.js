@@ -2,16 +2,18 @@ frappe.ui.form.on("Deploy Center", {
 	refresh(frm) {
 		frm.disable_save();
 		renderHistory(frm);
+		bindPendingPush(frm);
 		if (!frm.has_perm("write")) {
 			return;
 		}
 		loadPending(frm);
 		frm.page.set_primary_action(__("Deploy to website"), () => deployWebsite(frm));
-		frm.page.set_secondary_action(__("Refresh"), () => loadPending(frm), "refresh");
+		frm.page.set_secondary_action(__("Refresh"), () => syncPending(frm), "refresh");
 	},
 });
 
 const PROGRESS_EVENT = "opero_site_progress";
+const PENDING_EVENT = "opero_site_pending";
 
 function renderHistory(frm) {
 	const rows = frm.doc.deploy_log || [];
@@ -126,7 +128,77 @@ function renderPending(wrap, payload) {
 	wrap.html(`<ul>${items}</ul>`);
 }
 
+function bindPendingPush(frm) {
+	if (!frappe.realtime || !frappe.realtime.on || frm._opero_pending_bound) {
+		return;
+	}
+	frm._opero_pending_bound = true;
+	frappe.realtime.on(PENDING_EVENT, (data) => {
+		pushPending(frm, data);
+	});
+}
+
+function pushPending(frm, data) {
+	const incoming = (data && data.files) || [];
+	if (!incoming.length) {
+		return;
+	}
+	if (frm._opero_busy) {
+		frm._opero_pending_queue = (frm._opero_pending_queue || []).concat(incoming);
+		return;
+	}
+	applyPendingFiles(frm, incoming);
+}
+
+function applyPendingQueue(frm) {
+	const queued = frm._opero_pending_queue || [];
+	frm._opero_pending_queue = [];
+	if (queued.length) {
+		applyPendingFiles(frm, queued);
+	}
+}
+
+function applyPendingFiles(frm, incoming) {
+	const byPath = {};
+	for (const row of frm._opero_pending_files || []) {
+		byPath[row.path] = row.action;
+	}
+	for (const row of incoming) {
+		if (row && row.path) {
+			byPath[row.path] = row.action;
+		}
+	}
+	const files = Object.keys(byPath)
+		.sort()
+		.map((path) => ({ path, action: byPath[path] }));
+	frm._opero_pending_files = files;
+	renderPending(frm.get_field("pending_html").$wrapper, { files });
+}
+
 function loadPending(frm) {
+	if (frm._opero_busy) {
+		return;
+	}
+	const wrap = frm.get_field("pending_html").$wrapper;
+	setBusy(frm, true);
+	frappe.call({
+		method: "opero.opero_site.publish.preview_pending",
+		callback(r) {
+			setBusy(frm, false);
+			const payload = r.message || {};
+			frm._opero_pending_files = payload.files || [];
+			renderPending(wrap, payload);
+			applyPendingQueue(frm);
+		},
+		error() {
+			setBusy(frm, false);
+			wrap.html(`<p class="text-danger">${__("Could not load pending website changes.")}</p>`);
+			applyPendingQueue(frm);
+		},
+	});
+}
+
+function syncPending(frm) {
 	if (frm._opero_busy) {
 		return;
 	}
@@ -139,12 +211,16 @@ function loadPending(frm) {
 		callback(r) {
 			stop();
 			setBusy(frm, false);
-			renderPending(wrap, r.message || {});
+			const payload = r.message || {};
+			frm._opero_pending_files = payload.files || [];
+			renderPending(wrap, payload);
+			applyPendingQueue(frm);
 		},
 		error() {
 			stop();
 			setBusy(frm, false);
 			wrap.html(`<p class="text-danger">${__("Could not compare Desk with GitHub.")}</p>`);
+			applyPendingQueue(frm);
 		},
 	});
 }

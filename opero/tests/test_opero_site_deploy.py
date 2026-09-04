@@ -10,10 +10,15 @@ from opero.opero_site.load import load_files
 from opero.opero_site.markdown import parse_frontmatter, preserve_unmanaged_frontmatter, to_markdown
 from opero.opero_site.media import export_markdown_media, export_planned_media, git_blob_sha
 from opero.opero_site.publish import (
+	clear_pending_cache,
 	collect_content_files,
 	collect_content_plan,
+	desk_pending_entries,
+	notify_pending_website_changes,
 	pending_entries,
+	pending_push_for_doc,
 	planned_content_changes,
+	preview_pending,
 	record_deploy,
 	settle_publish_statuses,
 )
@@ -74,6 +79,7 @@ class TestOperoSitePublish(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
 		frappe.db.delete("Team Member")
+		clear_pending_cache()
 		publisher = frappe.get_single("Deploy Center")
 		publisher.set("deploy_log", [])
 		publisher.save(ignore_permissions=True)
@@ -91,6 +97,68 @@ class TestOperoSitePublish(FrappeTestCase):
 				{"path": "content/publications/old-update.md", "action": "delete"},
 			],
 		)
+
+	def test_pending_push_for_publication_statuses(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Pending Push",
+				"slug": "pending-push",
+				"publication_type": "Newsletter",
+				"published_on": "2025-01-01",
+				"summary": "Summary",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(
+			pending_push_for_doc(doc),
+			[{"path": "content/publications/pending-push.md", "action": "update"}],
+		)
+		doc.db_set("status", "Published")
+		doc.show_on_website = 0
+		doc.save(ignore_permissions=True)
+		self.assertEqual(
+			pending_push_for_doc(doc),
+			[{"path": "content/publications/pending-push.md", "action": "delete"}],
+		)
+
+	def test_notify_pushes_pending_cache_for_preview(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Cached Pending",
+				"slug": "cached-pending",
+				"publication_type": "Newsletter",
+				"published_on": "2025-01-01",
+				"summary": "Summary",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		notify_pending_website_changes(doc, "on_update")
+		self.assertIn(
+			{"path": "content/publications/cached-pending.md", "action": "update"},
+			desk_pending_entries(),
+		)
+		payload = preview_pending()
+		self.assertIn(
+			{"path": "content/publications/cached-pending.md", "action": "update"},
+			payload["files"],
+		)
+
+	def test_draft_publication_does_not_push_pending(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Still Draft",
+				"slug": "still-draft",
+				"publication_type": "Newsletter",
+				"published_on": "2025-01-01",
+				"summary": "Summary",
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(pending_push_for_doc(doc), [])
+		notify_pending_website_changes(doc, "after_insert")
+		self.assertEqual(desk_pending_entries(), [])
 
 	def test_record_deploy_keeps_last_ten_newest_first(self):
 		for index in range(12):
