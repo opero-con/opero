@@ -16,7 +16,8 @@
    "fieldname": "office_label",
    "fieldtype": "Data",
    "label": "Label",
-   "description": "For example Head office or Regional office."
+   "description": "For example Corporate Address or Field Address.",
+   "in_list_view": 1
   },
   {
    "fieldname": "building",
@@ -50,7 +51,7 @@
  "name": "Office",
  "owner": "Administrator",
  "permissions": [],
- "modified": "2026-08-25 12:35:00.000000",
+ "modified": "2026-09-04 09:34:11.929085",
  "modified_by": "Administrator",
  "track_changes": 0,
  "has_web_view": 0

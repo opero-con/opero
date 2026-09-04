@@ -81,7 +81,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			("Home Page", "section_impacts", "impacts", "Impact metrics"),
 			("Home Page", "section_projects", "projects", "Projects"),
 			("Home Page", "section_partners", "partners", "Partners"),
-			("Site Settings", "section_offices", "offices", "Offices"),
+			("Site Settings", "section_offices", "offices", "Address"),
 		)
 		for doctype, section, child, title in cases:
 			meta = frappe.get_meta(doctype)
