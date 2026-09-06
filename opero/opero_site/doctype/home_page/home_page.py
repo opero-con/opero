@@ -4,7 +4,12 @@ from frappe.model.document import Document
 from frappe.utils import cint, cstr
 
 from opero.opero_site.publish_status import TO_PUBLISH, apply_publish_status
-from opero.opero_site.utils import hero_carousel_entry, lines, optional_url
+from opero.opero_site.utils import (
+	hero_carousel_entry,
+	lines,
+	normalize_hero_image_focus,
+	optional_url,
+)
 
 
 class HomePage(Document):
@@ -33,9 +38,12 @@ class HomePage(Document):
 				hero["imageAlt"] = cstr(primary.image_alt).strip()
 			if cstr(primary.note).strip():
 				hero["note"] = cstr(primary.note).strip()
+			primary_focus = normalize_hero_image_focus(primary.image_focus)
+			if primary_focus != "center":
+				hero["imageFocus"] = primary_focus
 			carousel = []
 			for row in frames[1:]:
-				entry = hero_carousel_entry(row.image, row.note)
+				entry = hero_carousel_entry(row.image, row.note, row.image_focus)
 				if entry:
 					carousel.append(entry)
 			if carousel:

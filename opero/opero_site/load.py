@@ -9,7 +9,11 @@ from opero.opero_site.github import GithubError
 from opero.opero_site.markdown import parse_frontmatter
 from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
 from opero.opero_site.publish_status import DRAFT, PUBLISHED, UNPUBLISHED
-from opero.opero_site.utils import normalize_publication_type, parse_hero_carousel_item
+from opero.opero_site.utils import (
+	hero_image_focus_label,
+	normalize_publication_type,
+	parse_hero_carousel_item,
+)
 
 
 def slug_from_path(path: str) -> str:
@@ -70,13 +74,22 @@ def apply_home(doc, data: dict):
 				"image": primary,
 				"image_alt": _text(hero.get("imageAlt")),
 				"note": _text(hero.get("note")),
+				"image_focus": hero_image_focus_label(hero.get("imageFocus")),
 			},
 		)
 	for item in hero.get("carousel") or []:
 		parsed = parse_hero_carousel_item(item)
 		if parsed:
-			path, note = parsed
-			doc.append("hero_images", {"image": path, "note": note, "image_alt": ""})
+			path, note, focus = parsed
+			doc.append(
+				"hero_images",
+				{
+					"image": path,
+					"note": note,
+					"image_alt": "",
+					"image_focus": hero_image_focus_label(focus),
+				},
+			)
 	doc.about_title = _text(about.get("title"))
 	doc.set("about_paragraphs", [])
 	for paragraph in about.get("paragraphs") or []:

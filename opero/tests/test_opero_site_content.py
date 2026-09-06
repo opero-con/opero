@@ -164,25 +164,27 @@ class TestOperoSiteContent(FrappeTestCase):
 				"image": "/media/homepage/opero-wash-hub.jpg",
 				"image_alt": "Aerial view of WASH work",
 				"note": "Kenya · East Africa",
+				"image_focus": "Top",
 			},
 		)
 		doc.append(
 			"hero_images",
-			{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya"},
+			{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya", "image_focus": "Left"},
 		)
 		doc.append(
 			"hero_images",
-			{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg", "note": ""},
+			{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg", "note": "", "image_focus": "Center"},
 		)
 		doc.save(ignore_permissions=True)
 		hero = doc.to_site_frontmatter()["hero"]
 		self.assertEqual(hero["image"], "/media/homepage/opero-wash-hub.jpg")
 		self.assertEqual(hero["imageAlt"], "Aerial view of WASH work")
 		self.assertEqual(hero["note"], "Kenya · East Africa")
+		self.assertEqual(hero["imageFocus"], "top")
 		self.assertEqual(
 			hero["carousel"],
 			[
-				{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya"},
+				{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya", "imageFocus": "left"},
 				{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg"},
 			],
 		)
