@@ -99,6 +99,41 @@ def normalize_body_html(html: str) -> str:
 	return body_sections_to_html(html_to_body_sections(html))
 
 
+def html_to_paragraphs(html: str) -> list[str]:
+	"""Turn Text Editor HTML into a flat paragraph list for about.paragraphs."""
+	paragraphs = []
+	for section in html_to_body_sections(html):
+		for para in section.get("paragraphs") or []:
+			text = cstr(para).strip()
+			if text:
+				paragraphs.append(text)
+	return dedupe_paragraphs(paragraphs)
+
+
+def paragraphs_to_html(paragraphs) -> str:
+	"""Turn a paragraph list into Text Editor HTML."""
+	parts = []
+	for para in dedupe_paragraphs(paragraphs):
+		parts.append(f"<p>{escape(para)}</p>")
+	return "".join(parts)
+
+
+def dedupe_paragraphs(paragraphs) -> list[str]:
+	"""Drop an exact mirrored repeat (A+B + A+B)."""
+	rows = [cstr(para).strip() for para in (paragraphs or []) if cstr(para).strip()]
+	n = len(rows)
+	if n >= 2 and n % 2 == 0:
+		half = n // 2
+		if rows[:half] == rows[half:]:
+			return rows[:half]
+	return rows
+
+
+def normalize_paragraphs_html(html: str) -> str:
+	"""Round-trip Text Editor HTML through the about.paragraphs model."""
+	return paragraphs_to_html(html_to_paragraphs(html))
+
+
 def _walk(builder: _Builder, nodes) -> None:
 	for node in nodes:
 		if isinstance(node, Tag):
