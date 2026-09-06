@@ -1,5 +1,5 @@
 const OPTIONAL_SITE_DOCTYPES = ["Publication", "Team Member"];
-const ALWAYS_ON_SITE_DOCTYPES = ["Home Page", "Privacy", "Site Settings"];
+const ALWAYS_ON_SITE_DOCTYPES = ["Home Page", "Privacy policy", "Site Settings"];
 const SITE_CONTENT_DOCTYPES = OPTIONAL_SITE_DOCTYPES.concat(ALWAYS_ON_SITE_DOCTYPES);
 
 if (!window._opero_publish_status_bound) {

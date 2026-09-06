@@ -24,7 +24,7 @@ DEFAULT_BRANCH = "main"
 MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/")
 DEPLOY_LOG_LIMIT = 10
 CONTENT_DOCTYPES = ("Publication", "Team Member")
-CONTENT_SINGLES = ("Home Page", "Privacy", "Site Settings")
+CONTENT_SINGLES = ("Home Page", "Privacy policy", "Site Settings")
 SITE_CONTENT_DOCTYPES = CONTENT_DOCTYPES + CONTENT_SINGLES
 PENDING_EVENT = "opero_site_pending"
 PENDING_CACHE_KEY = "opero_site_pending_files"
@@ -32,7 +32,7 @@ PENDING_CACHE_KEY = "opero_site_pending_files"
 CONTENT_PATHS = {
 	"Site Settings": "content/settings/general.md",
 	"Home Page": "content/homepage/home.md",
-	"Privacy": "content/privacy/privacy.md",
+	"Privacy policy": "content/privacy/privacy.md",
 }
 
 
@@ -55,7 +55,7 @@ def _doc_is_ready(doc) -> bool:
 		return bool(doc.organization_name)
 	if doc.doctype == "Home Page":
 		return bool(doc.hero_title)
-	if doc.doctype == "Privacy":
+	if doc.doctype == "Privacy policy":
 		return bool(doc.last_reviewed)
 	return True
 
@@ -211,7 +211,7 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	)
 	home = frappe.get_single("Home Page")
 	consider("content/homepage/home.md", home, bool(home.hero_title))
-	privacy = frappe.get_single("Privacy")
+	privacy = frappe.get_single("Privacy policy")
 	consider("content/privacy/privacy.md", privacy, bool(privacy.last_reviewed))
 	for name in frappe.get_all("Publication", pluck="name"):
 		doc = frappe.get_doc("Publication", name)

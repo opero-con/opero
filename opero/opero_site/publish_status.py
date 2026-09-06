@@ -10,7 +10,7 @@ UNPUBLISHED = "Unpublished"
 STATUSES = (DRAFT, TO_PUBLISH, PUBLISHED, TO_UNPUBLISH, UNPUBLISHED)
 ON_SITE = (TO_PUBLISH, PUBLISHED)
 OFF_SITE = (TO_UNPUBLISH, UNPUBLISHED)
-ALWAYS_ON_SITE = frozenset({"Home Page", "Privacy", "Site Settings"})
+ALWAYS_ON_SITE = frozenset({"Home Page", "Privacy policy", "Site Settings"})
 
 
 def apply_publish_status(doc, *, default: str = DRAFT) -> None:

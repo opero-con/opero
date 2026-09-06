@@ -1,4 +1,4 @@
-frappe.ui.form.on("Privacy", {
+frappe.ui.form.on("Privacy policy", {
 	setup(frm) {
 		const field = frm.get_field("body");
 		if (!field) {

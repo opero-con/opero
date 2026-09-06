@@ -212,7 +212,7 @@ def load_files(files: dict[str, str]) -> dict[str, int]:
 				doc.save(ignore_permissions=True)
 				counts["home"] += 1
 			elif path == "content/privacy/privacy.md":
-				doc = frappe.get_single("Privacy")
+				doc = frappe.get_single("Privacy policy")
 				apply_privacy(doc, parse_frontmatter(text))
 				doc.save(ignore_permissions=True)
 				counts["privacy"] += 1

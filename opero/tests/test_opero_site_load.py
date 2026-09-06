@@ -183,7 +183,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(home.impacts[0].metric_label, "WASH technologies designed")
 		self.assertEqual(len(frappe.get_all("Team Member")), 1)
 
-		privacy = frappe.get_single("Privacy")
+		privacy = frappe.get_single("Privacy policy")
 		self.assertEqual(str(privacy.last_reviewed), "2026-07-23")
 		self.assertIn("Privacy mail", privacy.body)
 		self.assertIn("https://opero-services.com/privacy", privacy.body)
