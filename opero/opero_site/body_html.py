@@ -48,13 +48,13 @@ def html_to_body_sections(html: str) -> list[dict]:
 	builder = _Builder()
 	_walk(builder, soup.children)
 	builder.flush()
-	return builder.sections
+	return dedupe_body_sections(builder.sections)
 
 
 def body_sections_to_html(sections) -> str:
 	"""Turn the opero-content `body` list into Text Editor HTML."""
 	parts = []
-	for section in sections or []:
+	for section in dedupe_body_sections(sections) or []:
 		if not isinstance(section, dict):
 			continue
 		heading = cstr(section.get("heading")).strip()
@@ -76,6 +76,27 @@ def body_sections_to_html(sections) -> str:
 			if label and href:
 				parts.append(f'<p><a href="{escape(href, quote=True)}">{escape(label)}</a></p>')
 	return "".join(parts)
+
+
+def dedupe_body_sections(sections) -> list[dict]:
+	"""Drop an exact mirrored repeat (A+B+C + A+B+C) or consecutive identical sections."""
+	rows = [section for section in (sections or []) if isinstance(section, dict)]
+	n = len(rows)
+	if n >= 2 and n % 2 == 0:
+		half = n // 2
+		if rows[:half] == rows[half:]:
+			rows = rows[:half]
+	out = []
+	for section in rows:
+		if out and out[-1] == section:
+			continue
+		out.append(section)
+	return out
+
+
+def normalize_body_html(html: str) -> str:
+	"""Round-trip Text Editor HTML through the section model and drop mirrored dupes."""
+	return body_sections_to_html(html_to_body_sections(html))
 
 
 def _walk(builder: _Builder, nodes) -> None:

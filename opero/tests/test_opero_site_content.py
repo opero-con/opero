@@ -4,7 +4,12 @@ import frappe
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
 
-from opero.opero_site.body_html import body_sections_to_html, html_to_body_sections
+from opero.opero_site.body_html import (
+	body_sections_to_html,
+	dedupe_body_sections,
+	html_to_body_sections,
+	normalize_body_html,
+)
 from opero.opero_site.utils import normalize_publication_type, parse_links, slugify
 
 
@@ -463,3 +468,59 @@ class TestPublicationBodyHtml(FrappeTestCase):
 	def test_html_rejects_invalid_link_url(self):
 		with self.assertRaises(ValidationError):
 			html_to_body_sections('<p><a href="example.com/file.pdf">Download</a></p>')
+
+	def test_mirrored_section_list_is_deduped(self):
+		section = {
+			"heading": "Who is responsible",
+			"paragraphs": ["Opero Services Ltd is the data controller."],
+		}
+		doubled = [section, {"heading": "Why we use this data", "bullets": ["Deliver the website"]}]
+		doubled = doubled + doubled
+		self.assertEqual(
+			dedupe_body_sections(doubled),
+			[
+				{
+					"heading": "Who is responsible",
+					"paragraphs": ["Opero Services Ltd is the data controller."],
+				},
+				{"heading": "Why we use this data", "bullets": ["Deliver the website"]},
+			],
+		)
+		html = body_sections_to_html(doubled)
+		self.assertEqual(html.count("<h2>"), 2)
+		self.assertEqual(
+			normalize_body_html(html + html),
+			body_sections_to_html(
+				[
+					{
+						"heading": "Who is responsible",
+						"paragraphs": ["Opero Services Ltd is the data controller."],
+					},
+					{"heading": "Why we use this data", "bullets": ["Deliver the website"]},
+				]
+			),
+		)
+
+	def test_privacy_validate_collapses_mirrored_body(self):
+		section_html = body_sections_to_html(
+			[
+				{
+					"heading": "Who is responsible",
+					"paragraphs": ["Opero Services Ltd is the data controller."],
+				}
+			]
+		)
+		doc = frappe.get_single("Privacy")
+		doc.last_reviewed = "2026-07-23"
+		doc.body = section_html + section_html
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.body, section_html)
+		self.assertEqual(
+			doc.to_site_frontmatter()["sections"],
+			[
+				{
+					"heading": "Who is responsible",
+					"paragraphs": ["Opero Services Ltd is the data controller."],
+				}
+			],
+		)

@@ -86,3 +86,4 @@ opero.patches.v0_4.remove_show_on_website_from_always_on_singles
 opero.patches.v0_4.add_website_enquiries
 opero.patches.v0_4.allow_website_manager_communication
 opero.patches.v0_4.convert_privacy_body_to_html
+opero.patches.v0_4.dedupe_privacy_body_sections
