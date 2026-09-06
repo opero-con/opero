@@ -7,6 +7,7 @@
  "field_order": [
   "image",
   "note",
+  "image_focus",
   "image_alt"
  ],
  "fields": [
@@ -26,6 +27,15 @@
    "label": "Location"
   },
   {
+   "default": "Center",
+   "description": "Which part of the photo stays in frame on the tall homepage hero.",
+   "fieldname": "image_focus",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Focus",
+   "options": "Center\nTop\nBottom\nLeft\nRight"
+  },
+  {
    "description": "Used for the first row (the main image).",
    "fieldname": "image_alt",
    "fieldtype": "Data",
@@ -39,7 +49,7 @@
  "name": "Hero Image",
  "owner": "Administrator",
  "permissions": [],
- "modified": "2026-08-30 12:00:00.000000",
+ "modified": "2026-09-06 13:20:00.000000",
  "modified_by": "Administrator",
  "track_changes": 0,
  "has_web_view": 0

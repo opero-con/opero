@@ -20,10 +20,28 @@ PUBLICATION_TYPE_ALIASES = {
 	"Portfolio": "Overview",
 }
 
+HERO_IMAGE_FOCUSES = ("center", "top", "bottom", "left", "right")
+HERO_IMAGE_FOCUS_LABELS = {
+	"center": "Center",
+	"top": "Top",
+	"bottom": "Bottom",
+	"left": "Left",
+	"right": "Right",
+}
+
 
 def normalize_publication_type(value: str) -> str:
 	trimmed = cstr(value).strip()
 	return PUBLICATION_TYPE_ALIASES.get(trimmed, trimmed)
+
+
+def normalize_hero_image_focus(value: str) -> str:
+	key = cstr(value).strip().lower()
+	return key if key in HERO_IMAGE_FOCUSES else "center"
+
+
+def hero_image_focus_label(value: str) -> str:
+	return HERO_IMAGE_FOCUS_LABELS[normalize_hero_image_focus(value)]
 
 
 def slugify(text: str) -> str:
@@ -54,7 +72,7 @@ def paragraphs(value: str) -> list[str]:
 	return [block.strip() for block in blocks if block.strip()]
 
 
-def hero_carousel_entry(image: str, note: str = "") -> dict | None:
+def hero_carousel_entry(image: str, note: str = "", focus: str = "") -> dict | None:
 	path = cstr(image).strip()
 	if not path:
 		return None
@@ -62,18 +80,25 @@ def hero_carousel_entry(image: str, note: str = "") -> dict | None:
 	label = cstr(note).strip()
 	if label:
 		entry["note"] = label
+	normalized = normalize_hero_image_focus(focus)
+	if normalized != "center":
+		entry["imageFocus"] = normalized
 	return entry
 
 
-def parse_hero_carousel_item(item) -> tuple[str, str] | None:
+def parse_hero_carousel_item(item) -> tuple[str, str, str] | None:
 	if isinstance(item, str):
 		path = cstr(item).strip()
-		return (path, "") if path else None
+		return (path, "", "center") if path else None
 	if isinstance(item, dict):
 		path = cstr(item.get("image")).strip()
 		if not path:
 			return None
-		return path, cstr(item.get("note")).strip()
+		return (
+			path,
+			cstr(item.get("note")).strip(),
+			normalize_hero_image_focus(item.get("imageFocus") or item.get("image_focus")),
+		)
 	return None
 
 

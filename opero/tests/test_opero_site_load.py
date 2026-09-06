@@ -36,9 +36,11 @@ hero:
   image: /media/homepage/opero-wash-hub.jpg
   imageAlt: Aerial view of WASH work
   note: Kenya · East Africa
+  imageFocus: top
   carousel:
     - image: /media/homepage/pupu-pump-team.jpg
       note: Kisumu · Kenya
+      imageFocus: left
     - /media/homepage/fecal-sludge-treatment-tower.jpg
 about:
   title: Practical WASH solutions
@@ -161,18 +163,19 @@ class TestOperoSiteLoad(FrappeTestCase):
 		home = frappe.get_single("Home Page")
 		self.assertEqual(home.hero_title, "From idea to lasting WASH impact.")
 		self.assertEqual(
-			[(row.image, row.note, row.image_alt) for row in home.hero_images],
+			[(row.image, row.note, row.image_alt, row.image_focus) for row in home.hero_images],
 			[
-				("/media/homepage/opero-wash-hub.jpg", "Kenya · East Africa", "Aerial view of WASH work"),
-				("/media/homepage/pupu-pump-team.jpg", "Kisumu · Kenya", ""),
-				("/media/homepage/fecal-sludge-treatment-tower.jpg", "", ""),
+				("/media/homepage/opero-wash-hub.jpg", "Kenya · East Africa", "Aerial view of WASH work", "Top"),
+				("/media/homepage/pupu-pump-team.jpg", "Kisumu · Kenya", "", "Left"),
+				("/media/homepage/fecal-sludge-treatment-tower.jpg", "", "", "Center"),
 			],
 		)
 		self.assertEqual(home.to_site_frontmatter()["hero"]["image"], "/media/homepage/opero-wash-hub.jpg")
+		self.assertEqual(home.to_site_frontmatter()["hero"]["imageFocus"], "top")
 		self.assertEqual(
 			home.to_site_frontmatter()["hero"]["carousel"],
 			[
-				{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya"},
+				{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya", "imageFocus": "left"},
 				{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg"},
 			],
 		)
