@@ -10,7 +10,10 @@ def execute():
 	if not frappe.db.table_exists("Hero Image"):
 		return
 
-	image = _single("hero_image")
+	# Read legacy Singles keys directly. get_single_value() throws once Home Page
+	# meta no longer lists hero_image (already-migrated Cubenet, or pre_model_sync
+	# after a partial update), which aborted every auto-migrate.
+	image = _legacy_single("hero_image")
 	if not image:
 		return
 
@@ -20,7 +23,9 @@ def execute():
 		fields=["name", "image", "idx"],
 		order_by="idx",
 	)
-	if existing and cstr(existing[0].image).strip() == image:
+	if existing:
+		# Table model already in use (typical Cubenet). Drop any leftover Singles keys.
+		_clear_legacy_singles()
 		return
 
 	frappe.db.sql(
@@ -39,11 +44,30 @@ def execute():
 			"parentfield": "hero_images",
 			"idx": 1,
 			"image": image,
-			"image_alt": _single("hero_image_alt"),
-			"note": _single("hero_note") or "Kenya · East Africa",
+			"image_alt": _legacy_single("hero_image_alt"),
+			"note": _legacy_single("hero_note") or "Kenya · East Africa",
 		}
 	).insert(ignore_permissions=True)
+	_clear_legacy_singles()
 
 
-def _single(field: str) -> str:
-	return cstr(frappe.db.get_single_value("Home Page", field)).strip()
+def _legacy_single(field: str) -> str:
+	value = frappe.db.sql(
+		"""
+		SELECT value
+		FROM tabSingles
+		WHERE doctype = %s AND field = %s
+		""",
+		("Home Page", field),
+	)
+	return cstr(value[0][0] if value else "").strip()
+
+
+def _clear_legacy_singles() -> None:
+	frappe.db.sql(
+		"""
+		DELETE FROM tabSingles
+		WHERE doctype = %s AND field IN (%s, %s, %s)
+		""",
+		("Home Page", "hero_image", "hero_image_alt", "hero_note"),
+	)
