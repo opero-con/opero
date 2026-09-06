@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, cstr, flt, getdate
 
-from opero.opero_site.body_html import body_sections_to_html
+from opero.opero_site.body_html import body_sections_to_html, paragraphs_to_html
 from opero.opero_site.github import GithubError
 from opero.opero_site.markdown import parse_frontmatter
 from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
@@ -91,10 +91,7 @@ def apply_home(doc, data: dict):
 				},
 			)
 	doc.about_title = _text(about.get("title"))
-	doc.set("about_paragraphs", [])
-	for paragraph in about.get("paragraphs") or []:
-		if _text(paragraph):
-			doc.append("about_paragraphs", {"paragraph": _text(paragraph)})
+	doc.about_body = paragraphs_to_html(about.get("paragraphs"))
 	doc.set("pillars", [])
 	for row in data.get("pillars") or []:
 		doc.append("pillars", {"title": _text(row.get("title")), "description": _text(row.get("description"))})

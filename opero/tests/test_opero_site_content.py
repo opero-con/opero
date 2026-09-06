@@ -8,7 +8,10 @@ from opero.opero_site.body_html import (
 	body_sections_to_html,
 	dedupe_body_sections,
 	html_to_body_sections,
+	html_to_paragraphs,
 	normalize_body_html,
+	normalize_paragraphs_html,
+	paragraphs_to_html,
 )
 from opero.opero_site.utils import normalize_publication_type, parse_links, slugify
 
@@ -106,8 +109,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		doc.hero_description = "Practical support for WASH enterprises."
 		doc.about_title = "Practical WASH solutions"
 		doc.set("hero_images", [])
-		doc.set("about_paragraphs", [])
-		doc.append("about_paragraphs", {"paragraph": "Opero is a Kenyan WASH firm."})
+		doc.about_body = "<p>Opero is a Kenyan WASH firm.</p>"
 		doc.set("pillars", [])
 		doc.append("pillars", {"title": "Market research", "description": "Local market realities."})
 		doc.set("impacts", [])
@@ -462,6 +464,12 @@ class TestPublicationBodyHtml(FrappeTestCase):
 		]
 		html = body_sections_to_html(sections)
 		self.assertEqual(html_to_body_sections(html), sections)
+
+	def test_paragraphs_html_roundtrip_matches_about_frontmatter(self):
+		paragraphs = ["Opero is a Kenyan WASH firm.", "We design practical tools."]
+		html = paragraphs_to_html(paragraphs)
+		self.assertEqual(html_to_paragraphs(html), paragraphs)
+		self.assertEqual(normalize_paragraphs_html(html + html), paragraphs_to_html(paragraphs))
 
 	def test_html_empty_editor_is_omitted(self):
 		self.assertEqual(html_to_body_sections("<p><br></p>"), [])

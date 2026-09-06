@@ -179,7 +179,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 				{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg"},
 			],
 		)
-		self.assertEqual(home.about_paragraphs[0].paragraph, "Opero is a Kenyan WASH firm.")
+		self.assertEqual(home.about_body, "<p>Opero is a Kenyan WASH firm.</p>")
 		self.assertEqual(home.impacts[0].metric_label, "WASH technologies designed")
 		self.assertEqual(len(frappe.get_all("Team Member")), 1)
 

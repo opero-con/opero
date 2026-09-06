@@ -16,7 +16,7 @@
   "hero_images",
   "section_about",
   "about_title",
-  "about_paragraphs",
+  "about_body",
   "section_pillars",
   "pillars",
   "section_impacts",
@@ -76,10 +76,10 @@
    "label": "Title"
   },
   {
-   "fieldname": "about_paragraphs",
-   "fieldtype": "Table",
-   "label": "Paragraphs",
-   "options": "Paragraph"
+   "description": "Each paragraph becomes one about paragraph on the public homepage.",
+   "fieldname": "about_body",
+   "fieldtype": "Text Editor",
+   "label": "Body"
   },
   {
    "fieldname": "section_pillars",
@@ -134,7 +134,7 @@
  "module": "Opero Site",
  "name": "Home Page",
  "owner": "Administrator",
- "modified": "2026-08-30 22:16:00.000000",
+ "modified": "2026-09-07 03:15:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
