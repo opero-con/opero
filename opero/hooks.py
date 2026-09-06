@@ -90,6 +90,7 @@ doctype_js = {
 	"Site Settings": "public/js/opero_site_settings.js",
 	"Deploy Center": "public/js/opero_site_deploy_center.js",
 	"Publication": "public/js/opero_site_publication.js",
+	"Privacy": "public/js/opero_site_privacy.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
