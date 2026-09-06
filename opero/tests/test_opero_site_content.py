@@ -390,13 +390,13 @@ class TestOperoSiteContent(FrappeTestCase):
 	def test_privacy_frontmatter_matches_privacy_collection(self):
 		doc = frappe.get_single("Privacy")
 		doc.last_reviewed = "2026-07-23"
-		doc.set("sections", [])
-		doc.append(
-			"sections",
-			{
-				"heading": "Who is responsible",
-				"paragraphs": "Opero Services Ltd is the data controller.",
-			},
+		doc.body = body_sections_to_html(
+			[
+				{
+					"heading": "Who is responsible",
+					"paragraphs": ["Opero Services Ltd is the data controller."],
+				}
+			]
 		)
 		doc.save(ignore_permissions=True)
 		self.assertEqual(

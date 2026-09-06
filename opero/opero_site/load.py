@@ -20,31 +20,10 @@ def _text(value) -> str:
 	return cstr(value).strip()
 
 
-def _join_paragraphs(value) -> str:
-	if isinstance(value, list):
-		return "\n\n".join(_text(item) for item in value if _text(item))
-	return _text(value)
-
-
 def _join_lines(value) -> str:
 	if isinstance(value, list):
 		return "\n".join(_text(item) for item in value if _text(item))
 	return _text(value)
-
-
-def _join_links(value) -> str:
-	if not value:
-		return ""
-	lines = []
-	for item in value:
-		if isinstance(item, dict):
-			label = _text(item.get("label"))
-			href = _text(item.get("href") or item.get("url"))
-			if label and href:
-				lines.append(f"{label} | {href}")
-		elif _text(item):
-			lines.append(_text(item))
-	return "\n".join(lines)
 
 
 def apply_settings(doc, data: dict):
@@ -146,17 +125,7 @@ def apply_privacy(doc, data: dict):
 	reviewed = data.get("lastReviewed")
 	doc.last_reviewed = getdate(reviewed) if reviewed else None
 	doc.status = PUBLISHED
-	doc.set("sections", [])
-	for row in data.get("sections") or []:
-		doc.append(
-			"sections",
-			{
-				"heading": _text(row.get("heading")),
-				"paragraphs": _join_paragraphs(row.get("paragraphs")),
-				"bullets": _join_lines(row.get("bullets")),
-				"links": _join_links(row.get("links")),
-			},
-		)
+	doc.body = body_sections_to_html(data.get("sections"))
 
 
 def apply_publication(doc, data: dict, slug: str):

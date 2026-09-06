@@ -10,7 +10,7 @@
  "field_order": [
   "status",
   "last_reviewed",
-  "sections"
+  "body"
  ],
  "fields": [
   {
@@ -30,10 +30,10 @@
    "reqd": 1
   },
   {
-   "fieldname": "sections",
-   "fieldtype": "Table",
-   "label": "Sections",
-   "options": "Body Section"
+   "description": "Use headings for sections, lists for bullets, and a link on its own line for a button on the public page.",
+   "fieldname": "body",
+   "fieldtype": "Text Editor",
+   "label": "Body"
   }
  ],
  "issingle": 1,
@@ -43,7 +43,7 @@
  "module": "Opero Site",
  "name": "Privacy",
  "owner": "Administrator",
- "modified": "2026-08-30 21:40:00.000000",
+ "modified": "2026-09-06 12:00:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
