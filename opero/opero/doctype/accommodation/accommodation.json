@@ -14,7 +14,7 @@
   "nights",
   "column_break_jqsc",
   "preferred_location_or_name",
-  "accomodation_type"
+  "accommodation_type"
  ],
  "fields": [
   {
@@ -69,8 +69,8 @@
   },
   {
    "idx": 6,
-   "fieldname": "accomodation_type",
-   "label": "Accomodation Type",
+   "fieldname": "accommodation_type",
+   "label": "Accommodation Type",
    "fieldtype": "Select",
    "options": "\nHotel\nApartment\nAirBnB\nFamily/Friend",
    "permlevel": 0,
@@ -86,10 +86,10 @@
  "issingle": 0,
  "istable": 1,
  "links": [],
- "modified": "2026-08-04 21:32:47.076222",
+ "modified": "2026-09-07 00:45:00.000000",
  "modified_by": "Administrator",
  "module": "Opero",
- "name": "Accomodation",
+ "name": "Accommodation",
  "owner": "Administrator",
  "permissions": [],
  "sort_field": "modified",

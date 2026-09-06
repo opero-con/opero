@@ -51,7 +51,7 @@ function updateSectionVisibility(frm) {
 }
 
 // --- Nights in Travel Request ---
-frappe.ui.form.on('Accomodation', {
+frappe.ui.form.on('Accommodation', {
     check_in_date: function(frm, cdt, cdn) {
         calculate_number_of_days(frm, cdt, cdn);
     },

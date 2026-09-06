@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class Accomodation(Document):
+class Accommodation(Document):
 	pass

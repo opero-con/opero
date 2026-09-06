@@ -88,3 +88,4 @@ opero.patches.v0_4.allow_website_manager_communication
 opero.patches.v0_4.convert_privacy_body_to_html
 opero.patches.v0_4.dedupe_privacy_body_sections
 opero.patches.v0_4.rename_privacy_to_privacy_policy
+opero.patches.v0_4.rename_accomodation_to_accommodation
