@@ -90,7 +90,7 @@ doctype_js = {
 	"Site Settings": "public/js/opero_site_settings.js",
 	"Deploy Center": "public/js/opero_site_deploy_center.js",
 	"Publication": "public/js/opero_site_publication.js",
-	"Privacy": "public/js/opero_site_privacy.js",
+	"Privacy policy": "public/js/opero_site_privacy_policy.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -245,7 +245,7 @@ doc_events = {
 	"Home Page": {
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 	},
-	"Privacy": {
+	"Privacy policy": {
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 	},
 	"Site Settings": {

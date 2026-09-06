@@ -11,4 +11,4 @@ that the commit message already explains.
 
 | ADR | Decision | Status |
 |-----|----------|--------|
-| [0001](0001-always-on-site-singles.md) | Home Page, Privacy, and Site Settings are always on-site | Accepted |
+| [0001](0001-always-on-site-singles.md) | Home Page, Privacy policy, and Site Settings are always on-site | Accepted |

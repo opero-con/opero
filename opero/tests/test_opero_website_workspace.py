@@ -19,7 +19,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Home Page": "Home Page",
 				"Team": "Team Member",
 				"Publications": "Publication",
-				"Privacy": "Privacy",
+				"Privacy policy": "Privacy policy",
 				"Deploy Center": "Deploy Center",
 				"Settings": "Site Settings",
 			},
@@ -38,7 +38,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Home Page",
 				"Team",
 				"Publications",
-				"Privacy",
+				"Privacy policy",
 				"Website Enquiries",
 			},
 		)
@@ -56,7 +56,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			"Home Page",
 			"Team Member",
 			"Publication",
-			"Privacy",
+			"Privacy policy",
 			"Deploy Center",
 			"Site Settings",
 		]
@@ -68,7 +68,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			self.assertIn("Website Manager", roles, doctype)
 
 	def test_always_on_site_singles_have_no_show_on_website(self):
-		for doctype in ("Home Page", "Privacy", "Site Settings"):
+		for doctype in ("Home Page", "Privacy policy", "Site Settings"):
 			self.assertFalse(frappe.get_meta(doctype).has_field("show_on_website"), doctype)
 		self.assertTrue(frappe.get_meta("Publication").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Team Member").has_field("show_on_website"))

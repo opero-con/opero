@@ -395,8 +395,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		)
 
 	def test_privacy_frontmatter_matches_privacy_collection(self):
-		doc = frappe.get_single("Privacy")
-		doc.last_reviewed = "2026-07-23"
+		doc = frappe.get_single("Privacy policy")
 		doc.body = body_sections_to_html(
 			[
 				{
@@ -406,10 +405,11 @@ class TestOperoSiteContent(FrappeTestCase):
 			]
 		)
 		doc.save(ignore_permissions=True)
+		self.assertEqual(str(doc.last_reviewed), frappe.utils.today())
 		self.assertEqual(
 			doc.to_site_frontmatter(),
 			{
-				"lastReviewed": "2026-07-23",
+				"lastReviewed": frappe.utils.today(),
 				"sections": [
 					{
 						"heading": "Who is responsible",
@@ -418,6 +418,31 @@ class TestOperoSiteContent(FrappeTestCase):
 				],
 			},
 		)
+
+	def test_privacy_last_reviewed_stays_put_when_body_unchanged(self):
+		doc = frappe.get_single("Privacy policy")
+		doc.body = body_sections_to_html(
+			[{"heading": "Contact", "paragraphs": ["Write to privacy@example.com."]}]
+		)
+		doc.save(ignore_permissions=True)
+		first_reviewed = str(doc.last_reviewed)
+		doc.reload()
+		doc.status = "To publish"
+		doc.save(ignore_permissions=True)
+		self.assertEqual(str(doc.last_reviewed), first_reviewed)
+
+	def test_privacy_load_keeps_frontmatter_last_reviewed(self):
+		doc = frappe.get_single("Privacy policy")
+		frappe.flags.opero_site_syncing = True
+		try:
+			doc.last_reviewed = "2026-07-23"
+			doc.body = body_sections_to_html(
+				[{"heading": "Contact", "paragraphs": ["Write to privacy@example.com."]}]
+			)
+			doc.save(ignore_permissions=True)
+		finally:
+			frappe.flags.opero_site_syncing = False
+		self.assertEqual(str(doc.last_reviewed), "2026-07-23")
 
 
 class TestPublicationBodyHtml(FrappeTestCase):
@@ -510,7 +535,7 @@ class TestPublicationBodyHtml(FrappeTestCase):
 				}
 			]
 		)
-		doc = frappe.get_single("Privacy")
+		doc = frappe.get_single("Privacy policy")
 		doc.last_reviewed = "2026-07-23"
 		doc.body = section_html + section_html
 		doc.save(ignore_permissions=True)
