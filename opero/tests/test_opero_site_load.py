@@ -182,8 +182,9 @@ class TestOperoSiteLoad(FrappeTestCase):
 
 		privacy = frappe.get_single("Privacy")
 		self.assertEqual(str(privacy.last_reviewed), "2026-07-23")
-		self.assertIn("Privacy mail | https://opero-services.com/privacy", privacy.sections[0].links)
-		self.assertEqual(privacy.sections[1].bullets.splitlines()[0], "Deliver the website")
+		self.assertIn("Privacy mail", privacy.body)
+		self.assertIn("https://opero-services.com/privacy", privacy.body)
+		self.assertIn("Deliver the website", privacy.body)
 
 		publication = frappe.get_doc("Publication", "january-2025-update")
 		self.assertEqual(str(publication.published_on), "2025-01-30")
