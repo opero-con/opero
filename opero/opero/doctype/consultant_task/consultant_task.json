@@ -190,6 +190,7 @@
    "fieldtype": "Select",
    "options": "\nBilled\nPaid",
    "depends_on": "eval:doc.completion_status == \"Completed\"",
+   "allow_on_submit": 1,
    "permlevel": 0,
    "columns": 0,
    "in_list_view": 1,
