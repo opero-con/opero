@@ -90,3 +90,4 @@ opero.patches.v0_4.dedupe_privacy_body_sections
 opero.patches.v0_4.rename_privacy_to_privacy_policy
 opero.patches.v0_4.rename_accomodation_to_accommodation
 opero.patches.v0_4.convert_home_about_to_html
+opero.patches.v0_4.show_timesheet_employee_name
