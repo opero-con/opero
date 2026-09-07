@@ -77,6 +77,7 @@ doctype_js = {
 	"Actual Spend": "public/js/custom/actual_spend.js",
 	"Cash Advance-Reimbursable Form": "public/js/custom/cash_advance_reimbursable_form.js",
 	"Consultant Task": "public/js/custom/consultant_task.js",
+	"Enterprise": "public/js/custom/enterprise.js",
 	"Item": "public/js/custom/item.js",
 	"Leave Application": "public/js/custom/leave_application.js",
 	"Material Request": "public/js/custom/material_request.js",
