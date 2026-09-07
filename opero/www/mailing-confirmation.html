@@ -1,0 +1,25 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div class="my-5 mx-auto" style="max-width: 560px">
+  <h1>{{ _("Confirm your Mailing Lists") }}</h1>
+  {% if error %}
+    <p class="text-danger">{{ error | e }}</p>
+  {% elif completed %}
+    <p>{{ _("Your selected subscriptions are confirmed. You can unsubscribe using the link in any newsletter.") }}</p>
+  {% else %}
+    <p>{{ _("Choose the lists you want to receive emails from.") }}</p>
+    <p class="text-muted">{{ email | e }}</p>
+    <form method="post">
+      <input type="hidden" name="token" value="{{ token | e }}">
+      <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token | e }}">
+      {% for membership in memberships %}
+        <div class="form-check my-3">
+          <input class="form-check-input" type="checkbox" name="list_{{ loop.index0 }}" id="list_{{ loop.index0 }}">
+          <label class="form-check-label" for="list_{{ loop.index0 }}">{{ membership.mailing_list | e }}</label>
+        </div>
+      {% endfor %}
+      <button class="btn btn-primary mt-3" type="submit">{{ _("Confirm selected lists") }}</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

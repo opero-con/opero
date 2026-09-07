@@ -47,6 +47,7 @@ app_license = "mit"
 # Query string busts desk asset caches when the app version advances.
 app_include_css = f"/assets/opero/css/opero.css?v={_opero_asset_v}"
 app_include_js = [
+	f"/assets/opero/js/mailing_shared.js?v={_opero_asset_v}",
 	f"/assets/opero/js/custom/resource_planner_reports.js?v={_opero_asset_v}",
 	f"/assets/opero/js/custom/entity_scope.js?v={_opero_asset_v}",
 	f"/assets/opero/js/opero_site_publish_status.js?v={_opero_asset_v}",
@@ -68,6 +69,9 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
+	"Contact": "public/js/mailing_contact.js",
+	"Email Group": "public/js/mailing_list.js",
+	"Email Group Member": "public/js/mailing_member.js",
 	"ToDo": "public/js/todo.js",
 	"Activity Cost": "public/js/custom/activity_cost.js",
 	"Actual Spend": "public/js/custom/actual_spend.js",
@@ -92,7 +96,7 @@ doctype_js = {
 	"Publication": "public/js/opero_site_publication.js",
 	"Privacy policy": "public/js/opero_site_privacy_policy.js",
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {"Contact": "public/js/mailing_contact_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -200,7 +204,31 @@ has_permission = {
 	"Communication": "opero.opero_site.enquiry.communication_has_permission",
 }
 
+override_doctype_class = {
+	"Email Group": "opero.mailing.overrides.MailingList",
+	"Newsletter": "opero.mailing.overrides.MailingNewsletter",
+}
+
+override_whitelisted_methods = {
+	"frappe.email.doctype.email_group.email_group.add_subscribers": "opero.mailing.overrides.add_subscribers",
+	"frappe.email.doctype.newsletter.newsletter.subscribe": "opero.mailing.confirmation.subscribe",
+	"frappe.email.doctype.newsletter.newsletter.confirm_subscription": "opero.mailing.confirmation.legacy_confirmation",
+	"frappe.desk.reportview.get": "opero.mailing.filters.get",
+	"frappe.desk.reportview.get_count": "opero.mailing.filters.get_count",
+}
+
 doc_events = {
+	"Contact": {
+		"validate": "opero.mailing.membership.contact_validate",
+		"on_update": "opero.mailing.membership.contact_updated",
+	},
+	"Email Group Member": {
+		"before_insert": "opero.mailing.membership.member_before_insert",
+		"validate": "opero.mailing.membership.member_validate",
+		"on_update": "opero.mailing.membership.member_updated",
+		"on_trash": "opero.mailing.membership.member_removed",
+		"after_delete": "opero.mailing.membership.member_after_delete",
+	},
 	# Entity scoping: a Project's company owns every document beneath it.
 	# Which DocTypes are scoped is data, held in opero/entity.py, so this is
 	# wired once for all of them instead of being duplicated per DocType here.

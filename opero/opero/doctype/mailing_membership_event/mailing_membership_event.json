@@ -1,0 +1,71 @@
+{
+ "doctype": "DocType",
+ "name": "Mailing Membership Event",
+ "module": "Opero",
+ "custom": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "email",
+  "mailing_list",
+  "member",
+  "contact",
+  "action",
+  "subscription_status",
+  "actor"
+ ],
+ "fields": [
+  {
+   "fieldname": "email",
+   "label": "Email",
+   "fieldtype": "Data",
+   "options": "Email",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "mailing_list",
+   "label": "Mailing List",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "member",
+   "label": "Member",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "contact",
+   "label": "Contact",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "action",
+   "label": "Action",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "subscription_status",
+   "label": "Subscription Status",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "actor",
+   "label": "Changed By",
+   "fieldtype": "Data"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Newsletter Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "track_changes": 1,
+ "istable": 0,
+ "editable_grid": 0,
+ "autoname": "hash",
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

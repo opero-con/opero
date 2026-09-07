@@ -91,3 +91,5 @@ opero.patches.v0_4.rename_privacy_to_privacy_policy
 opero.patches.v0_4.rename_accomodation_to_accommodation
 opero.patches.v0_4.convert_home_about_to_html
 opero.patches.v0_4.show_timesheet_employee_name
+opero.patches.v0_4.add_contact_mailing_lists
+opero.patches.v0_4.link_mailing_member_to_contact
