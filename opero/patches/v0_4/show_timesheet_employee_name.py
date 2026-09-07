@@ -1,7 +1,7 @@
 """Ship Timesheet Customize Form changes for export-friendly layout.
 
-- Keep Employee Name unhidden in meta so Report/List export can include it;
-  the form hides it again via `timesheet.js` (`toggle_display`).
+- Keep Personnel (employee_name) unhidden in meta so Report/List export can
+  include it; the form hides it again via `timesheet.js` (`toggle_display`).
 - Hide Start Date / End Date on the form (still on the DocType).
 - Clear the Employee Detail section label and stop making it collapsible.
 - Reorder fields so Project / Company / PM sit with the contributor block.
