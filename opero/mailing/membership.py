@@ -134,6 +134,68 @@ def member_after_delete(doc, method=None):
 		sync_email(doc.email)
 
 
+def prepare_list_merge(source, target):
+	"""Drop overlapping source members and child links before a list merge rename.
+
+	Frappe rewrites every Link to the source list onto the target. Email Group
+	Member uniqueness is (email_group, email), so shared addresses must leave
+	the source first. Contact and Newsletter child rows that already point at
+	the target are removed so the rewrite cannot duplicate them.
+	"""
+	source_members = frappe.get_all(
+		MEMBER,
+		filters={"email_group": source},
+		fields=["name", "email", "unsubscribed", "custom_confirmation_status", "custom_contact"],
+	)
+	for sm in source_members:
+		target_name = frappe.db.get_value(
+			MEMBER, {"email_group": target, "email": email_key(sm.email)}
+		)
+		if not target_name:
+			continue
+		_fold_member_into(target_name, sm)
+		frappe.delete_doc(MEMBER, sm.name, ignore_permissions=True)
+
+	_drop_duplicate_links(CHILD, "mailing_list", source, target)
+	_drop_duplicate_links("Newsletter Email Group", "email_group", source, target)
+
+
+def _fold_member_into(target_name, source_member):
+	"""Keep the surviving target row; prefer unsubscribe and confirmed status."""
+	target = frappe.get_doc(MEMBER, target_name)
+	changed = False
+	if cint(source_member.unsubscribed) and not cint(target.unsubscribed):
+		target.unsubscribed = 1
+		changed = True
+	source_status = source_member.custom_confirmation_status or "Confirmed"
+	target_status = target.custom_confirmation_status or "Confirmed"
+	if (
+		not cint(target.unsubscribed)
+		and source_status == "Confirmed"
+		and target_status == "Pending"
+	):
+		target.custom_confirmation_status = "Confirmed"
+		changed = True
+	if not target.get("custom_contact") and source_member.get("custom_contact"):
+		target.custom_contact = source_member.custom_contact
+		changed = True
+	if changed:
+		with internal():
+			target.save(ignore_permissions=True)
+
+
+def _drop_duplicate_links(doctype, fieldname, source, target):
+	if not frappe.db.exists("DocType", doctype):
+		return
+	keep = set(frappe.get_all(doctype, filters={fieldname: target}, pluck="parent"))
+	if not keep:
+		return
+	for name in frappe.get_all(
+		doctype, filters={fieldname: source, "parent": ["in", list(keep)]}, pluck="name"
+	):
+		frappe.db.delete(doctype, {"name": name})
+
+
 def sync_email(email, exclude=None):
 	"""Refresh Contact selections and statuses, including shared email Contacts.
 

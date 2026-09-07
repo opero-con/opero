@@ -364,6 +364,38 @@ class TestMailingLists(FrappeTestCase):
 		frappe.delete_doc("Email Group", self.a.name + " Renamed")
 		self.assertEqual(c.reload().get(m.FIELD), [])
 
+	def test_merging_lists_keeps_unique_and_overlapping_members(self):
+		shared = self.email
+		only_a = frappe.generate_hash(length=10) + "@example.test"
+		only_b = frappe.generate_hash(length=10) + "@example.test"
+		both = self.contact(shared, [self.a.name, self.b.name])
+		self.contact(only_a, [self.a.name])
+		self.contact(only_b, [self.b.name])
+		with m.internal():
+			source = self.member(self.a.name, shared)
+			source.custom_confirmation_status = "Confirmed"
+			source.save()
+		frappe.rename_doc("Email Group", self.a.name, self.b.name, merge=True)
+		self.assertFalse(frappe.db.exists("Email Group", self.a.name))
+		for email in (shared, only_a, only_b):
+			self.assertTrue(
+				frappe.db.exists(m.MEMBER, {"email_group": self.b.name, "email": email}), email
+			)
+		self.assertEqual(m.status(self.member(self.b.name, shared)), "Confirmed")
+		self.assertEqual([r.mailing_list for r in both.reload().get(m.FIELD)], [self.b.name])
+		self.assertEqual(
+			frappe.db.get_value("Email Group", self.b.name, "total_subscribers"),
+			3,
+		)
+
+	def test_merge_preserves_unsubscribe_from_source_list(self):
+		self.contact(self.email, [self.a.name, self.b.name])
+		source = self.member(self.a.name)
+		source.unsubscribed = 1
+		source.save()
+		frappe.rename_doc("Email Group", self.a.name, self.b.name, merge=True)
+		self.assertEqual(self.member(self.b.name).unsubscribed, 1)
+
 	def test_native_import_saves_pending_and_sends_no_welcome(self):
 		c = self.contact(self.email)
 		# Limit the source query to synthetic Contacts; real Contacts must never be imported by tests.

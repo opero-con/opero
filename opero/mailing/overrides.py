@@ -7,10 +7,25 @@ from frappe.email.doctype.email_group_member.email_group_member import EmailGrou
 from frappe.email.doctype.newsletter.newsletter import Newsletter
 from frappe.utils import validate_email_address
 
-from opero.mailing.membership import MEMBER, email_key, ensure_member, require_manager
+from opero.mailing.membership import (
+	MEMBER,
+	email_key,
+	ensure_member,
+	prepare_list_merge,
+	require_manager,
+)
 
 
 class MailingList(EmailGroup):
+	def before_rename(self, old, new, merge):
+		if merge:
+			prepare_list_merge(old, new)
+		return new
+
+	def after_rename(self, old, new, merge):
+		if merge:
+			self.update_total_subscribers()
+
 	def import_from(self, doctype):
 		self.check_permission("write")
 		require_manager()
