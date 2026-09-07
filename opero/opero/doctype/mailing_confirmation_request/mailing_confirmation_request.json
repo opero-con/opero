@@ -1,0 +1,70 @@
+{
+ "doctype": "DocType",
+ "name": "Mailing Confirmation Request",
+ "module": "Opero",
+ "custom": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "email",
+  "token_hash",
+  "status",
+  "members",
+  "sent_on",
+  "completed_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "email",
+   "label": "Email",
+   "fieldtype": "Data",
+   "options": "Email",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "token_hash",
+   "label": "Token Hash",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Pending\nUsed\nInvalidated",
+   "default": "Pending",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "members",
+   "label": "Requested Lists",
+   "fieldtype": "Table",
+   "options": "Mailing Confirmation Item"
+  },
+  {
+   "fieldname": "sent_on",
+   "label": "Sent On",
+   "fieldtype": "Datetime"
+  },
+  {
+   "fieldname": "completed_on",
+   "label": "Completed On",
+   "fieldtype": "Datetime"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Newsletter Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "track_changes": 1,
+ "istable": 0,
+ "editable_grid": 0,
+ "autoname": "hash",
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

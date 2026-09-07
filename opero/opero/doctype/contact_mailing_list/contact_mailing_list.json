@@ -1,0 +1,35 @@
+{
+ "doctype": "DocType",
+ "name": "Contact Mailing List",
+ "module": "Opero",
+ "custom": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "mailing_list",
+  "subscription_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "mailing_list",
+   "label": "Mailing List",
+   "fieldtype": "Link",
+   "options": "Email Group",
+   "in_list_view": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "subscription_status",
+   "label": "Subscription Status",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "permissions": [],
+ "track_changes": 1,
+ "istable": 1,
+ "editable_grid": 1,
+ "autoname": "hash",
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
