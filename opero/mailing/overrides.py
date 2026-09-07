@@ -3,6 +3,7 @@
 import frappe
 from frappe import _
 from frappe.email.doctype.email_group.email_group import EmailGroup
+from frappe.email.doctype.email_group_member.email_group_member import EmailGroupMember
 from frappe.email.doctype.newsletter.newsletter import Newsletter
 from frappe.utils import validate_email_address
 
@@ -25,6 +26,13 @@ class MailingList(EmailGroup):
 			if row.get(field) and validate_email_address(row[field], throw=False):
 				ensure_member(self.name, row[field], row.get("unsubscribed", False))
 		return self.update_total_subscribers()
+
+
+class MailingListMember(EmailGroupMember):
+	def autoname(self):
+		if not self.email and self.get("custom_contact"):
+			self.email = frappe.db.get_value("Contact", self.custom_contact, "email_id")
+		self.name = readable_member_name(self.email_group, self.email)
 
 
 class MailingNewsletter(Newsletter):
@@ -63,4 +71,19 @@ def add_subscribers(name, email_list):
 	for email in email_list:
 		if email.strip():
 			ensure_member(name, email)
-	return group.update_total_subscribers()
+		return group.update_total_subscribers()
+
+
+def readable_member_name(group, email):
+	email = email_key(email)
+	if not email:
+		return frappe.generate_hash(length=10)
+	base = email
+	if frappe.db.exists(MEMBER, base):
+		base = f"{group}-{email}"
+
+	if len(base) <= 140:
+		return base
+
+	suffix = frappe.generate_hash(f"{group}:{email}", 10)
+	return f"{base[:129]}-{suffix}"

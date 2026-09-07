@@ -13,9 +13,17 @@ fixtures = [
 					"Project-zoho_project_id",
 					"Timesheet Detail-zoho_entry_id",
 					"Timesheet Detail-zoho_task_id",
+					"Email Group-custom_column_break_s8kcx",
+					"Email Group-custom_column_break_sdvdc",
+					"Email Group Member-custom_contact",
+					"Email Group Member-custom_confirmation_status",
 				],
 			]
 		],
+	},
+	{
+		"dt": "Property Setter",
+		"filters": [["doc_type", "in", ["Email Group", "Email Group Member"]]],
 	},
 ]
 app_title = "Opero"
@@ -207,6 +215,7 @@ has_permission = {
 
 override_doctype_class = {
 	"Email Group": "opero.mailing.overrides.MailingList",
+	"Email Group Member": "opero.mailing.overrides.MailingListMember",
 	"Newsletter": "opero.mailing.overrides.MailingNewsletter",
 }
 

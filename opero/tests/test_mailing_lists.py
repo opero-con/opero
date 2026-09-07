@@ -71,6 +71,36 @@ class TestMailingLists(FrappeTestCase):
 		self.assertEqual(contact.reload().get(m.FIELD)[0].mailing_list, self.a.name)
 		self.mail.assert_not_called()
 
+	def test_member_name_uses_email_when_available(self):
+		member = frappe.get_doc(
+			{
+				"doctype": m.MEMBER,
+				"email_group": self.a.name,
+				"email": self.email,
+			}
+		).insert()
+
+		self.assertEqual(member.name, self.email)
+
+	def test_member_name_keeps_same_email_available_for_multiple_lists(self):
+		first = frappe.get_doc(
+			{
+				"doctype": m.MEMBER,
+				"email_group": self.a.name,
+				"email": self.email,
+			}
+		).insert()
+		second = frappe.get_doc(
+			{
+				"doctype": m.MEMBER,
+				"email_group": self.b.name,
+				"email": self.email,
+			}
+		).insert()
+
+		self.assertEqual(first.name, self.email)
+		self.assertEqual(second.name, f"{self.b.name}-{self.email}")
+
 	def test_selected_contact_is_authoritative_for_email(self):
 		contact = self.contact(self.email)
 		member = frappe.get_doc(
@@ -222,7 +252,7 @@ class TestMailingLists(FrappeTestCase):
 		)
 		c.reload().append(m.FIELD, {"mailing_list": self.a.name})
 		c.save()
-		self.assertNotEqual(self.member().name, member.name)
+		self.assertEqual(self.member().name, member.name)
 		self.assertEqual(m.status(self.member()), "Pending")
 
 	def test_any_all_status_filter_and_export(self):
