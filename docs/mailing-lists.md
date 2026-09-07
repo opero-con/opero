@@ -1,19 +1,19 @@
 # Mailing Lists
 
 Opero uses Frappe's Email Group, Email Group Member, and Newsletter records.
-Their displayed names are **Mailing List** and **Emailing List Member**;
+Their displayed names are **Mailing List** and **Mailing List Member**;
 the internal DocType names and existing routes remain unchanged.
 
 ## Add a member using a Contact
 
-Open an Emailing List Member, choose its Mailing List, and select **Contact**.
+Open a Mailing List Member, choose its Mailing List, and select **Contact**.
 The Contact link is available in both Quick Entry and the full form. It searches
 the Contacts you can access and fills the selected Contact's primary email.
 **Mobile No** is shown only when Contact is set (fetched from the Contact) and
 is available in list view and export. Clear Contact to enter a standalone email
 address instead.
 
-A Contact needs a primary email to create an Emailing List Member. Contacts
+A Contact needs a primary email to create a Mailing List Member. Contacts
 without an email can still have lists assigned from the Contact form; those
 memberships show **No email** until a primary address is added.
 
