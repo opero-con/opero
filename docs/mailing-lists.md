@@ -50,7 +50,10 @@ because they do not carry the state needed to prevent replay after unsubscribe.
 Use the existing **Action → New Newsletter** on a Mailing List. Newsletter
 recipients must be confirmed and not unsubscribed; shared addresses receive
 one copy. Frappe's unsubscribe page still supports selecting individual lists
-or all current lists. List renaming and deletion retain native behavior.
+or all current lists. List renaming keeps native behavior. Merging one list
+into another keeps a single membership per address: the target row wins, an
+unsubscribe on either list is preserved, and a Confirmed source upgrades a
+Pending target.
 
 Contact editors manage memberships. Newsletter Managers create lists and send
 confirmation requests and newsletters. Selecting a Contact does not grant
