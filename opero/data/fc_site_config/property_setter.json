@@ -1905,21 +1905,6 @@
   "doctype": "Property Setter"
  },
  {
-  "name": "Timesheet-employee_detail-collapsible",
-  "idx": 0,
-  "is_system_generated": 0,
-  "doctype_or_field": "DocField",
-  "doc_type": "Timesheet",
-  "field_name": "employee_detail",
-  "row_name": null,
-  "module": "Opero",
-  "property": "collapsible",
-  "property_type": "Check",
-  "value": "1",
-  "default_value": null,
-  "doctype": "Property Setter"
- },
- {
   "name": "Timesheet-employee_detail-label",
   "idx": 0,
   "is_system_generated": 0,
@@ -1930,7 +1915,7 @@
   "module": "Opero",
   "property": "label",
   "property_type": "Data",
-  "value": "Contributor Detail",
+  "value": "",
   "default_value": null,
   "doctype": "Property Setter"
  },
@@ -1945,7 +1930,7 @@
   "module": "Opero",
   "property": "hidden",
   "property_type": "Check",
-  "value": "1",
+  "value": "0",
   "default_value": null,
   "doctype": "Property Setter"
  },
@@ -1980,6 +1965,21 @@
   "doctype": "Property Setter"
  },
  {
+  "name": "Timesheet-end_date-hidden",
+  "idx": 0,
+  "is_system_generated": 0,
+  "doctype_or_field": "DocField",
+  "doc_type": "Timesheet",
+  "field_name": "end_date",
+  "row_name": null,
+  "module": "Opero",
+  "property": "hidden",
+  "property_type": "Check",
+  "value": "1",
+  "default_value": null,
+  "doctype": "Property Setter"
+ },
+ {
   "name": "Timesheet-exchange_rate-hidden",
   "idx": 0,
   "is_system_generated": 0,
@@ -2005,7 +2005,7 @@
   "module": "Opero",
   "property": "field_order",
   "property_type": "Data",
-  "value": "[\"workflow_state\", \"custom_section_break_zm48z\", \"currency\", \"custom_column_break_mopvs\", \"exchange_rate\", \"custom_column_break_nk7tx\", \"custom_column_break_rnmhl\", \"employee_detail\", \"employee\", \"employee_name\", \"column_break_9\", \"custom_total_spent_hours\", \"department\", \"user\", \"custom_column_break_w8osb\", \"custom_allocated_hours\", \"custom_section_break_ke6yk\", \"parent_project\", \"title\", \"naming_series\", \"customer\", \"sales_invoice\", \"custom_column_break_u3jje\", \"custom_pb_rate\", \"custom_project_name\", \"custom_pm_notified\", \"column_break_3\", \"salary_slip\", \"status\", \"company\", \"custom_project_manager\", \"custom_pm_name\", \"custom_pm_email\", \"section_break_18\", \"note\", \"amended_from\", \"section_break_5\", \"time_logs\", \"working_hours\", \"custom_column_break_kqerb\", \"start_date\", \"custom_column_break_hyquf\", \"end_date\", \"custom_column_break_mjuix\", \"total_hours\", \"billing_details\", \"total_billable_hours\", \"base_total_billable_amount\", \"base_total_billed_amount\", \"base_total_costing_amount\", \"column_break_10\", \"total_billed_hours\", \"total_billable_amount\", \"total_billed_amount\", \"total_costing_amount\", \"per_billed\"]",
+  "value": "[\"workflow_state\", \"custom_section_break_zm48z\", \"currency\", \"custom_column_break_mopvs\", \"exchange_rate\", \"custom_column_break_nk7tx\", \"custom_column_break_rnmhl\", \"employee_detail\", \"employee\", \"employee_name\", \"column_break_9\", \"parent_project\", \"custom_total_spent_hours\", \"department\", \"user\", \"custom_column_break_w8osb\", \"custom_allocated_hours\", \"company\", \"custom_pm_name\", \"custom_section_break_ke6yk\", \"title\", \"naming_series\", \"customer\", \"sales_invoice\", \"custom_column_break_u3jje\", \"custom_pb_rate\", \"custom_project_name\", \"custom_pm_notified\", \"column_break_3\", \"status\", \"custom_project_manager\", \"custom_pm_email\", \"section_break_18\", \"note\", \"amended_from\", \"section_break_5\", \"time_logs\", \"working_hours\", \"custom_column_break_kqerb\", \"start_date\", \"custom_column_break_hyquf\", \"end_date\", \"custom_column_break_mjuix\", \"total_hours\", \"billing_details\", \"total_billable_hours\", \"base_total_billable_amount\", \"base_total_billed_amount\", \"base_total_costing_amount\", \"column_break_10\", \"total_billed_hours\", \"total_billable_amount\", \"total_billed_amount\", \"total_costing_amount\", \"per_billed\"]",
   "default_value": null,
   "doctype": "Property Setter"
  },
@@ -2111,6 +2111,21 @@
   "property": "description",
   "property_type": "Text",
   "value": "From above timesheet rows.",
+  "default_value": null,
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Timesheet-start_date-hidden",
+  "idx": 0,
+  "is_system_generated": 0,
+  "doctype_or_field": "DocField",
+  "doc_type": "Timesheet",
+  "field_name": "start_date",
+  "row_name": null,
+  "module": "Opero",
+  "property": "hidden",
+  "property_type": "Check",
+  "value": "1",
   "default_value": null,
   "doctype": "Property Setter"
  },

@@ -1,6 +1,14 @@
 // Opero: client scripts for Timesheet
 // Migrated from Frappe Cloud Client Scripts (enabled Form scripts).
 
+// Hide Employee Name on the form only. Keep the field unhidden in meta so
+// Report/List export can still include it (export pickers skip df.hidden).
+frappe.ui.form.on("Timesheet", {
+	refresh: function (frm) {
+		frm.toggle_display("employee_name", false);
+	},
+});
+
 // --- Auto Height Note: TS ---
 frappe.ui.form.on('Timesheet', {
     onload: function(frm) {
