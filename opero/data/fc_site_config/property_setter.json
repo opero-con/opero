@@ -1935,6 +1935,21 @@
   "doctype": "Property Setter"
  },
  {
+  "name": "Timesheet-employee_name-label",
+  "idx": 0,
+  "is_system_generated": 0,
+  "doctype_or_field": "DocField",
+  "doc_type": "Timesheet",
+  "field_name": "employee_name",
+  "row_name": null,
+  "module": "Opero",
+  "property": "label",
+  "property_type": "Data",
+  "value": "Personnel",
+  "default_value": null,
+  "doctype": "Property Setter"
+ },
+ {
   "name": "Timesheet-employee-label",
   "idx": 0,
   "is_system_generated": 0,
