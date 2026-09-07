@@ -1,7 +1,8 @@
 {
  "actions": [],
+ "allow_events_in_timeline": 1,
  "allow_auto_repeat": 0,
- "allow_import": 0,
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "naming_series:",
  "creation": "2024-09-29 19:30:59.229902",
@@ -10,27 +11,162 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
+  "basic_info",
   "naming_series",
-  "enterprise_name"
+  "enterprise_name",
+  "business_category",
+  "column_break_4",
+  "status",
+  "website",
+  "disabled",
+  "contact_and_address_tab",
+  "address_contacts",
+  "address_html",
+  "column_break_10",
+  "contact_html",
+  "primary_address_and_contact",
+  "enterprise_primary_address",
+  "primary_address",
+  "column_break_14",
+  "enterprise_primary_contact",
+  "mobile_no",
+  "email_id",
+  "more_info",
+  "notes"
  ],
  "fields": [
   {
-   "idx": 1,
-   "fieldname": "naming_series",
-   "label": "Series",
-   "fieldtype": "Data",
-   "permlevel": 0,
-   "columns": 0,
-   "length": 0
+   "fieldname": "basic_info",
+   "fieldtype": "Section Break",
+   "options": "fa fa-building"
   },
   {
-   "idx": 2,
-   "fieldname": "enterprise_name",
-   "label": "Enterprise Name",
+   "default": "ENT-.YYYY.-",
+   "fieldname": "naming_series",
    "fieldtype": "Data",
-   "permlevel": 0,
-   "columns": 0,
-   "length": 0
+   "label": "Series",
+   "no_copy": 1,
+   "set_only_once": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "enterprise_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "Enterprise Name",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "business_category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Business Category",
+   "link_filters": "[[\"WASH Category\", \"is_group\", \"=\", 0]]",
+   "options": "WASH Category",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Identified",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Identified\nOnboarded\nActive Support\nGraduated\nDormant"
+  },
+  {
+   "fieldname": "website",
+   "fieldtype": "Data",
+   "label": "Website",
+   "options": "URL"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "contact_and_address_tab",
+   "fieldtype": "Tab Break",
+   "label": "Contact & Address"
+  },
+  {
+   "fieldname": "address_contacts",
+   "fieldtype": "Section Break",
+   "label": "Address and Contacts"
+  },
+  {
+   "fieldname": "address_html",
+   "fieldtype": "HTML",
+   "label": "Address HTML"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "contact_html",
+   "fieldtype": "HTML",
+   "label": "Contact HTML"
+  },
+  {
+   "fieldname": "primary_address_and_contact",
+   "fieldtype": "Section Break",
+   "label": "Primary Address and Contact"
+  },
+  {
+   "fieldname": "enterprise_primary_address",
+   "fieldtype": "Link",
+   "label": "Primary Address",
+   "options": "Address"
+  },
+  {
+   "fieldname": "primary_address",
+   "fieldtype": "Text",
+   "label": "Primary Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_14",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enterprise_primary_contact",
+   "fieldtype": "Link",
+   "label": "Primary Contact",
+   "options": "Contact"
+  },
+  {
+   "fieldname": "mobile_no",
+   "fieldtype": "Data",
+   "label": "Mobile No",
+   "options": "Phone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "email_id",
+   "fieldtype": "Data",
+   "label": "Email Address",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "more_info",
+   "fieldtype": "Tab Break",
+   "label": "More Info"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notes"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -65,13 +201,14 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 0,
+ "title_field": "enterprise_name",
+ "track_changes": 1,
  "max_attachments": 0,
- "quick_entry": 0,
+ "quick_entry": 1,
  "track_seen": 0,
  "track_views": 0,
  "is_calendar_and_gantt": 0,
- "show_title_field_in_link": 0,
+ "show_title_field_in_link": 1,
  "grid_page_length": 50,
  "protect_attached_files": 0,
  "row_format": "Dynamic",
