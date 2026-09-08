@@ -100,3 +100,6 @@ opero.patches.v0_4.drop_mailing_member_confirmation_status
 opero.patches.v0_4.rename_enterprise_business_category_to_wash_category
 opero.patches.v0_4.drop_enterprise_naming_series
 opero.patches.v0_4.add_mailing_member_mobile_from_contact
+
+opero.patches.v0_4.rename_to_publish_to_to_deploy
+opero.patches.v0_4.add_enterprise_website_publishing

@@ -135,6 +135,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
 		frappe.db.delete("Team Member")
+		frappe.db.delete("Enterprise")
 
 	def test_parse_frontmatter_and_slug_from_path(self):
 		self.assertEqual(parse_frontmatter(TEAM_MD)["name"], "Anita Onyango")
@@ -153,7 +154,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 				"docs/editor-guide.md": "---\ntitle: ignored\n---\n",
 			}
 		)
-		self.assertEqual(counts, {"settings": 1, "home": 1, "privacy": 1, "publications": 1, "team": 1})
+		self.assertEqual(counts, {"settings": 1, "home": 1, "privacy": 1, "publications": 1, "team": 1, "enterprises": 0})
 
 		settings = frappe.get_single("Site Settings")
 		self.assertEqual(settings.organization_name, "Opero Services Ltd")
@@ -323,3 +324,50 @@ active: false
 		doc = frappe.get_doc("Team Member", "hidden-person")
 		self.assertEqual(doc.status, "Unpublished")
 		self.assertFalse(doc.show_on_website)
+
+	def test_load_enterprise_matches_existing_by_name_and_attaches_logo(self):
+		existing = frappe.get_doc(
+			{
+				"doctype": "Enterprise",
+				"enterprise_name": "Gasia Poa",
+				"status": "Onboarded",
+			}
+		).insert(ignore_permissions=True)
+
+		# Minimal valid 1x1 PNG so File.insert can strip EXIF.
+		png = (
+			b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+			b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+			b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+		)
+
+		class _Repo:
+			base_branch = "main"
+
+			def get_bytes(self, path, ref):
+				if path != "media/enterprises/gasia-poa.png":
+					raise AssertionError(path)
+				return png
+
+		counts = load_files(
+			{
+				"content/enterprises/gasia-poa.md": """---
+name: Gasia Poa
+order: 10
+active: true
+logo: /media/enterprises/gasia-poa.png
+---
+"""
+			},
+			repo=_Repo(),
+		)
+		self.assertEqual(counts["enterprises"], 1)
+		existing.reload()
+		self.assertEqual(existing.status, "Onboarded")
+		self.assertEqual(existing.website_status, "Published")
+		self.assertTrue(existing.show_on_website)
+		self.assertEqual(existing.sort_order, 10)
+		self.assertTrue(
+			existing.logo.startswith("/files/") or existing.logo.startswith("/private/files/")
+		)
+		self.assertEqual(frappe.db.count("Enterprise", {"enterprise_name": "Gasia Poa"}), 1)

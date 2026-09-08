@@ -4,7 +4,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, cstr
 
 from opero.opero_site.body_html import html_to_paragraphs, normalize_paragraphs_html
-from opero.opero_site.publish_status import TO_PUBLISH, apply_publish_status
+from opero.opero_site.publish_status import TO_DEPLOY, apply_publish_status
 from opero.opero_site.utils import (
 	hero_carousel_entry,
 	lines,
@@ -15,7 +15,7 @@ from opero.opero_site.utils import (
 
 class HomePage(Document):
 	def validate(self):
-		apply_publish_status(self, default=TO_PUBLISH)
+		apply_publish_status(self, default=TO_DEPLOY)
 		self.about_body = normalize_paragraphs_html(self.about_body)
 		for row in self.projects or []:
 			row.detail_url = optional_url(row.detail_url, "Detail URL")

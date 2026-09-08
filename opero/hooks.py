@@ -279,6 +279,11 @@ doc_events = {
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
 	},
+	"Enterprise": {
+		"after_insert": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
+	},
 	"Home Page": {
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 	},

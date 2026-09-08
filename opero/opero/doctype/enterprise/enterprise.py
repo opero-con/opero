@@ -1,8 +1,13 @@
 from secrets import randbelow
 
 import frappe
+from frappe import _
 from frappe.contacts.address_and_contact import delete_contact_and_address, load_address_and_contact
 from frappe.model.document import Document
+from frappe.utils import cint, cstr
+
+from opero.opero_site.publish_status import apply_publish_status, is_on_site
+from opero.opero_site.utils import optional_url, slugify
 
 
 def make_enterprise_name():
@@ -14,12 +19,39 @@ def make_enterprise_name():
 	frappe.throw(frappe._("Could not allocate a unique Enterprise ID. Try again."))
 
 
+def enterprise_content_slug(enterprise_name: str) -> str:
+	"""Filename id for `content/enterprises/<slug>.md`, derived from the display name."""
+	return slugify(enterprise_name)
+
+
 class Enterprise(Document):
 	def onload(self):
 		load_address_and_contact(self)
 
 	def autoname(self):
 		self.name = make_enterprise_name()
+
+	def validate(self):
+		self.enterprise_name = cstr(self.enterprise_name).strip()
+		if not self.enterprise_name:
+			frappe.throw(_("Enterprise Name is required."))
+		if not enterprise_content_slug(self.enterprise_name):
+			frappe.throw(_("Enterprise Name must contain at least one letter or number."))
+
+		self.website = optional_url(self.website, "Website")
+		apply_publish_status(self)
+		self.sort_order = cint(self.sort_order)
+
+	def to_site_frontmatter(self) -> dict:
+		"""YAML frontmatter for opero-content `content/enterprises/<slug>.md`."""
+		payload = {
+			"name": self.enterprise_name,
+			"order": cint(self.sort_order),
+			"active": is_on_site(self),
+		}
+		if self.logo:
+			payload["logo"] = cstr(self.logo)
+		return payload
 
 	def on_trash(self):
 		if self.enterprise_primary_contact:

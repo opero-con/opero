@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
+
 import frappe
 from frappe import _
 from frappe.utils import cint, cstr, flt, getdate
+from frappe.utils.file_manager import save_file
 
 from opero.opero_site.body_html import body_sections_to_html, paragraphs_to_html
-from opero.opero_site.github import GithubError
+from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.markdown import parse_frontmatter
 from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
 from opero.opero_site.publish_status import DRAFT, PUBLISHED, UNPUBLISHED
@@ -193,8 +196,88 @@ def apply_team_member(doc, data: dict, slug: str):
 	doc.linkedin = _text(data.get("linkedin"))
 
 
-def load_files(files: dict[str, str]) -> dict[str, int]:
-	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0}
+def apply_enterprise(doc, data: dict, slug: str):
+	active = data.get("active")
+	# Keep an existing CRM name; only fill when creating or blank.
+	incoming = _text(data.get("name")) or slug
+	if not _text(doc.enterprise_name):
+		doc.enterprise_name = incoming
+	doc.sort_order = cint(data.get("order"))
+	if active is False:
+		doc.website_status = UNPUBLISHED
+		doc.show_on_website = 0
+	else:
+		doc.website_status = PUBLISHED
+		doc.show_on_website = 1
+
+
+def find_enterprise(slug: str, display_name: str = "") -> str | None:
+	"""Match content to Cubenet Enterprise by derived slug or case-insensitive name."""
+	from opero.opero.doctype.enterprise.enterprise import enterprise_content_slug
+
+	display = _text(display_name)
+	for row in frappe.get_all("Enterprise", fields=["name", "enterprise_name"]):
+		ename = _text(row.enterprise_name)
+		if not ename:
+			continue
+		if enterprise_content_slug(ename) == slug:
+			return row.name
+		if display and ename.casefold() == display.casefold():
+			return row.name
+	return None
+
+
+def attach_content_logo(doc, logo_path: str, repo: ContentRepo | None) -> bool:
+	"""Download `/media/...` logos into Desk File attachments. Returns True if doc.logo changed."""
+	logo_path = _text(logo_path)
+	previous = _text(doc.logo)
+	if not logo_path:
+		doc.logo = ""
+		return previous != ""
+
+	if logo_path.startswith(("/files/", "/private/files/")):
+		doc.logo = logo_path
+		return previous != logo_path
+
+	repo_path = logo_path[1:] if logo_path.startswith("/") else logo_path
+	if not repo_path.startswith("media/"):
+		doc.logo = logo_path if logo_path.startswith("/") else f"/{logo_path}"
+		return previous != _text(doc.logo)
+
+	filename = os.path.basename(repo_path)
+	if not filename or filename in (".", ".."):
+		doc.logo = f"/{repo_path}"
+		return previous != _text(doc.logo)
+
+	existing = frappe.db.get_value(
+		"File",
+		{
+			"attached_to_doctype": doc.doctype,
+			"attached_to_name": doc.name,
+			"file_name": filename,
+		},
+		"file_url",
+	)
+	if existing:
+		doc.logo = existing
+		return previous != existing
+
+	blob = repo.get_bytes(repo_path, repo.base_branch) if repo else None
+	if not blob:
+		doc.logo = f"/{repo_path}"
+		return previous != _text(doc.logo)
+
+	file_doc = save_file(filename, blob, doc.doctype, doc.name, is_private=0)
+	doc.logo = file_doc.file_url
+	return previous != _text(doc.logo)
+
+
+def _enterprise_name_for_slug(slug: str) -> str | None:
+	return find_enterprise(slug)
+
+
+def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[str, int]:
+	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0, "enterprises": 0}
 	frappe.flags.opero_site_syncing = True
 	try:
 		for path, text in files.items():
@@ -231,6 +314,22 @@ def load_files(files: dict[str, str]) -> dict[str, int]:
 				apply_team_member(doc, parse_frontmatter(text), slug)
 				doc.save(ignore_permissions=True)
 				counts["team"] += 1
+			elif path.startswith("content/enterprises/") and path.endswith(".md"):
+				slug = slug_from_path(path)
+				data = parse_frontmatter(text)
+				name = find_enterprise(slug, _text(data.get("name")))
+				if name:
+					doc = frappe.get_doc("Enterprise", name)
+				else:
+					doc = frappe.new_doc("Enterprise")
+				apply_enterprise(doc, data, slug)
+				if doc.is_new():
+					doc.insert(ignore_permissions=True)
+				else:
+					doc.save(ignore_permissions=True)
+				if attach_content_logo(doc, _text(data.get("logo")), repo):
+					doc.save(ignore_permissions=True)
+				counts["enterprises"] += 1
 	finally:
 		frappe.flags.opero_site_syncing = False
 		clear_pending_cache()
@@ -245,7 +344,7 @@ def load_from_website() -> dict:
 	try:
 		paths = repo.list_markdown("content/", repo.base_branch)
 		files = repo.existing_files(paths, repo.base_branch)
-		counts = load_files(files)
+		counts = load_files(files, repo=repo)
 	except GithubError as exc:
 		frappe.throw(str(exc))
 	total = sum(counts.values())

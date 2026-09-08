@@ -1,6 +1,11 @@
-const OPTIONAL_SITE_DOCTYPES = ["Publication", "Team Member"];
+const OPTIONAL_SITE_DOCTYPES = ["Publication", "Team Member", "Enterprise"];
 const ALWAYS_ON_SITE_DOCTYPES = ["Home Page", "Privacy policy", "Site Settings"];
 const SITE_CONTENT_DOCTYPES = OPTIONAL_SITE_DOCTYPES.concat(ALWAYS_ON_SITE_DOCTYPES);
+// Enterprise CRM Status stays on the Details tab; do not drive the form/list indicator.
+const INDICATOR_SITE_DOCTYPES = SITE_CONTENT_DOCTYPES.filter((name) => name !== "Enterprise");
+const PUBLISH_STATUS_FIELD = {
+	Enterprise: "website_status",
+};
 
 if (!window._opero_publish_status_bound) {
 	window._opero_publish_status_bound = true;
@@ -9,7 +14,7 @@ if (!window._opero_publish_status_bound) {
 
 function setupStatusPills() {
 	frappe.provide("frappe.listview_settings");
-	SITE_CONTENT_DOCTYPES.forEach(bindStatusPill);
+	INDICATOR_SITE_DOCTYPES.forEach(bindStatusPill);
 	if (typeof frappe.get_indicator === "function" && !frappe.get_indicator._opero_wrapped) {
 		wrapGetIndicator();
 	}
@@ -18,6 +23,10 @@ function setupStatusPills() {
 setupStatusPills();
 $(document).on("app_ready", setupStatusPills);
 
+function publishStatusField(doctype) {
+	return PUBLISH_STATUS_FIELD[doctype] || "status";
+}
+
 function wrapGetIndicator() {
 	const original = frappe.get_indicator;
 	const wrapped = function (doc, doctype, show_workflow_state) {
@@ -25,8 +34,8 @@ function wrapGetIndicator() {
 			return original.call(this, doc, doctype, show_workflow_state);
 		}
 		const name = doctype || (doc && doc.doctype);
-		if (doc && SITE_CONTENT_DOCTYPES.includes(name)) {
-			const mapped = getPublishStatusIndicator(doc);
+		if (doc && INDICATOR_SITE_DOCTYPES.includes(name)) {
+			const mapped = getPublishStatusIndicator(doc, name);
 			if (mapped) {
 				return mapped;
 			}
@@ -38,12 +47,15 @@ function wrapGetIndicator() {
 }
 
 function bindPublishStatus(doctype) {
+	const field = publishStatusField(doctype);
 	const handlers = {
 		refresh(frm) {
 			if (!frm.is_dirty()) {
-				frm._saved_publish_status = frm.doc.status;
+				frm._saved_publish_status = frm.doc[field];
 			}
-			setPublishStatusPill(frm);
+			if (INDICATOR_SITE_DOCTYPES.includes(doctype)) {
+				setPublishStatusPill(frm);
+			}
 		},
 	};
 	if (OPTIONAL_SITE_DOCTYPES.includes(doctype)) {
@@ -52,10 +64,13 @@ function bindPublishStatus(doctype) {
 				return;
 			}
 			frm._syncing_publish_status = true;
-			const saved = frm._saved_publish_status || frm.doc.status;
-			frm.doc.status = statusFromCheckbox(frm.doc.show_on_website, saved);
+			const saved = frm._saved_publish_status || frm.doc[field];
+			frm.doc[field] = statusFromCheckbox(frm.doc.show_on_website, saved);
+			frm.refresh_field(field);
 			frm._syncing_publish_status = false;
-			setPublishStatusPill(frm);
+			if (INDICATOR_SITE_DOCTYPES.includes(doctype)) {
+				setPublishStatusPill(frm);
+			}
 		};
 	}
 	frappe.ui.form.on(doctype, handlers);
@@ -63,7 +78,7 @@ function bindPublishStatus(doctype) {
 
 function statusFromCheckbox(show, status) {
 	if (cint(show)) {
-		return status === "Published" ? "Published" : "To publish";
+		return "To deploy";
 	}
 	if (status === "Unpublished") {
 		return "Unpublished";
@@ -78,7 +93,7 @@ function setPublishStatusPill(frm) {
 	if (!frm.page) {
 		return;
 	}
-	const indicator = getPublishStatusIndicator(frm.doc);
+	const indicator = getPublishStatusIndicator(frm.doc, frm.doctype);
 	if (indicator) {
 		frm.page.set_indicator(indicator[0], indicator[1]);
 	}
@@ -92,7 +107,7 @@ function setPublicationDeployRibbon(frm) {
 		return;
 	}
 	frm.layout.show_message();
-	if (frm.doc.status !== "To publish" && frm.doc.status !== "To unpublish") {
+	if (frm.doc.status !== "To deploy" && frm.doc.status !== "To unpublish") {
 		return;
 	}
 	const link = frappe.utils.get_form_link(
@@ -111,24 +126,26 @@ function setPublicationDeployRibbon(frm) {
 function bindStatusPill(doctype) {
 	frappe.provide("frappe.listview_settings");
 	const settings = frappe.listview_settings[doctype] || {};
-	settings.get_indicator = getPublishStatusIndicator;
+	settings.get_indicator = (doc) => getPublishStatusIndicator(doc, doctype);
 	frappe.listview_settings[doctype] = settings;
 }
 
-function getPublishStatusIndicator(doc) {
-	if (doc.status === "Published") {
-		return [__("Published"), "green", "status,=,Published"];
+function getPublishStatusIndicator(doc, doctype) {
+	const field = publishStatusField(doctype || doc.doctype);
+	const status = doc[field];
+	if (status === "Published") {
+		return [__("Published"), "green", `${field},=,Published`];
 	}
-	if (doc.status === "To publish") {
-		return [__("To publish"), "blue", "status,=,To publish"];
+	if (status === "To deploy") {
+		return [__("To deploy"), "blue", `${field},=,To deploy`];
 	}
-	if (doc.status === "To unpublish") {
-		return [__("To unpublish"), "red", "status,=,To unpublish"];
+	if (status === "To unpublish") {
+		return [__("To unpublish"), "red", `${field},=,To unpublish`];
 	}
-	if (doc.status === "Unpublished") {
-		return [__("Unpublished"), "gray", "status,=,Unpublished"];
+	if (status === "Unpublished") {
+		return [__("Unpublished"), "gray", `${field},=,Unpublished`];
 	}
-	if (doc.status === "Draft") {
-		return [__("Draft"), "orange", "status,=,Draft"];
+	if (status === "Draft") {
+		return [__("Draft"), "orange", `${field},=,Draft`];
 	}
 }

@@ -36,6 +36,8 @@ def media_folder_for(path: str) -> str:
 		return "publications"
 	if path.startswith("content/team/"):
 		return "team"
+	if path.startswith("content/enterprises/"):
+		return "enterprises"
 	if path == "content/settings/general.md":
 		return "og"
 	return "uploads"

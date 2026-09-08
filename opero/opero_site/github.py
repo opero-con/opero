@@ -64,6 +64,12 @@ class ContentRepo:
 		return self._transport(method, f"https://api.github.com{path}", json=json)
 
 	def get_file(self, path: str, ref: str) -> str | None:
+		raw = self.get_bytes(path, ref)
+		if raw is None:
+			return None
+		return raw.decode("utf-8")
+
+	def get_bytes(self, path: str, ref: str) -> bytes | None:
 		try:
 			payload = self._api("GET", f"/repos/{self.repo}/contents/{quote(path)}?ref={quote(ref)}")
 		except GithubError as exc:
@@ -73,7 +79,7 @@ class ContentRepo:
 		encoded = payload.get("content")
 		if not encoded:
 			return None
-		return base64.b64decode(encoded.replace("\n", "")).decode("utf-8")
+		return base64.b64decode(encoded.replace("\n", ""))
 
 	def existing_files(self, paths: list[str], ref: str, on_progress=None) -> dict[str, str]:
 		out = {}

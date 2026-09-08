@@ -76,7 +76,7 @@
    "hidden": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Draft\nTo publish\nPublished\nTo unpublish\nUnpublished",
+   "options": "Draft\nTo deploy\nPublished\nTo unpublish\nUnpublished",
    "read_only": 1,
    "reqd": 1
   },
@@ -258,7 +258,7 @@
   },
   {
    "color": "Blue",
-   "title": "To publish"
+   "title": "To deploy"
   },
   {
    "color": "Green",
