@@ -71,10 +71,6 @@ def record(member, action, contact=None):
 	).insert(ignore_permissions=True)
 
 
-def member_before_insert(doc, method=None):
-	doc.custom_confirmation_status = "Confirmed"
-
-
 def member_validate(doc, method=None):
 	old = doc.get_doc_before_save()
 	contact = doc.get("custom_contact")
@@ -87,7 +83,6 @@ def member_validate(doc, method=None):
 		doc.email = primary_email
 	doc.email = email_key(doc.email)
 	validate_email_address(doc.email, throw=True)
-	doc.custom_confirmation_status = "Confirmed"
 	if not old or frappe.flags.opero_mailing_internal:
 		return
 	if cint(old.unsubscribed) and not cint(doc.unsubscribed):
@@ -241,7 +236,6 @@ def ensure_member(group, email, unsubscribed=False):
 				"email_group": group,
 				"email": email_key(email),
 				"unsubscribed": int(unsubscribed),
-				"custom_confirmation_status": "Confirmed",
 			}
 		).insert(ignore_permissions=True)
 

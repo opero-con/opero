@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import cint
 
 from opero.mailing import confirmation as confirm_api
 from opero.mailing import membership as m
@@ -204,7 +205,6 @@ class TestMailingLists(FrappeTestCase):
 					"doctype": m.MEMBER,
 					"email_group": self.a.name,
 					"email": self.email,
-					"custom_confirmation_status": "Confirmed",
 				}
 			).insert()
 		newsletter = frappe.new_doc("Newsletter")
@@ -222,16 +222,16 @@ class TestMailingLists(FrappeTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			export_rows()
 
-	def test_client_confirmation_status_stays_confirmed(self):
+	def test_new_members_are_eligible(self):
 		doc = frappe.get_doc(
 			{
 				"doctype": m.MEMBER,
 				"email_group": self.a.name,
 				"email": self.email,
-				"custom_confirmation_status": "Confirmed",
 			}
 		).insert()
-		self.assertEqual(doc.custom_confirmation_status, "Confirmed")
+		self.assertEqual(m.status(doc), "Confirmed")
+		self.assertFalse(cint(doc.unsubscribed))
 
 	def test_contact_editor_can_select_and_assign_but_cannot_create_lists(self):
 		from frappe.client import validate_link

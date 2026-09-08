@@ -16,7 +16,6 @@ fixtures = [
 					"Email Group-custom_column_break_s8kcx",
 					"Email Group-custom_column_break_sdvdc",
 					"Email Group Member-custom_contact",
-					"Email Group Member-custom_confirmation_status",
 				],
 			]
 		],
@@ -233,7 +232,6 @@ doc_events = {
 		"on_update": "opero.mailing.membership.contact_updated",
 	},
 	"Email Group Member": {
-		"before_insert": "opero.mailing.membership.member_before_insert",
 		"validate": "opero.mailing.membership.member_validate",
 		"on_update": "opero.mailing.membership.member_updated",
 		"on_trash": "opero.mailing.membership.member_removed",

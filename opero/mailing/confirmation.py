@@ -8,7 +8,7 @@ from frappe import _
 from frappe.rate_limiter import rate_limit
 from frappe.utils import cint
 
-from opero.mailing.membership import ensure_member, internal, status
+from opero.mailing.membership import ensure_member, internal
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
@@ -21,10 +21,9 @@ def subscribe(email, email_group=None):
 	if not frappe.db.exists("Email Group", group):
 		frappe.throw(_("Mailing List not found."))
 	member = ensure_member(group, email)
-	if cint(member.unsubscribed) or status(member) != "Confirmed":
+	if cint(member.unsubscribed):
 		with internal():
 			member.unsubscribed = 0
-			member.custom_confirmation_status = "Confirmed"
 			member.save(ignore_permissions=True)
 	return {"message": _("You have been subscribed to this mailing list.")}
 

@@ -40,26 +40,8 @@ def execute():
 					"module": "Opero",
 				},
 			],
-			"Email Group Member": [
-				{
-					"fieldname": "custom_confirmation_status",
-					"label": "Subscription Status",
-					"fieldtype": "Select",
-					"options": "Confirmed",
-					"default": "Confirmed",
-					"read_only": 1,
-					"in_list_view": 1,
-					"in_standard_filter": 1,
-					"insert_after": "email",
-					"module": "Opero",
-					"description": "Members are eligible until they unsubscribe from a newsletter footer link. Newsletter Managers can reactivate by clearing Unsubscribed.",
-				},
-			],
 		},
 		update=True,
-	)
-	frappe.db.sql(
-		"update `tabEmail Group Member` set custom_confirmation_status='Confirmed' where coalesce(custom_confirmation_status, '')=''"
 	)
 	from opero.mailing.membership import sync_email
 
