@@ -88,6 +88,8 @@ def canonical_frontmatter(path: str, data: dict) -> dict:
 		shaped = _canonical_publication(data, _slug_from_path(path))
 	elif path.startswith("content/team/"):
 		shaped = _canonical_team(data)
+	elif path.startswith("content/enterprises/"):
+		shaped = _canonical_enterprise(data)
 	else:
 		shaped = dict(data)
 	return _compact(shaped)
@@ -353,6 +355,17 @@ def _canonical_team(data: dict) -> dict:
 		payload["imageScale"] = flt(data.get("imageScale"))
 	if data.get("imageHoverScale") not in (None, ""):
 		payload["imageHoverScale"] = flt(data.get("imageHoverScale"))
+	return payload
+
+
+def _canonical_enterprise(data: dict) -> dict:
+	payload = {
+		"name": _text(data.get("name")),
+		"order": cint(data.get("order")),
+		"active": False if data.get("active") is False else True,
+	}
+	if data.get("logo"):
+		payload["logo"] = cstr(data.get("logo"))
 	return payload
 
 

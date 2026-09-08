@@ -18,6 +18,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			{
 				"Home Page": "Home Page",
 				"Team": "Team Member",
+				"Enterprises": "Enterprise",
 				"Publications": "Publication",
 				"Privacy policy": "Privacy policy",
 				"Deploy Center": "Deploy Center",
@@ -37,6 +38,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Settings",
 				"Home Page",
 				"Team",
+				"Enterprises",
 				"Publications",
 				"Privacy policy",
 				"Website Enquiries",
@@ -55,6 +57,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		doctypes = [
 			"Home Page",
 			"Team Member",
+			"Enterprise",
 			"Publication",
 			"Privacy policy",
 			"Deploy Center",
@@ -72,6 +75,17 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			self.assertFalse(frappe.get_meta(doctype).has_field("show_on_website"), doctype)
 		self.assertTrue(frappe.get_meta("Publication").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Team Member").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Enterprise").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Partner").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Enterprise").has_field("website_status"))
+		self.assertEqual(
+			frappe.get_meta("Enterprise").get_field("status").options.split("\n"),
+			["Identified", "Onboarded", "Active Support", "Graduated", "Dormant"],
+		)
+		self.assertEqual(
+			frappe.get_meta("Enterprise").get_field("website_status").options.split("\n"),
+			["Draft", "To deploy", "Published", "To unpublish", "Unpublished"],
+		)
 
 	def test_lone_section_children_do_not_repeat_the_section_title(self):
 		cases = (

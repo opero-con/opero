@@ -30,7 +30,12 @@
   "enterprise_primary_contact",
   "mobile_no",
   "email_id",
-  "more_info",
+  "website_tab",
+  "show_on_website",
+  "website_status",
+  "sort_order",
+  "logo",
+  "section_notes",
   "notes"
  ],
  "fields": [
@@ -150,9 +155,44 @@
    "read_only": 1
   },
   {
-   "fieldname": "more_info",
+   "fieldname": "website_tab",
    "fieldtype": "Tab Break",
-   "label": "More Info"
+   "label": "Website"
+  },
+  {
+   "default": "0",
+   "description": "Takes effect on the next Deploy to website.",
+   "fieldname": "show_on_website",
+   "fieldtype": "Check",
+   "label": "Show on website"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "website_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Website Status",
+   "options": "Draft\nTo deploy\nPublished\nTo unpublish\nUnpublished",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "10",
+   "description": "Lower numbers appear first on the Enterprises logo conveyor.",
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Order"
+  },
+  {
+   "fieldname": "logo",
+   "fieldtype": "Attach Image",
+   "label": "Logo"
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
   },
   {
    "fieldname": "notes",
@@ -167,7 +207,7 @@
  "issingle": 0,
  "istable": 0,
  "links": [],
- "modified": "2026-08-04 21:32:47.345254",
+ "modified": "2026-09-08 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Opero",
  "name": "Enterprise",
@@ -187,6 +227,18 @@
    "share": 1,
    "print": 1,
    "email": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Website Manager",
+   "share": 1,
+   "write": 1
   }
  ],
  "sort_field": "modified",

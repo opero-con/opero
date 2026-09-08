@@ -4,26 +4,28 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from opero.opero.doctype.enterprise.enterprise import enterprise_content_slug
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
 from opero.opero_site.media import export_planned_media, git_blob_sha
 from opero.opero_site.publish_status import (
 	ALWAYS_ON_SITE,
 	PUBLISHED,
-	TO_PUBLISH,
+	TO_DEPLOY,
 	TO_UNPUBLISH,
 	UNPUBLISHED,
 	is_off_site,
 	is_on_site,
-	is_to_publish,
+	is_to_deploy,
 	is_to_unpublish,
+	publish_status_field,
 )
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
-MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/")
+MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/", "content/enterprises/")
 DEPLOY_LOG_LIMIT = 10
-CONTENT_DOCTYPES = ("Publication", "Team Member")
+CONTENT_DOCTYPES = ("Publication", "Team Member", "Enterprise")
 CONTENT_SINGLES = ("Home Page", "Privacy policy", "Site Settings")
 SITE_CONTENT_DOCTYPES = CONTENT_DOCTYPES + CONTENT_SINGLES
 PENDING_EVENT = "opero_site_pending"
@@ -40,6 +42,9 @@ def content_path_for(doc) -> str | None:
 	fixed = CONTENT_PATHS.get(doc.doctype)
 	if fixed:
 		return fixed
+	if doc.doctype == "Enterprise":
+		slug = enterprise_content_slug(getattr(doc, "enterprise_name", None) or "")
+		return f"content/enterprises/{slug}.md" if slug else None
 	slug = getattr(doc, "slug", None)
 	if not slug:
 		return None
@@ -64,13 +69,15 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 	"""Desk-side pending rows for one content save (no GitHub round-trip)."""
 	entries: list[dict] = []
 	previous = None if deleted or doc.is_new() else doc.get_doc_before_save()
-	if previous and getattr(previous, "slug", None) and previous.slug != getattr(doc, "slug", None):
+	if previous:
 		old_path = content_path_for(previous)
-		if old_path and doc.doctype == "Publication" and (
+		new_path = content_path_for(doc)
+		renamed = bool(old_path and new_path and old_path != new_path)
+		if renamed and doc.doctype == "Publication" and (
 			is_on_site(previous) or is_off_site(previous) or is_on_site(doc) or is_off_site(doc)
 		):
 			entries.append({"path": old_path, "action": "delete"})
-		elif old_path and doc.doctype == "Team Member" and (
+		elif renamed and doc.doctype in ("Team Member", "Enterprise") and (
 			is_on_site(previous) or is_off_site(previous)
 		):
 			entries.append({"path": old_path, "action": "delete"})
@@ -96,7 +103,7 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 			entries.append({"path": path, "action": "delete"})
 		return _unique_pending(entries)
 
-	if doc.doctype == "Team Member":
+	if doc.doctype in ("Team Member", "Enterprise"):
 		if is_on_site(doc) or is_off_site(doc):
 			entries.append({"path": path, "action": "update"})
 		return _unique_pending(entries)
@@ -139,21 +146,24 @@ def pending_from_status() -> list[dict]:
 	"""Queued publish intents that should appear even before a GitHub compare."""
 	entries: list[dict] = []
 	for doctype in CONTENT_DOCTYPES:
+		status_field = publish_status_field(doctype)
+		fields = [status_field, "enterprise_name"] if doctype == "Enterprise" else [status_field, "slug"]
 		for row in frappe.get_all(
 			doctype,
-			filters={"status": ["in", [TO_PUBLISH, TO_UNPUBLISH]]},
-			fields=["slug", "status"],
+			filters={status_field: ["in", [TO_DEPLOY, TO_UNPUBLISH]]},
+			fields=fields,
 		):
-			path = content_path_for(frappe._dict(doctype=doctype, slug=row.slug))
+			path = content_path_for(frappe._dict(doctype=doctype, **row))
 			if not path:
 				continue
-			if doctype == "Publication" and row.status == TO_UNPUBLISH:
+			row_status = row.get(status_field)
+			if doctype == "Publication" and row_status == TO_UNPUBLISH:
 				entries.append({"path": path, "action": "delete"})
 			else:
 				entries.append({"path": path, "action": "update"})
 	for name in CONTENT_SINGLES:
 		doc = frappe.get_single(name)
-		if is_to_publish(doc) and _doc_is_ready(doc):
+		if is_to_deploy(doc) and _doc_is_ready(doc):
 			path = content_path_for(doc)
 			if path:
 				entries.append({"path": path, "action": "update"})
@@ -219,6 +229,12 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	for name in frappe.get_all("Team Member", pluck="name"):
 		doc = frappe.get_doc("Team Member", name)
 		consider(f"content/team/{doc.slug}.md", doc, True, hide_when_unpublished=True)
+	for name in frappe.get_all("Enterprise", pluck="name"):
+		doc = frappe.get_doc("Enterprise", name)
+		path = content_path_for(doc)
+		if not path:
+			continue
+		consider(path, doc, True, hide_when_unpublished=True)
 	return files, keep
 
 
@@ -302,9 +318,10 @@ def record_deploy(commit_url: str, sha: str, files: list[tuple[str, str | None]]
 def settle_publish_statuses() -> None:
 	"""After a deploy, queued intents become live or off-site states."""
 	for doctype in CONTENT_DOCTYPES:
+		status_field = publish_status_field(doctype)
 		for name in frappe.get_all(
 			doctype,
-			filters={"status": ["in", [TO_PUBLISH, TO_UNPUBLISH]]},
+			filters={status_field: ["in", [TO_DEPLOY, TO_UNPUBLISH]]},
 			pluck="name",
 		):
 			_settle_doc(frappe.get_doc(doctype, name))
@@ -315,13 +332,14 @@ def settle_publish_statuses() -> None:
 
 
 def _settle_doc(doc) -> None:
+	field = publish_status_field(doc)
 	if doc.doctype in ALWAYS_ON_SITE:
-		doc.db_set("status", PUBLISHED)
+		doc.db_set(field, PUBLISHED)
 		return
-	if is_to_publish(doc):
-		doc.db_set("status", PUBLISHED)
+	if is_to_deploy(doc):
+		doc.db_set(field, PUBLISHED)
 	elif is_to_unpublish(doc):
-		doc.db_set("status", UNPUBLISHED)
+		doc.db_set(field, UNPUBLISHED)
 
 
 def _require_deploy_permission() -> None:

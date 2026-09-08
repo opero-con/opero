@@ -19,11 +19,14 @@ checkbox looked like an off switch and was not one.
 ## Decision
 
 Home Page, Privacy policy, and Site Settings have no Show on website field. They are
-always on-site. Status is still the title pill (`To publish` / `Published`).
-Load from GitHub and Publish to website keep writing their Markdown whenever
-the record has the required copy.
+always on-site. Status is still the title pill (`To deploy` / `Published`). A Desk
+save after content is ready sets **To deploy** (including when the doc was already
+Published) so the pill matches Deploy Center pending work. Load from GitHub and
+Deploy to website keep writing their Markdown whenever the record has the required
+copy. After a successful deploy (or an up-to-date check), settle moves **To deploy**
+back to **Published**.
 
-Publication, Team Member, and partner rows keep Show on website.
+Publication, Team Member, Enterprise, and partner rows keep Show on website.
 
 ## Consequences
 
