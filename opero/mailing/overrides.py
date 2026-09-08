@@ -92,9 +92,14 @@ def readable_member_name(group, email):
 	email = email_key(email)
 	if not email:
 		return frappe.generate_hash(length=10)
+	if frappe.db.exists(MEMBER, email):
+		frappe.throw(
+			_("A mailing list member with email {0} already exists. Please use a different email.").format(
+				email
+			),
+			frappe.ValidationError,
+		)
 	base = email
-	if frappe.db.exists(MEMBER, base):
-		base = f"{group}-{email}"
 
 	if len(base) <= 140:
 		return base
