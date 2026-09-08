@@ -9,7 +9,9 @@ the internal DocType names and existing routes remain unchanged.
 Open an Emailing List Member, choose its Mailing List, and select **Contact**.
 The Contact link is available in both Quick Entry and the full form. It searches
 the Contacts you can access and fills the selected Contact's primary email.
-Clear Contact to enter a standalone email address instead.
+**Mobile No** is shown only when Contact is set (fetched from the Contact) and
+is available in list view and export. Clear Contact to enter a standalone email
+address instead.
 
 A Contact needs a primary email to create an Emailing List Member. Contacts
 without an email can still have lists assigned from the Contact form; those
