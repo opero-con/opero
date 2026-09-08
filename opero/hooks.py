@@ -16,6 +16,7 @@ fixtures = [
 					"Email Group-custom_column_break_s8kcx",
 					"Email Group-custom_column_break_sdvdc",
 					"Email Group Member-custom_contact",
+					"Email Group Member-custom_mobile_no",
 				],
 			]
 		],

@@ -51,6 +51,8 @@ class TestMailingLists(FrappeTestCase):
 
 	def test_member_can_be_added_by_selecting_contact(self):
 		contact = self.contact(self.email)
+		contact.append("phone_nos", {"phone": "+254711000000", "is_primary_mobile_no": 1})
+		contact.save()
 		member = frappe.get_doc(
 			{
 				"doctype": m.MEMBER,
@@ -60,9 +62,20 @@ class TestMailingLists(FrappeTestCase):
 		).insert()
 		self.assertEqual(member.email, self.email)
 		self.assertEqual(member.custom_contact, contact.name)
+		self.assertEqual(member.custom_mobile_no, "+254711000000")
 		self.assertEqual(m.status(member), "Confirmed")
 		self.assertEqual(contact.reload().get(m.FIELD)[0].mailing_list, self.a.name)
 		self.mail.assert_not_called()
+
+		standalone = frappe.get_doc(
+			{
+				"doctype": m.MEMBER,
+				"email_group": self.b.name,
+				"email": "solo-" + self.email,
+			}
+		).insert()
+		self.assertFalse(standalone.custom_contact)
+		self.assertFalse(standalone.custom_mobile_no)
 
 	def test_selected_contact_is_authoritative_for_email(self):
 		contact = self.contact(self.email)

@@ -99,3 +99,4 @@ opero.patches.v0_4.drop_mailing_confirmation
 opero.patches.v0_4.drop_mailing_member_confirmation_status
 opero.patches.v0_4.rename_enterprise_business_category_to_wash_category
 opero.patches.v0_4.drop_enterprise_naming_series
+opero.patches.v0_4.add_mailing_member_mobile_from_contact

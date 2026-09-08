@@ -81,6 +81,9 @@ def member_validate(doc, method=None):
 		if not primary_email:
 			frappe.throw(_("Set a primary email on the selected Contact before adding this member."))
 		doc.email = primary_email
+		doc.custom_mobile_no = frappe.db.get_value("Contact", contact, "mobile_no")
+	else:
+		doc.custom_mobile_no = None
 	doc.email = email_key(doc.email)
 	validate_email_address(doc.email, throw=True)
 	if not old or frappe.flags.opero_mailing_internal:
