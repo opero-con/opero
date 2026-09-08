@@ -95,3 +95,4 @@ opero.patches.v0_4.label_timesheet_employee_name_personnel
 opero.patches.v0_4.add_contact_mailing_lists
 opero.patches.v0_4.link_mailing_member_to_contact
 opero.patches.v0_4.name_mailing_members_by_email
+opero.patches.v0_4.drop_mailing_confirmation

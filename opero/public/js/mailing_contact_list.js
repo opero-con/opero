@@ -25,7 +25,7 @@
 				title: __("Filter Contacts by Mailing Lists"),
 				fields: [opero.mailing.group_field(),
 					{ fieldname: "match", label: __("Match lists"), fieldtype: "Select", options: "Any\nAll", default: "Any" },
-					{ fieldname: "status", label: __("Membership status"), fieldtype: "Select", options: "\nPending\nConfirmed\nUnsubscribed\nNo email" },
+					{ fieldname: "status", label: __("Membership status"), fieldtype: "Select", options: "\nConfirmed\nUnsubscribed\nNo email" },
 					{ fieldtype: "HTML", options: `<p>${__("Status applies to each selected list. All requires every selected membership to match.")}</p>` }],
 				primary_action_label: __("Apply filters"),
 				primary_action(values) {
@@ -47,13 +47,6 @@
 		listview.page.add_action_item(__("Manage Mailing Lists"), () => {
 			opero.mailing.bulk(listview.get_checked_items().map((c) => c.name), () => listview.refresh());
 		});
-		if (opero.mailing.is_manager()) {
-			listview.page.add_action_item(__("Review confirmation requests"), () => {
-				const contacts = listview.get_checked_items().map((c) => c.name);
-				if (!contacts.length) return frappe.msgprint(__("Select Contacts first."));
-				opero.mailing.review({ contacts, mailing_lists: listview.opero_mailing_filter.mailing_lists || [] });
-			});
-		}
 		if (frappe.model.can_export("Contact")) {
 			listview.page.add_menu_item(__("Export with Mailing List status"), () => {
 				const args = listview.get_args();

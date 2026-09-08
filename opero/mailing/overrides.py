@@ -1,4 +1,4 @@
-"""Retain native groups and newsletters, with confirmed-recipient eligibility."""
+"""Retain native groups and newsletters; eligible recipients are not unsubscribed."""
 
 import frappe
 from frappe import _
@@ -59,7 +59,6 @@ class MailingNewsletter(Newsletter):
 					filters={
 						"email_group": ["in", self.get_email_groups()],
 						"unsubscribed": 0,
-						"custom_confirmation_status": "Confirmed",
 					},
 					pluck="email",
 				)
@@ -86,7 +85,7 @@ def add_subscribers(name, email_list):
 	for email in email_list:
 		if email.strip():
 			ensure_member(name, email)
-		return group.update_total_subscribers()
+	return group.update_total_subscribers()
 
 
 def readable_member_name(group, email):

@@ -16,7 +16,7 @@ def selection(value):
 	if (
 		not isinstance(groups, list)
 		or mode not in ("Any", "All")
-		or state not in ("", "Pending", "Confirmed", "Unsubscribed", "No email")
+		or state not in ("", "Confirmed", "Unsubscribed", "No email")
 	):
 		frappe.throw(_("Invalid Mailing List filters."))
 	return groups, mode, state

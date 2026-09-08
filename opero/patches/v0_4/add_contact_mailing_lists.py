@@ -5,12 +5,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def execute():
-	for name in (
-		"contact_mailing_list",
-		"mailing_confirmation_item",
-		"mailing_confirmation_request",
-		"mailing_membership_event",
-	):
+	for name in ("contact_mailing_list", "mailing_membership_event"):
 		frappe.reload_doc("opero", "doctype", name)
 	create_custom_fields(
 		{
@@ -48,22 +43,21 @@ def execute():
 			"Email Group Member": [
 				{
 					"fieldname": "custom_confirmation_status",
-					"label": "Confirmation Status",
+					"label": "Subscription Status",
 					"fieldtype": "Select",
-					"options": "Pending\nConfirmed",
+					"options": "Confirmed",
 					"default": "Confirmed",
 					"read_only": 1,
 					"in_list_view": 1,
 					"in_standard_filter": 1,
 					"insert_after": "email",
 					"module": "Opero",
-					"description": "New memberships require confirmation. Newsletter Managers can reactivate an unsubscribed member by clearing Unsubscribed.",
+					"description": "Members are eligible until they unsubscribe from a newsletter footer link. Newsletter Managers can reactivate by clearing Unsubscribed.",
 				},
 			],
 		},
 		update=True,
 	)
-	# SQL defaults keep existing active members eligible; every new insert is Pending via the hook.
 	frappe.db.sql(
 		"update `tabEmail Group Member` set custom_confirmation_status='Confirmed' where coalesce(custom_confirmation_status, '')=''"
 	)
