@@ -1,10 +1,6 @@
 frappe.ui.form.on("Email Group", {
 	refresh(frm) {
 		if (frm.is_new() || !opero.mailing.is_manager()) return;
-		frm.add_custom_button(__("Review confirmation requests"), () => {
-			if (frm.is_dirty()) return frappe.msgprint(__("Save the Mailing List first."));
-			opero.mailing.review({ mailing_lists: [frm.doc.name] }, () => frm.reload_doc());
-		}, __("Action"));
 		frm.add_custom_button(__("View members"), () => {
 			frappe.set_route("List", "Email Group Member", { email_group: frm.doc.name });
 		}, __("Action"));

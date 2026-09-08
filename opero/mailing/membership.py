@@ -2,6 +2,7 @@
 
 No save/import sends mail. Internal updates use a server-only context, never a
 client-supplied document flag. Membership history survives member deletion.
+Members are eligible until they unsubscribe via the newsletter footer link.
 """
 
 from contextlib import contextmanager
@@ -52,7 +53,7 @@ def contact_primary_email(contact):
 def status(member):
 	if cint(member.unsubscribed):
 		return "Unsubscribed"
-	return member.get("custom_confirmation_status") or "Confirmed"
+	return "Confirmed"
 
 
 def record(member, action, contact=None):
@@ -70,20 +71,8 @@ def record(member, action, contact=None):
 	).insert(ignore_permissions=True)
 
 
-def invalidate(member_name):
-	requests = frappe.get_all("Mailing Confirmation Item", filters={"member": member_name}, pluck="parent")
-	if requests:
-		frappe.db.set_value(
-			"Mailing Confirmation Request",
-			{"name": ["in", requests], "status": "Pending"},
-			"status",
-			"Invalidated",
-		)
-
-
 def member_before_insert(doc, method=None):
-	if not frappe.flags.opero_mailing_internal:
-		doc.custom_confirmation_status = "Pending"
+	doc.custom_confirmation_status = "Confirmed"
 
 
 def member_validate(doc, method=None):
@@ -98,34 +87,27 @@ def member_validate(doc, method=None):
 		doc.email = primary_email
 	doc.email = email_key(doc.email)
 	validate_email_address(doc.email, throw=True)
+	doc.custom_confirmation_status = "Confirmed"
 	if not old or frappe.flags.opero_mailing_internal:
 		return
-	if old.custom_confirmation_status != doc.custom_confirmation_status:
-		frappe.throw(_("Confirmation status is managed through confirmation requests."))
-	if old.email != doc.email or old.email_group != doc.email_group:
-		doc.custom_confirmation_status = "Pending"
 	if cint(old.unsubscribed) and not cint(doc.unsubscribed):
 		require_manager()
-		doc.custom_confirmation_status = "Confirmed"
 
 
 def member_updated(doc, method=None):
 	old = doc.get_doc_before_save()
 	if old and (old.email != doc.email or old.email_group != doc.email_group):
-		invalidate(doc.name)
 		record(old, "Moved")
 		sync_email(old.email)
 	if not old:
 		record(doc, "Added")
 	elif status(old) != status(doc):
-		invalidate(doc.name)
 		record(doc, "Status changed")
 	if not frappe.flags.opero_mailing_sync:
 		sync_email(doc.email)
 
 
 def member_removed(doc, method=None):
-	invalidate(doc.name)
 	record(doc, "Removed")
 
 
@@ -145,7 +127,7 @@ def prepare_list_merge(source, target):
 	source_members = frappe.get_all(
 		MEMBER,
 		filters={"email_group": source},
-		fields=["name", "email", "unsubscribed", "custom_confirmation_status", "custom_contact"],
+		fields=["name", "email", "unsubscribed", "custom_contact"],
 	)
 	for sm in source_members:
 		target_name = frappe.db.get_value(
@@ -161,20 +143,11 @@ def prepare_list_merge(source, target):
 
 
 def _fold_member_into(target_name, source_member):
-	"""Keep the surviving target row; prefer unsubscribe and confirmed status."""
+	"""Keep the surviving target row; prefer unsubscribe and Contact link."""
 	target = frappe.get_doc(MEMBER, target_name)
 	changed = False
 	if cint(source_member.unsubscribed) and not cint(target.unsubscribed):
 		target.unsubscribed = 1
-		changed = True
-	source_status = source_member.custom_confirmation_status or "Confirmed"
-	target_status = target.custom_confirmation_status or "Confirmed"
-	if (
-		not cint(target.unsubscribed)
-		and source_status == "Confirmed"
-		and target_status == "Pending"
-	):
-		target.custom_confirmation_status = "Confirmed"
 		changed = True
 	if not target.get("custom_contact") and source_member.get("custom_contact"):
 		target.custom_contact = source_member.custom_contact
@@ -219,7 +192,7 @@ def sync_email(email, exclude=None):
 	members = frappe.get_all(
 		MEMBER,
 		filters={"email": email_key(email)},
-		fields=["email_group", "unsubscribed", "custom_confirmation_status"],
+		fields=["email_group", "unsubscribed"],
 		order_by="email_group",
 	)
 	for contact in frappe.get_all("Contact", filters={"email_id": email_key(email)}, pluck="name"):
@@ -268,7 +241,7 @@ def ensure_member(group, email, unsubscribed=False):
 				"email_group": group,
 				"email": email_key(email),
 				"unsubscribed": int(unsubscribed),
-				"custom_confirmation_status": "Pending",
+				"custom_confirmation_status": "Confirmed",
 			}
 		).insert(ignore_permissions=True)
 
@@ -309,14 +282,13 @@ def contact_updated(doc, method=None):
 				member = frappe.db.get_value(
 					MEMBER,
 					{"email": old_email, "email_group": group},
-					["name", "unsubscribed", "custom_confirmation_status", "custom_contact"],
+					["name", "unsubscribed", "custom_contact"],
 					as_dict=True,
 				)
 				if member:
 					if member.custom_contact == doc.name:
 						linked_groups.add(group)
 					previous[group] = status(member)
-					invalidate(member.name)
 					if not others:
 						remove_member(group, old_email)
 		if email:

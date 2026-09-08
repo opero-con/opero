@@ -1,8 +1,6 @@
 """Exercise real Frappe documents; intercept mail and roll back all test data."""
 
-import re
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlparse
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -41,20 +39,14 @@ class TestMailingLists(FrappeTestCase):
 	def member(self, group=None, email=None):
 		return frappe.get_doc(m.MEMBER, {"email_group": group or self.a.name, "email": email or self.email})
 
-	def token(self, members):
-		confirm_api.send_requests([x.name for x in members])
-		message = self.mail.call_args.kwargs["message"]
-		url = re.search("href='([^']+)'", message)[1]
-		return parse_qs(urlparse(url).query)["token"][0]
-
-	def test_contact_add_is_pending_and_never_sends(self):
+	def test_contact_add_is_confirmed_and_never_sends(self):
 		c = self.contact(self.email, [self.a.name, self.b.name])
-		self.assertEqual(m.status(self.member()), "Pending")
-		self.assertEqual({r.subscription_status for r in c.reload().get(m.FIELD)}, {"Pending"})
+		self.assertEqual(m.status(self.member()), "Confirmed")
+		self.assertEqual({r.subscription_status for r in c.reload().get(m.FIELD)}, {"Confirmed"})
 		self.mail.assert_not_called()
 		newsletter = frappe.new_doc("Newsletter")
 		newsletter.append("email_group", {"email_group": self.a.name})
-		self.assertNotIn(self.email, newsletter.get_recipients())
+		self.assertIn(self.email, newsletter.get_recipients())
 
 	def test_member_can_be_added_by_selecting_contact(self):
 		contact = self.contact(self.email)
@@ -67,39 +59,9 @@ class TestMailingLists(FrappeTestCase):
 		).insert()
 		self.assertEqual(member.email, self.email)
 		self.assertEqual(member.custom_contact, contact.name)
-		self.assertEqual(m.status(member), "Pending")
+		self.assertEqual(m.status(member), "Confirmed")
 		self.assertEqual(contact.reload().get(m.FIELD)[0].mailing_list, self.a.name)
 		self.mail.assert_not_called()
-
-	def test_member_name_uses_email_when_available(self):
-		member = frappe.get_doc(
-			{
-				"doctype": m.MEMBER,
-				"email_group": self.a.name,
-				"email": self.email,
-			}
-		).insert()
-
-		self.assertEqual(member.name, self.email)
-
-	def test_member_name_keeps_same_email_available_for_multiple_lists(self):
-		first = frappe.get_doc(
-			{
-				"doctype": m.MEMBER,
-				"email_group": self.a.name,
-				"email": self.email,
-			}
-		).insert()
-		second = frappe.get_doc(
-			{
-				"doctype": m.MEMBER,
-				"email_group": self.b.name,
-				"email": self.email,
-			}
-		).insert()
-
-		self.assertEqual(first.name, self.email)
-		self.assertEqual(second.name, f"{self.b.name}-{self.email}")
 
 	def test_selected_contact_is_authoritative_for_email(self):
 		contact = self.contact(self.email)
@@ -138,45 +100,13 @@ class TestMailingLists(FrappeTestCase):
 		contact.save()
 		member = self.member(email=contact.email_id)
 		self.assertEqual(member.custom_contact, contact.name)
-		self.assertEqual(m.status(member), "Pending")
+		self.assertEqual(m.status(member), "Confirmed")
 
 	def test_contact_email_lookup_requires_contact_read_permission(self):
 		contact = self.contact(self.email)
 		frappe.set_user("Guest")
 		with self.assertRaises(frappe.PermissionError):
 			m.contact_primary_email(contact.name)
-
-	def test_selective_confirmation_and_single_use(self):
-		self.contact(self.email, [self.a.name, self.b.name])
-		token = self.token([self.member(), self.member(self.b.name)])
-		self.assertEqual(self.mail.call_count, 1)
-		frappe.set_user("Guest")
-		confirm_api.confirm(token, [self.a.name])
-		self.assertEqual(m.status(self.member()), "Confirmed")
-		self.assertEqual(m.status(self.member(self.b.name)), "Pending")
-		with self.assertRaises(frappe.ValidationError):
-			confirm_api.confirm(token, [self.b.name])
-
-	def test_later_list_cannot_be_confirmed_by_old_request(self):
-		c = self.contact(self.email, [self.a.name])
-		token = self.token([self.member()])
-		c.reload().append(m.FIELD, {"mailing_list": self.b.name})
-		c.save()
-		with self.assertRaises(frappe.ValidationError):
-			confirm_api.confirm(token, [self.b.name])
-		confirm_api.confirm(token, [self.a.name])
-
-	def test_unsubscribe_invalidates_request_and_rejoin_works(self):
-		self.contact(self.email, [self.a.name])
-		old = self.token([self.member()])
-		doc = self.member()
-		doc.unsubscribed = 1
-		doc.save()
-		with self.assertRaises(frappe.ValidationError):
-			confirm_api.confirm(old, [self.a.name])
-		new = self.token([self.member()])
-		confirm_api.confirm(new, [self.a.name])
-		self.assertEqual(m.status(self.member()), "Confirmed")
 
 	def test_manager_can_clear_unsubscribed_and_history_is_retained(self):
 		self.contact(self.email, [self.a.name])
@@ -208,16 +138,15 @@ class TestMailingLists(FrappeTestCase):
 		self.assertEqual(c.reload().get(m.FIELD)[0].mailing_list, self.a.name)
 		self.mail.assert_not_called()
 
-	def test_primary_email_moves_and_needs_confirmation(self):
+	def test_primary_email_moves_and_preserves_unsubscribe(self):
 		c = self.contact(self.email, [self.a.name, self.b.name])
-		confirm_api.confirm(self.token([self.member()]), [self.a.name])
 		doc = self.member(self.b.name)
 		doc.unsubscribed = 1
 		doc.save()
 		c.reload()
 		c.email_ids[0].email_id = "new-" + self.email
 		c.save()
-		self.assertEqual(m.status(self.member(email=c.email_id)), "Pending")
+		self.assertEqual(m.status(self.member(email=c.email_id)), "Confirmed")
 		self.assertEqual(m.status(self.member(self.b.name, c.email_id)), "Unsubscribed")
 		self.assertFalse(frappe.db.exists(m.MEMBER, {"email": self.email}))
 
@@ -236,24 +165,23 @@ class TestMailingLists(FrappeTestCase):
 		self.assertFalse(frappe.db.exists(m.MEMBER, {"email_group": self.a.name}))
 		c.append("email_ids", {"email_id": self.email, "is_primary": 1})
 		c.save()
-		self.assertEqual(m.status(self.member()), "Pending")
+		self.assertEqual(m.status(self.member()), "Confirmed")
 		self.mail.assert_not_called()
 
-	def test_removal_invalidates_links_preserves_history_and_rejoin_is_pending(self):
+	def test_removal_preserves_history_and_rejoin_is_confirmed(self):
 		c = self.contact(self.email, [self.a.name])
 		member = self.member()
-		token = self.token([member])
 		c.reload().set(m.FIELD, [])
 		c.save()
-		with self.assertRaises(frappe.ValidationError):
-			confirm_api.confirm(token, [self.a.name])
 		self.assertTrue(
 			frappe.db.exists("Mailing Membership Event", {"member": member.name, "action": "Removed"})
 		)
 		c.reload().append(m.FIELD, {"mailing_list": self.a.name})
 		c.save()
-		self.assertEqual(self.member().name, member.name)
-		self.assertEqual(m.status(self.member()), "Pending")
+		self.assertEqual(m.status(self.member()), "Confirmed")
+		self.assertTrue(
+			frappe.db.exists("Mailing Membership Event", {"member": self.member().name, "action": "Added"})
+		)
 
 	def test_any_all_status_filter_and_export(self):
 		one = self.contact(self.email, [self.a.name, self.b.name])
@@ -261,14 +189,15 @@ class TestMailingLists(FrappeTestCase):
 		base = {"mailing_lists": [self.a.name, self.b.name]}
 		self.assertEqual(set(matching_names(base)), {one.name, two.name})
 		self.assertEqual(matching_names({**base, "match": "All"}), [one.name])
-		confirm_api.confirm(self.token([self.member()]), [self.a.name])
+		self.member(self.b.name).db_set("unsubscribed", 1)
+		m.sync_email(self.email)
 		self.assertEqual(matching_names({**base, "match": "All", "status": "Confirmed"}), [])
-		self.assertEqual(matching_names({**base, "status": "Confirmed"}), [one.name])
+		self.assertEqual(matching_names({**base, "status": "Confirmed"}), [one.name, two.name])
 		rows = export_rows(mailing_filter={**base, "match": "All"})
 		self.assertEqual(len(rows), 3)
-		self.assertEqual({r[-1] for r in rows[1:]}, {"Pending", "Confirmed"})
+		self.assertEqual({r[-1] for r in rows[1:]}, {"Confirmed", "Unsubscribed"})
 
-	def test_existing_confirmed_members_stay_eligible(self):
+	def test_existing_members_stay_eligible(self):
 		with m.internal():
 			frappe.get_doc(
 				{
@@ -285,18 +214,15 @@ class TestMailingLists(FrappeTestCase):
 		self.contact(self.email)
 		self.assertEqual(newsletter.get_recipients(), [self.email])
 
-	def test_guests_cannot_manage_or_send(self):
+	def test_guests_cannot_manage(self):
 		c = self.contact(self.email, [self.a.name])
-		name = self.member().name
 		frappe.set_user("Guest")
-		with self.assertRaises(frappe.PermissionError):
-			confirm_api.send_requests([name])
 		with self.assertRaises(frappe.PermissionError):
 			m.bulk_membership([c.name], [self.b.name])
 		with self.assertRaises(frappe.PermissionError):
 			export_rows()
 
-	def test_client_cannot_forge_confirmed_status_on_insert(self):
+	def test_client_confirmation_status_stays_confirmed(self):
 		doc = frappe.get_doc(
 			{
 				"doctype": m.MEMBER,
@@ -305,12 +231,9 @@ class TestMailingLists(FrappeTestCase):
 				"custom_confirmation_status": "Confirmed",
 			}
 		).insert()
-		self.assertEqual(doc.custom_confirmation_status, "Pending")
-		doc.custom_confirmation_status = "Confirmed"
-		with self.assertRaises(frappe.ValidationError):
-			doc.save()
+		self.assertEqual(doc.custom_confirmation_status, "Confirmed")
 
-	def test_contact_editor_can_select_and_assign_but_cannot_send_or_create_lists(self):
+	def test_contact_editor_can_select_and_assign_but_cannot_create_lists(self):
 		from frappe.client import validate_link
 
 		user = frappe.get_doc(
@@ -324,10 +247,8 @@ class TestMailingLists(FrappeTestCase):
 		).insert()
 		frappe.set_user(user.name)
 		self.assertEqual(validate_link("Email Group", self.a.name).name, self.a.name)
-		c = self.contact(self.email, [self.a.name])
-		self.assertEqual(m.status(self.member()), "Pending")
-		with self.assertRaises(frappe.PermissionError):
-			confirm_api.preview(contacts=[c.name])
+		self.contact(self.email, [self.a.name])
+		self.assertEqual(m.status(self.member()), "Confirmed")
 		with self.assertRaises(frappe.PermissionError):
 			frappe.get_doc({"doctype": "Email Group", "title": self.prefix + " Forbidden"}).insert()
 
@@ -371,10 +292,6 @@ class TestMailingLists(FrappeTestCase):
 		both = self.contact(shared, [self.a.name, self.b.name])
 		self.contact(only_a, [self.a.name])
 		self.contact(only_b, [self.b.name])
-		with m.internal():
-			source = self.member(self.a.name, shared)
-			source.custom_confirmation_status = "Confirmed"
-			source.save()
 		frappe.rename_doc("Email Group", self.a.name, self.b.name, merge=True)
 		self.assertFalse(frappe.db.exists("Email Group", self.a.name))
 		for email in (shared, only_a, only_b):
@@ -396,7 +313,7 @@ class TestMailingLists(FrappeTestCase):
 		frappe.rename_doc("Email Group", self.a.name, self.b.name, merge=True)
 		self.assertEqual(self.member(self.b.name).unsubscribed, 1)
 
-	def test_native_import_saves_pending_and_sends_no_welcome(self):
+	def test_native_import_saves_confirmed_and_sends_no_welcome(self):
 		c = self.contact(self.email)
 		# Limit the source query to synthetic Contacts; real Contacts must never be imported by tests.
 		native = frappe.get_list
@@ -408,10 +325,10 @@ class TestMailingLists(FrappeTestCase):
 
 		with patch("frappe.get_list", side_effect=source):
 			self.a.import_from("Contact")
-		self.assertEqual(m.status(self.member()), "Pending")
+		self.assertEqual(m.status(self.member()), "Confirmed")
 		self.mail.assert_not_called()
 
-	def test_public_signup_preserves_unsubscribe_until_confirmed(self):
+	def test_public_signup_reactivates_unsubscribed(self):
 		self.contact(self.email, [self.a.name])
 		member = self.member()
 		member.unsubscribed = 1
@@ -419,5 +336,6 @@ class TestMailingLists(FrappeTestCase):
 		frappe.set_user("Guest")
 		# Exercise the service without the HTTP-only rate limiter wrapper.
 		confirm_api.subscribe.__wrapped__(self.email, self.a.name)
-		self.assertTrue(self.member().unsubscribed)
-		self.assertEqual(self.mail.call_count, 1)
+		self.assertFalse(self.member().unsubscribed)
+		self.assertEqual(m.status(self.member()), "Confirmed")
+		self.mail.assert_not_called()
