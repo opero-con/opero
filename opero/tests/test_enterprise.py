@@ -22,6 +22,7 @@ class TestEnterprise(FrappeTestCase):
 				"status": "Onboarded",
 			}
 		).insert()
+		self.assertRegex(enterprise.name, r"^E\d{5}$")
 		contact = frappe.get_doc(
 			{
 				"doctype": "Contact",

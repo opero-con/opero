@@ -1,6 +1,9 @@
 frappe.ui.form.on("Enterprise", {
 	setup(frm) {
-		frm.set_query("business_category", () => ({
+		// ID is assigned on save (E + 5 digits); never show a Series picker.
+		frm.toggle_display("naming_series", false);
+
+		frm.set_query("wash_category", () => ({
 			filters: {
 				is_group: 0,
 			},

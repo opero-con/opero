@@ -1,7 +1,17 @@
+from secrets import randbelow
+
 import frappe
 from frappe.contacts.address_and_contact import delete_contact_and_address, load_address_and_contact
 from frappe.model.document import Document
-from frappe.model.naming import set_name_by_naming_series
+
+
+def make_enterprise_name():
+	"""E + five random digits, like Contact/Supplier opaque IDs with a readable title."""
+	for _ in range(50):
+		name = f"E{randbelow(100000):05d}"
+		if not frappe.db.exists("Enterprise", name):
+			return name
+	frappe.throw(frappe._("Could not allocate a unique Enterprise ID. Try again."))
 
 
 class Enterprise(Document):
@@ -9,7 +19,7 @@ class Enterprise(Document):
 		load_address_and_contact(self)
 
 	def autoname(self):
-		set_name_by_naming_series(self)
+		self.name = make_enterprise_name()
 
 	def on_trash(self):
 		if self.enterprise_primary_contact:
