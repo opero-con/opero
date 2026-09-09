@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-deploy-center\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deploy Center\",\"col\":3}},{\"id\":\"ow-s-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"ow-s-home\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Home Page\",\"col\":3}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-enterprises\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Enterprises\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-privacy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Privacy policy\",\"col\":3}},{\"id\":\"ow-s-enquiries\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Website Enquiries\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-deploy-center\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Deploy Center\",\"col\":3}},{\"id\":\"ow-s-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Settings\",\"col\":3}},{\"id\":\"ow-s-home\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Home Hero\",\"col\":3}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-enterprises\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Enterprises\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-privacy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Privacy policy\",\"col\":3}},{\"id\":\"ow-s-enquiries\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Website Enquiries\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
  "creation": "2026-08-25 23:44:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,18 +16,68 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Content",
-   "link_count": 5,
+   "link_count": 10,
    "onboard": 0,
    "type": "Card Break"
   },
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Home Page",
+   "label": "Home Hero",
    "link_count": 0,
-   "link_to": "Home Page",
+   "link_to": "Home Hero",
    "link_type": "DocType",
    "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Home About",
+   "link_count": 0,
+   "link_to": "Home About",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Home Pillars",
+   "link_count": 0,
+   "link_to": "Home Pillars",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Home Impacts",
+   "link_count": 0,
+   "link_to": "Home Impacts",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Home Projects",
+   "link_count": 0,
+   "link_to": "Home Projects",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Home Partners",
+   "link_count": 0,
+   "link_to": "Home Partners",
+   "link_type": "DocType",
+   "onboard": 0,
    "type": "Link"
   },
   {
@@ -99,7 +149,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-08 22:50:00.000000",
+ "modified": "2026-09-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Opero Website",
@@ -130,8 +180,8 @@
    "type": "DocType"
   },
   {
-   "label": "Home Page",
-   "link_to": "Home Page",
+   "label": "Home Hero",
+   "link_to": "Home Hero",
    "type": "DocType"
   },
   {

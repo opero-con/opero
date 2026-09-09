@@ -1,102 +1,27 @@
 from __future__ import annotations
 
+import frappe
 from frappe.model.document import Document
-from frappe.utils import cint, cstr
 
-from opero.opero_site.body_html import html_to_paragraphs, normalize_paragraphs_html
 from opero.opero_site.publish_status import TO_DEPLOY, apply_publish_status
-from opero.opero_site.utils import (
-	hero_carousel_entry,
-	lines,
-	normalize_hero_image_focus,
-	optional_url,
-)
+
+HOME_SECTIONS = ("Home Hero", "Home About", "Home Pillars", "Home Impacts", "Home Projects", "Home Partners")
 
 
 class HomePage(Document):
 	def validate(self):
 		apply_publish_status(self, default=TO_DEPLOY)
-		self.about_body = normalize_paragraphs_html(self.about_body)
-		for row in self.projects or []:
-			row.detail_url = optional_url(row.detail_url, "Detail URL")
-		for row in self.partners or []:
-			row.url = optional_url(row.url, "Partner URL")
-			if row.show_on_website is None:
-				row.show_on_website = 1
-			row.sort_order = cint(row.sort_order)
 
 	def to_site_frontmatter(self) -> dict:
-		"""YAML for opero-content `content/homepage/home.md`."""
-		hero = {
-			"eyebrow": cstr(self.hero_eyebrow).strip(),
-			"title": cstr(self.hero_title).strip(),
-			"description": cstr(self.hero_description).strip(),
-		}
-		frames = [row for row in (self.hero_images or []) if cstr(row.image).strip()]
-		if frames:
-			primary = frames[0]
-			hero["image"] = cstr(primary.image)
-			if cstr(primary.image_alt).strip():
-				hero["imageAlt"] = cstr(primary.image_alt).strip()
-			if cstr(primary.note).strip():
-				hero["note"] = cstr(primary.note).strip()
-			primary_focus = normalize_hero_image_focus(primary.image_focus)
-			if primary_focus != "center":
-				hero["imageFocus"] = primary_focus
-			carousel = []
-			for row in frames[1:]:
-				entry = hero_carousel_entry(row.image, row.note, row.image_focus)
-				if entry:
-					carousel.append(entry)
-			if carousel:
-				hero["carousel"] = carousel
-
-		projects = []
-		for row in self.projects or []:
-			project = {
-				"slug": cstr(row.slug).strip(),
-				"title": cstr(row.title).strip(),
-				"shortTitle": cstr(row.short_title).strip(),
-				"eyebrow": cstr(row.eyebrow).strip(),
-				"summary": cstr(row.summary).strip(),
-				"highlights": lines(row.highlights),
-			}
-			if row.image:
-				project["image"] = cstr(row.image)
-			if row.image_alt:
-				project["imageAlt"] = cstr(row.image_alt).strip()
-			if row.metric_value or row.metric_label:
-				project["metricValue"] = cstr(row.metric_value).strip()
-				project["metricLabel"] = cstr(row.metric_label).strip()
-			if row.detail_url:
-				project["detailUrl"] = row.detail_url
-			projects.append(project)
-
-		partners = []
-		for row in sorted(self.partners or [], key=lambda item: cint(item.sort_order)):
-			if not cint(row.show_on_website):
-				continue
-			partner = {"name": cstr(row.partner_name).strip()}
-			if row.url:
-				partner["url"] = row.url
-			if row.logo:
-				partner["logo"] = cstr(row.logo)
-			partners.append(partner)
-
+		"""YAML for opero-content `content/homepage/home.md`, assembled from the section singles."""
+		hero, about, pillars, impacts, projects, partners = (
+			frappe.get_single(name) for name in HOME_SECTIONS
+		)
 		return {
-			"hero": hero,
-			"about": {
-				"title": cstr(self.about_title).strip(),
-				"paragraphs": html_to_paragraphs(self.about_body),
-			},
-			"pillars": [
-				{"title": cstr(row.title).strip(), "description": cstr(row.description).strip()}
-				for row in (self.pillars or [])
-			],
-			"impacts": [
-				{"value": cstr(row.value).strip(), "label": cstr(row.metric_label).strip()}
-				for row in (self.impacts or [])
-			],
-			"projects": projects,
-			"partners": partners,
+			"hero": hero.to_site_frontmatter(),
+			"about": about.to_site_frontmatter(),
+			"pillars": pillars.to_site_frontmatter(),
+			"impacts": impacts.to_site_frontmatter(),
+			"projects": projects.to_site_frontmatter(),
+			"partners": partners.to_site_frontmatter(),
 		}

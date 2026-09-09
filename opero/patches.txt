@@ -104,3 +104,6 @@ opero.patches.v0_4.add_mailing_member_mobile_from_contact
 
 opero.patches.v0_4.rename_to_publish_to_to_deploy
 opero.patches.v0_4.add_enterprise_website_publishing
+
+opero.patches.v0_4.split_home_page_sections
+opero.patches.v0_4.reload_opero_website_workspace_home_sections

@@ -161,16 +161,17 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(settings.offices[0].office_label, "Nairobi Office")
 		self.assertEqual(settings.seo_title, "Opero | Scaling WASH Enterprise and Innovation")
 
-		home = frappe.get_single("Home Page")
-		self.assertEqual(home.hero_title, "From idea to lasting WASH impact.")
+		hero = frappe.get_single("Home Hero")
+		self.assertEqual(hero.hero_title, "From idea to lasting WASH impact.")
 		self.assertEqual(
-			[(row.image, row.note, row.image_alt, row.image_focus) for row in home.hero_images],
+			[(row.image, row.note, row.image_alt, row.image_focus) for row in hero.hero_images],
 			[
 				("/media/homepage/opero-wash-hub.jpg", "Kenya · East Africa", "Aerial view of WASH work", "Top"),
 				("/media/homepage/pupu-pump-team.jpg", "Kisumu · Kenya", "", "Left"),
 				("/media/homepage/fecal-sludge-treatment-tower.jpg", "", "", "Center"),
 			],
 		)
+		home = frappe.get_single("Home Page")
 		self.assertEqual(home.to_site_frontmatter()["hero"]["image"], "/media/homepage/opero-wash-hub.jpg")
 		self.assertEqual(home.to_site_frontmatter()["hero"]["imageFocus"], "top")
 		self.assertEqual(
@@ -180,8 +181,10 @@ class TestOperoSiteLoad(FrappeTestCase):
 				{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg"},
 			],
 		)
-		self.assertEqual(home.about_body, "<p>Opero is a Kenyan WASH firm.</p>")
-		self.assertEqual(home.impacts[0].metric_label, "WASH technologies designed")
+		self.assertEqual(frappe.get_single("Home About").about_body, "<p>Opero is a Kenyan WASH firm.</p>")
+		self.assertEqual(
+			frappe.get_single("Home Impacts").impacts[0].metric_label, "WASH technologies designed"
+		)
 		self.assertEqual(len(frappe.get_all("Team Member")), 1)
 
 		privacy = frappe.get_single("Privacy policy")

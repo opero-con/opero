@@ -1,12 +1,4 @@
-frappe.ui.form.on("Home Page", {
-	setup(frm) {
-		const field = frm.get_field("about_body");
-		if (!field) {
-			return;
-		}
-		// About frontmatter is a flat paragraph list — no headings, lists, or link buttons.
-		field.df.get_toolbar_options = () => [];
-	},
+frappe.ui.form.on("Home Hero", {
 	refresh(frm) {
 		const field = frm.get_field("hero_description");
 		if (field && field.$input && !field.$input.data("opero-autosize")) {

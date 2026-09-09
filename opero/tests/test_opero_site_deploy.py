@@ -204,9 +204,9 @@ class TestOperoSitePublish(FrappeTestCase):
 
 	def test_changed_files_lists_real_desk_edits(self):
 		load_files({"content/homepage/home.md": HOME_MD})
-		home = frappe.get_single("Home Page")
-		home.hero_title = "Edited hero title"
-		home.save(ignore_permissions=True)
+		hero = frappe.get_single("Home Hero")
+		hero.hero_title = "Edited hero title"
+		hero.save(ignore_permissions=True)
 		changed = changed_files(
 			{"content/homepage/home.md": HOME_MD},
 			collect_content_files(),
@@ -215,9 +215,9 @@ class TestOperoSitePublish(FrappeTestCase):
 
 	def test_preserve_unmanaged_keeps_homepage_team_on_real_edit(self):
 		load_files({"content/homepage/home.md": HOME_MD})
-		home = frappe.get_single("Home Page")
-		home.hero_title = "Edited hero title"
-		home.save(ignore_permissions=True)
+		hero = frappe.get_single("Home Hero")
+		hero.hero_title = "Edited hero title"
+		hero.save(ignore_permissions=True)
 		planned = dict(collect_content_files())["content/homepage/home.md"]
 		merged = preserve_unmanaged_frontmatter(HOME_MD, planned)
 		data = parse_frontmatter(merged)
@@ -518,10 +518,12 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertNotIn(path, keep)
 
 	def test_home_page_is_always_written(self):
+		frappe.get_single("Home Hero").db_set(
+			"hero_title", "Always on the public site", update_modified=False
+		)
 		home = frappe.get_single("Home Page")
 		home.db_set("status", "Draft")
 		home.reload()
-		home.hero_title = "Always on the public site"
 		home.save(ignore_permissions=True)
 		self.assertEqual(home.status, "To deploy")
 		self.assertFalse(home.meta.has_field("show_on_website"))
@@ -541,9 +543,10 @@ class TestOperoSitePublish(FrappeTestCase):
 	def test_always_on_published_save_queues_to_deploy(self):
 		home = frappe.get_single("Home Page")
 		home.db_set("status", "Published")
+		hero = frappe.get_single("Home Hero")
+		hero.hero_title = "Edited while already live"
+		hero.save(ignore_permissions=True)
 		home.reload()
-		home.hero_title = "Edited while already live"
-		home.save(ignore_permissions=True)
 		self.assertEqual(home.status, "To deploy")
 		self.assertEqual(
 			pending_push_for_doc(home),
@@ -678,9 +681,9 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 	def test_export_rewrites_desk_hero_image_and_keeps_media_paths(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
-		home = frappe.get_single("Home Page")
-		home.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
-		home.save(ignore_permissions=True)
+		hero = frappe.get_single("Home Hero")
+		hero.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
+		hero.save(ignore_permissions=True)
 		text, media = export_markdown_media(
 			"content/homepage/home.md",
 			dict(collect_content_files())["content/homepage/home.md"],
@@ -719,9 +722,9 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 	def test_planned_changes_commits_new_desk_image(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
-		home = frappe.get_single("Home Page")
-		home.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
-		home.save(ignore_permissions=True)
+		hero = frappe.get_single("Home Hero")
+		hero.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
+		hero.save(ignore_permissions=True)
 		files = dict(
 			planned_content_changes(
 				_FakeContentRepo(
@@ -741,9 +744,9 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 	def test_planned_changes_skips_identical_media_blob(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
-		home = frappe.get_single("Home Page")
-		home.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
-		home.save(ignore_permissions=True)
+		hero = frappe.get_single("Home Hero")
+		hero.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
+		hero.save(ignore_permissions=True)
 		rewritten, media = export_planned_media(collect_content_files())
 		repo_path, blob = media[0]
 		files = planned_content_changes(
@@ -781,7 +784,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 def _attach_png(file_name: str, content: bytes):
 	from frappe.utils.file_manager import save_file
 
-	return save_file(file_name, content, "Home Page", "Home Page", is_private=1)
+	return save_file(file_name, content, "Home Hero", "Home Hero", is_private=1)
 
 
 def _minimal_pdf() -> bytes:
