@@ -8,20 +8,14 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
-  "about_title",
-  "about_body"
+  "impacts"
  ],
  "fields": [
   {
-   "fieldname": "about_title",
-   "fieldtype": "Data",
-   "label": "Title"
-  },
-  {
-   "description": "Each paragraph becomes one about paragraph on the public homepage.",
-   "fieldname": "about_body",
-   "fieldtype": "Text Editor",
-   "label": "Body"
+   "fieldname": "impacts",
+   "fieldtype": "Table",
+   "label": "Impact metrics",
+   "options": "Impact"
   }
  ],
  "issingle": 1,
@@ -29,7 +23,7 @@
  "is_submittable": 0,
  "has_web_view": 0,
  "module": "Opero Site",
- "name": "Home About",
+ "name": "Impacts",
  "owner": "Administrator",
  "modified": "2026-09-09 10:00:00.000000",
  "modified_by": "Administrator",

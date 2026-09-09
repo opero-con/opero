@@ -107,3 +107,4 @@ opero.patches.v0_4.add_enterprise_website_publishing
 
 opero.patches.v0_4.split_home_page_sections
 opero.patches.v0_4.reload_opero_website_workspace_home_sections
+opero.patches.v0_4.rename_home_section_doctypes

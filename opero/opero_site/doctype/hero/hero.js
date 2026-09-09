@@ -1,4 +1,4 @@
-frappe.ui.form.on("Home Hero", {
+frappe.ui.form.on("Hero", {
 	refresh(frm) {
 		const field = frm.get_field("hero_description");
 		if (field && field.$input && !field.$input.data("opero-autosize")) {

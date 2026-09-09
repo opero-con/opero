@@ -6,7 +6,7 @@ from frappe.utils import cstr
 from opero.opero_site.body_html import html_to_paragraphs, normalize_paragraphs_html
 
 
-class HomeAbout(Document):
+class About(Document):
 	def validate(self):
 		self.about_body = normalize_paragraphs_html(self.about_body)
 
