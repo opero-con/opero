@@ -8,14 +8,34 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
-  "partners"
+  "hero_eyebrow",
+  "hero_title",
+  "hero_description",
+  "hero_images"
  ],
  "fields": [
   {
-   "fieldname": "partners",
+   "fieldname": "hero_eyebrow",
+   "fieldtype": "Data",
+   "label": "Eyebrow"
+  },
+  {
+   "fieldname": "hero_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "hero_description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "hero_images",
    "fieldtype": "Table",
-   "label": "Partners",
-   "options": "Partner"
+   "label": "Hero images",
+   "options": "Hero Image"
   }
  ],
  "issingle": 1,
@@ -23,7 +43,7 @@
  "is_submittable": 0,
  "has_web_view": 0,
  "module": "Opero Site",
- "name": "Home Partners",
+ "name": "Hero",
  "owner": "Administrator",
  "modified": "2026-09-09 10:00:00.000000",
  "modified_by": "Administrator",

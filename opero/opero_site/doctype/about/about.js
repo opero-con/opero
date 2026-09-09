@@ -1,4 +1,4 @@
-frappe.ui.form.on("Home About", {
+frappe.ui.form.on("About", {
 	setup(frm) {
 		const field = frm.get_field("about_body");
 		if (!field) {

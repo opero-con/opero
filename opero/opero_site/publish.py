@@ -59,7 +59,7 @@ def _doc_is_ready(doc) -> bool:
 	if doc.doctype == "Site Settings":
 		return bool(doc.organization_name)
 	if doc.doctype == "Home Page":
-		return bool(frappe.get_single("Home Hero").hero_title)
+		return bool(frappe.get_single("Hero").hero_title)
 	if doc.doctype == "Privacy policy":
 		return bool(doc.last_reviewed)
 	return True

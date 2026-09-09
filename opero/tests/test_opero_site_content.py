@@ -103,29 +103,29 @@ class TestOperoSiteContent(FrappeTestCase):
 			doc.save(ignore_permissions=True)
 
 	def test_home_frontmatter_omits_team_and_hides_inactive_partners(self):
-		hero = frappe.get_single("Home Hero")
+		hero = frappe.get_single("Hero")
 		hero.hero_eyebrow = "Scaling WASH"
 		hero.hero_title = "From idea to lasting WASH impact."
 		hero.hero_description = "Practical support for WASH enterprises."
 		hero.set("hero_images", [])
 		hero.save(ignore_permissions=True)
 
-		about = frappe.get_single("Home About")
+		about = frappe.get_single("About")
 		about.about_title = "Practical WASH solutions"
 		about.about_body = "<p>Opero is a Kenyan WASH firm.</p>"
 		about.save(ignore_permissions=True)
 
-		pillars = frappe.get_single("Home Pillars")
+		pillars = frappe.get_single("Pillars")
 		pillars.set("pillars", [])
 		pillars.append("pillars", {"title": "Market research", "description": "Local market realities."})
 		pillars.save(ignore_permissions=True)
 
-		impacts = frappe.get_single("Home Impacts")
+		impacts = frappe.get_single("Impacts")
 		impacts.set("impacts", [])
 		impacts.append("impacts", {"value": "6", "metric_label": "WASH technologies designed"})
 		impacts.save(ignore_permissions=True)
 
-		projects = frappe.get_single("Home Projects")
+		projects = frappe.get_single("Projects")
 		projects.set("projects", [])
 		projects.append(
 			"projects",
@@ -143,7 +143,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		)
 		projects.save(ignore_permissions=True)
 
-		partners = frappe.get_single("Home Partners")
+		partners = frappe.get_single("Partners")
 		partners.set("partners", [])
 		partners.append(
 			"partners",
@@ -178,7 +178,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(payload["partners"], [{"name": "Practica Foundation", "url": "https://www.practica.org"}])
 
 	def test_home_frontmatter_includes_hero_carousel(self):
-		doc = frappe.get_single("Home Hero")
+		doc = frappe.get_single("Hero")
 		doc.hero_title = "From idea to lasting WASH impact."
 		doc.set("hero_images", [])
 		doc.append(

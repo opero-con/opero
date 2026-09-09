@@ -204,7 +204,7 @@ class TestOperoSitePublish(FrappeTestCase):
 
 	def test_changed_files_lists_real_desk_edits(self):
 		load_files({"content/homepage/home.md": HOME_MD})
-		hero = frappe.get_single("Home Hero")
+		hero = frappe.get_single("Hero")
 		hero.hero_title = "Edited hero title"
 		hero.save(ignore_permissions=True)
 		changed = changed_files(
@@ -215,7 +215,7 @@ class TestOperoSitePublish(FrappeTestCase):
 
 	def test_preserve_unmanaged_keeps_homepage_team_on_real_edit(self):
 		load_files({"content/homepage/home.md": HOME_MD})
-		hero = frappe.get_single("Home Hero")
+		hero = frappe.get_single("Hero")
 		hero.hero_title = "Edited hero title"
 		hero.save(ignore_permissions=True)
 		planned = dict(collect_content_files())["content/homepage/home.md"]
@@ -518,7 +518,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertNotIn(path, keep)
 
 	def test_home_page_is_always_written(self):
-		frappe.get_single("Home Hero").db_set(
+		frappe.get_single("Hero").db_set(
 			"hero_title", "Always on the public site", update_modified=False
 		)
 		home = frappe.get_single("Home Page")
@@ -543,7 +543,7 @@ class TestOperoSitePublish(FrappeTestCase):
 	def test_always_on_published_save_queues_to_deploy(self):
 		home = frappe.get_single("Home Page")
 		home.db_set("status", "Published")
-		hero = frappe.get_single("Home Hero")
+		hero = frappe.get_single("Hero")
 		hero.hero_title = "Edited while already live"
 		hero.save(ignore_permissions=True)
 		home.reload()
@@ -681,7 +681,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 	def test_export_rewrites_desk_hero_image_and_keeps_media_paths(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
-		hero = frappe.get_single("Home Hero")
+		hero = frappe.get_single("Hero")
 		hero.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
 		hero.save(ignore_permissions=True)
 		text, media = export_markdown_media(
@@ -722,7 +722,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 	def test_planned_changes_commits_new_desk_image(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
-		hero = frappe.get_single("Home Hero")
+		hero = frappe.get_single("Hero")
 		hero.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
 		hero.save(ignore_permissions=True)
 		files = dict(
@@ -744,7 +744,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 	def test_planned_changes_skips_identical_media_blob(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
-		hero = frappe.get_single("Home Hero")
+		hero = frappe.get_single("Hero")
 		hero.append("hero_images", {"image": file_doc.file_url, "note": "Kenya · East Africa"})
 		hero.save(ignore_permissions=True)
 		rewritten, media = export_planned_media(collect_content_files())
@@ -784,7 +784,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 def _attach_png(file_name: str, content: bytes):
 	from frappe.utils.file_manager import save_file
 
-	return save_file(file_name, content, "Home Hero", "Home Hero", is_private=1)
+	return save_file(file_name, content, "Hero", "Hero", is_private=1)
 
 
 def _minimal_pdf() -> bytes:

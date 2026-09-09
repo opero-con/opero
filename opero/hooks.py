@@ -284,22 +284,22 @@ doc_events = {
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
 	},
-	"Home Hero": {
+	"Hero": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Home About": {
+	"About": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Home Pillars": {
+	"Pillars": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Home Impacts": {
+	"Impacts": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Home Projects": {
+	"Projects": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Home Partners": {
+	"Partners": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
 	"Home Page": {

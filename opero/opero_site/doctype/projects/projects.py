@@ -6,7 +6,7 @@ from frappe.utils import cstr
 from opero.opero_site.utils import lines, optional_url
 
 
-class HomeProjects(Document):
+class Projects(Document):
 	def validate(self):
 		for row in self.projects or []:
 			row.detail_url = optional_url(row.detail_url, "Detail URL")

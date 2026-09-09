@@ -6,7 +6,7 @@ from frappe.utils import cstr
 from opero.opero_site.utils import hero_carousel_entry, normalize_hero_image_focus
 
 
-class HomeHero(Document):
+class Hero(Document):
 	def to_site_frontmatter(self) -> dict:
 		hero = {
 			"eyebrow": cstr(self.hero_eyebrow).strip(),

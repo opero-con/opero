@@ -1,10 +1,29 @@
 """Opero Website workspace lists public-site DocTypes, not Frappe Website."""
 
+import json
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from opero.patches.v0_4 import rename_home_section_doctypes
+
 
 class TestOperoWebsiteWorkspace(FrappeTestCase):
+	def test_home_section_rename_replaces_synced_destination(self):
+		with (
+			patch.object(rename_home_section_doctypes, "RENAMES", (("Home Hero", "Hero"),)),
+			patch.object(rename_home_section_doctypes.frappe.db, "exists", side_effect=(True, True)),
+			patch.object(rename_home_section_doctypes.frappe, "delete_doc") as delete_doc,
+			patch.object(rename_home_section_doctypes.frappe, "rename_doc") as rename_doc,
+			patch.object(rename_home_section_doctypes.frappe, "reload_doc") as reload_doc,
+		):
+			rename_home_section_doctypes.execute()
+
+		delete_doc.assert_called_once_with("DocType", "Hero", force=True, ignore_permissions=True)
+		rename_doc.assert_called_once_with("DocType", "Home Hero", "Hero", force=True)
+		reload_doc.assert_any_call("opero_site", "doctype", "hero", force=True)
+
 	def test_workspace_is_top_level_and_lists_site_doctypes(self):
 		doc = frappe.get_doc("Workspace", "Opero Website")
 		self.assertEqual(doc.parent_page, "")
@@ -13,15 +32,19 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertNotEqual(doc.name, "Website")
 
 		links = {row.label: row.link_to for row in doc.links if row.type == "Link"}
+		card_breaks = [row.label for row in doc.links if row.type == "Card Break"]
+		self.assertEqual(card_breaks, ["Home Page", "Other Content", "Setup"])
+		cards = [block["data"]["card_name"] for block in json.loads(doc.content) if block["type"] == "card"]
+		self.assertEqual(cards, ["Home Page", "Other Content", "Setup"])
 		self.assertEqual(
 			links,
 			{
-				"Home Hero": "Home Hero",
-				"Home About": "Home About",
-				"Home Pillars": "Home Pillars",
-				"Home Impacts": "Home Impacts",
-				"Home Projects": "Home Projects",
-				"Home Partners": "Home Partners",
+				"Hero": "Hero",
+				"About": "About",
+				"Pillars": "Pillars",
+				"Impacts": "Impacts",
+				"Projects": "Projects",
+				"Partners": "Partners",
 				"Team": "Team Member",
 				"Enterprises": "Enterprise",
 				"Publications": "Publication",
@@ -36,13 +59,13 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		shortcuts = {row.label: row.link_to for row in doc.shortcuts}
 		self.assertEqual(shortcuts["Deploy Center"], "Deploy Center")
 		self.assertEqual(shortcuts["Settings"], "Site Settings")
-		self.assertEqual(shortcuts["Home Hero"], "Home Hero")
+		self.assertEqual(shortcuts["Hero"], "Hero")
 		self.assertEqual(
 			set(shortcuts),
 			{
 				"Deploy Center",
 				"Settings",
-				"Home Hero",
+				"Hero",
 				"Team",
 				"Enterprises",
 				"Publications",
@@ -62,12 +85,12 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 	def test_website_manager_can_read_site_doctypes(self):
 		doctypes = [
 			"Home Page",
-			"Home Hero",
-			"Home About",
-			"Home Pillars",
-			"Home Impacts",
-			"Home Projects",
-			"Home Partners",
+			"Hero",
+			"About",
+			"Pillars",
+			"Impacts",
+			"Projects",
+			"Partners",
 			"Team Member",
 			"Enterprise",
 			"Publication",

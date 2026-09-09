@@ -303,12 +303,12 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 			elif path == "content/homepage/home.md":
 				data = parse_frontmatter(text)
 				for section_doctype, apply_section in (
-					("Home Hero", apply_home_hero),
-					("Home About", apply_home_about),
-					("Home Pillars", apply_home_pillars),
-					("Home Impacts", apply_home_impacts),
-					("Home Projects", apply_home_projects),
-					("Home Partners", apply_home_partners),
+					("Hero", apply_home_hero),
+					("About", apply_home_about),
+					("Pillars", apply_home_pillars),
+					("Impacts", apply_home_impacts),
+					("Projects", apply_home_projects),
+					("Partners", apply_home_partners),
 				):
 					section_doc = frappe.get_single(section_doctype)
 					apply_section(section_doc, data)
