@@ -103,19 +103,31 @@ class TestOperoSiteContent(FrappeTestCase):
 			doc.save(ignore_permissions=True)
 
 	def test_home_frontmatter_omits_team_and_hides_inactive_partners(self):
-		doc = frappe.get_single("Home Page")
-		doc.hero_eyebrow = "Scaling WASH"
-		doc.hero_title = "From idea to lasting WASH impact."
-		doc.hero_description = "Practical support for WASH enterprises."
-		doc.about_title = "Practical WASH solutions"
-		doc.set("hero_images", [])
-		doc.about_body = "<p>Opero is a Kenyan WASH firm.</p>"
-		doc.set("pillars", [])
-		doc.append("pillars", {"title": "Market research", "description": "Local market realities."})
-		doc.set("impacts", [])
-		doc.append("impacts", {"value": "6", "metric_label": "WASH technologies designed"})
-		doc.set("projects", [])
-		doc.append(
+		hero = frappe.get_single("Home Hero")
+		hero.hero_eyebrow = "Scaling WASH"
+		hero.hero_title = "From idea to lasting WASH impact."
+		hero.hero_description = "Practical support for WASH enterprises."
+		hero.set("hero_images", [])
+		hero.save(ignore_permissions=True)
+
+		about = frappe.get_single("Home About")
+		about.about_title = "Practical WASH solutions"
+		about.about_body = "<p>Opero is a Kenyan WASH firm.</p>"
+		about.save(ignore_permissions=True)
+
+		pillars = frappe.get_single("Home Pillars")
+		pillars.set("pillars", [])
+		pillars.append("pillars", {"title": "Market research", "description": "Local market realities."})
+		pillars.save(ignore_permissions=True)
+
+		impacts = frappe.get_single("Home Impacts")
+		impacts.set("impacts", [])
+		impacts.append("impacts", {"value": "6", "metric_label": "WASH technologies designed"})
+		impacts.save(ignore_permissions=True)
+
+		projects = frappe.get_single("Home Projects")
+		projects.set("projects", [])
+		projects.append(
 			"projects",
 			{
 				"slug": "pupu-pump",
@@ -129,8 +141,11 @@ class TestOperoSiteContent(FrappeTestCase):
 				"detail_url": "https://opero-services.com/pupu-pump",
 			},
 		)
-		doc.set("partners", [])
-		doc.append(
+		projects.save(ignore_permissions=True)
+
+		partners = frappe.get_single("Home Partners")
+		partners.set("partners", [])
+		partners.append(
 			"partners",
 			{
 				"partner_name": "Hidden Partner",
@@ -138,7 +153,7 @@ class TestOperoSiteContent(FrappeTestCase):
 				"sort_order": 1,
 			},
 		)
-		doc.append(
+		partners.append(
 			"partners",
 			{
 				"partner_name": "Practica Foundation",
@@ -147,8 +162,9 @@ class TestOperoSiteContent(FrappeTestCase):
 				"sort_order": 20,
 			},
 		)
-		doc.save(ignore_permissions=True)
-		payload = doc.to_site_frontmatter()
+		partners.save(ignore_permissions=True)
+
+		payload = frappe.get_single("Home Page").to_site_frontmatter()
 		self.assertNotIn("team", payload)
 		self.assertNotIn("image", payload["hero"])
 		self.assertNotIn("carousel", payload["hero"])
@@ -162,7 +178,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(payload["partners"], [{"name": "Practica Foundation", "url": "https://www.practica.org"}])
 
 	def test_home_frontmatter_includes_hero_carousel(self):
-		doc = frappe.get_single("Home Page")
+		doc = frappe.get_single("Home Hero")
 		doc.hero_title = "From idea to lasting WASH impact."
 		doc.set("hero_images", [])
 		doc.append(
@@ -183,7 +199,7 @@ class TestOperoSiteContent(FrappeTestCase):
 			{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg", "note": "", "image_focus": "Center"},
 		)
 		doc.save(ignore_permissions=True)
-		hero = doc.to_site_frontmatter()["hero"]
+		hero = doc.to_site_frontmatter()
 		self.assertEqual(hero["image"], "/media/homepage/opero-wash-hub.jpg")
 		self.assertEqual(hero["imageAlt"], "Aerial view of WASH work")
 		self.assertEqual(hero["note"], "Kenya · East Africa")

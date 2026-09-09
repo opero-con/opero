@@ -16,7 +16,12 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(
 			links,
 			{
-				"Home Page": "Home Page",
+				"Home Hero": "Home Hero",
+				"Home About": "Home About",
+				"Home Pillars": "Home Pillars",
+				"Home Impacts": "Home Impacts",
+				"Home Projects": "Home Projects",
+				"Home Partners": "Home Partners",
 				"Team": "Team Member",
 				"Enterprises": "Enterprise",
 				"Publications": "Publication",
@@ -31,12 +36,13 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		shortcuts = {row.label: row.link_to for row in doc.shortcuts}
 		self.assertEqual(shortcuts["Deploy Center"], "Deploy Center")
 		self.assertEqual(shortcuts["Settings"], "Site Settings")
+		self.assertEqual(shortcuts["Home Hero"], "Home Hero")
 		self.assertEqual(
 			set(shortcuts),
 			{
 				"Deploy Center",
 				"Settings",
-				"Home Page",
+				"Home Hero",
 				"Team",
 				"Enterprises",
 				"Publications",
@@ -56,6 +62,12 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 	def test_website_manager_can_read_site_doctypes(self):
 		doctypes = [
 			"Home Page",
+			"Home Hero",
+			"Home About",
+			"Home Pillars",
+			"Home Impacts",
+			"Home Projects",
+			"Home Partners",
 			"Team Member",
 			"Enterprise",
 			"Publication",
@@ -91,10 +103,6 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		cases = (
 			("Publication", "section_topics", "topics", "Topics"),
 			("Publication", "section_body", "body", "Body"),
-			("Home Page", "section_pillars", "pillars", "Service pillars"),
-			("Home Page", "section_impacts", "impacts", "Impact metrics"),
-			("Home Page", "section_projects", "projects", "Projects"),
-			("Home Page", "section_partners", "partners", "Partners"),
 			("Site Settings", "section_offices", "offices", "Address"),
 		)
 		for doctype, section, child, title in cases:

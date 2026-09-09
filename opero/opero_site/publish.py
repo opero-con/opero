@@ -59,7 +59,7 @@ def _doc_is_ready(doc) -> bool:
 	if doc.doctype == "Site Settings":
 		return bool(doc.organization_name)
 	if doc.doctype == "Home Page":
-		return bool(doc.hero_title)
+		return bool(frappe.get_single("Home Hero").hero_title)
 	if doc.doctype == "Privacy policy":
 		return bool(doc.last_reviewed)
 	return True
@@ -176,6 +176,13 @@ def desk_pending_entries() -> list[dict]:
 	return [{"path": path, "action": action} for path, action in sorted(by_path.items())]
 
 
+def queue_home_page_deploy(doc=None, method: str | None = None) -> None:
+	"""A Home Page section save queues the combined homepage for deploy."""
+	if frappe.flags.get("opero_site_syncing"):
+		return
+	frappe.get_single("Home Page").save(ignore_permissions=True)
+
+
 def notify_pending_website_changes(doc, method: str | None = None) -> None:
 	"""Push this save into the Deploy Center pending list (cache + realtime)."""
 	if frappe.flags.get("opero_site_syncing"):
@@ -220,7 +227,7 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 		bool(settings.organization_name),
 	)
 	home = frappe.get_single("Home Page")
-	consider("content/homepage/home.md", home, bool(home.hero_title))
+	consider("content/homepage/home.md", home, _doc_is_ready(home))
 	privacy = frappe.get_single("Privacy policy")
 	consider("content/privacy/privacy.md", privacy, bool(privacy.last_reviewed))
 	for name in frappe.get_all("Publication", pluck="name"):

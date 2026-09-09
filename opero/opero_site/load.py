@@ -61,13 +61,11 @@ def apply_settings(doc, data: dict):
 		)
 
 
-def apply_home(doc, data: dict):
+def apply_home_hero(doc, data: dict):
 	hero = data.get("hero") or {}
-	about = data.get("about") or {}
 	doc.hero_eyebrow = _text(hero.get("eyebrow"))
 	doc.hero_title = _text(hero.get("title"))
 	doc.hero_description = _text(hero.get("description"))
-	doc.status = PUBLISHED
 	doc.set("hero_images", [])
 	primary = _text(hero.get("image"))
 	if primary:
@@ -93,14 +91,27 @@ def apply_home(doc, data: dict):
 					"image_focus": hero_image_focus_label(focus),
 				},
 			)
+
+
+def apply_home_about(doc, data: dict):
+	about = data.get("about") or {}
 	doc.about_title = _text(about.get("title"))
 	doc.about_body = paragraphs_to_html(about.get("paragraphs"))
+
+
+def apply_home_pillars(doc, data: dict):
 	doc.set("pillars", [])
 	for row in data.get("pillars") or []:
 		doc.append("pillars", {"title": _text(row.get("title")), "description": _text(row.get("description"))})
+
+
+def apply_home_impacts(doc, data: dict):
 	doc.set("impacts", [])
 	for row in data.get("impacts") or []:
 		doc.append("impacts", {"value": _text(row.get("value")), "metric_label": _text(row.get("label"))})
+
+
+def apply_home_projects(doc, data: dict):
 	doc.set("projects", [])
 	for row in data.get("projects") or []:
 		doc.append(
@@ -119,6 +130,9 @@ def apply_home(doc, data: dict):
 				"detail_url": _text(row.get("detailUrl")),
 			},
 		)
+
+
+def apply_home_partners(doc, data: dict):
 	doc.set("partners", [])
 	for row in data.get("partners") or []:
 		active = row.get("active")
@@ -287,9 +301,21 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 				doc.save(ignore_permissions=True)
 				counts["settings"] += 1
 			elif path == "content/homepage/home.md":
-				doc = frappe.get_single("Home Page")
-				apply_home(doc, parse_frontmatter(text))
-				doc.save(ignore_permissions=True)
+				data = parse_frontmatter(text)
+				for section_doctype, apply_section in (
+					("Home Hero", apply_home_hero),
+					("Home About", apply_home_about),
+					("Home Pillars", apply_home_pillars),
+					("Home Impacts", apply_home_impacts),
+					("Home Projects", apply_home_projects),
+					("Home Partners", apply_home_partners),
+				):
+					section_doc = frappe.get_single(section_doctype)
+					apply_section(section_doc, data)
+					section_doc.save(ignore_permissions=True)
+				home = frappe.get_single("Home Page")
+				home.status = PUBLISHED
+				home.save(ignore_permissions=True)
 				counts["home"] += 1
 			elif path == "content/privacy/privacy.md":
 				doc = frappe.get_single("Privacy policy")
