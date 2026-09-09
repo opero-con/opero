@@ -46,7 +46,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Projects": "Projects",
 				"Partners": "Partners",
 				"Team": "Team Member",
-				"Enterprises": "Enterprise",
+				"Enterprises": "website-enterprises",
 				"Publications": "Publication",
 				"Privacy policy": "Privacy policy",
 				"Deploy Center": "Deploy Center",
@@ -74,6 +74,8 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			},
 		)
 		enquiries = next(row for row in doc.shortcuts if row.label == "Website Enquiries")
+		enterprises = next(row for row in doc.links if row.label == "Enterprises")
+		self.assertEqual(enterprises.link_type, "Page")
 		self.assertEqual(enquiries.link_to, "Communication")
 		self.assertEqual(enquiries.doc_view, "List")
 		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
