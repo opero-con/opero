@@ -210,12 +210,16 @@ def _canonical_home(data: dict) -> dict:
 			"paragraphs": _as_paragraphs(about_in.get("paragraphs")),
 		},
 		"ourWork": {
-			"summary": _text(our_work_in.get("summary")),
+			"homepageSummary": _text(our_work_in.get("homepageSummary")),
+			"pageIntroduction": _text(our_work_in.get("pageIntroduction")),
 			"expertise": [
 			{"title": _text(row.get("title")), "description": _text(row.get("description"))}
 			for row in (our_work_in.get("expertise") or [])
 			if isinstance(row, dict)
 			],
+			"image": _text(our_work_in.get("image")),
+			"imageAlt": _text(our_work_in.get("imageAlt")),
+			"pageConclusion": _text(our_work_in.get("pageConclusion")),
 		},
 		"impacts": [
 			{"value": _text(row.get("value")), "label": _text(row.get("label"))}

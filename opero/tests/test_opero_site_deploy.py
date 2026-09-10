@@ -36,10 +36,14 @@ about:
   paragraphs:
     - Opero is a Kenyan WASH firm.
 ourWork:
-  summary: To solve WASH challenges.
+  homepageSummary: To solve WASH challenges.
+  pageIntroduction: "To solve WASH challenges, we bring together core expertise in:"
   expertise:
     - title: Market research
       description: Local market realities.
+  image: /media/homepage/our-work.jpg
+  imageAlt: Opero WASH work in practice
+  pageConclusion: Our work is grounded in real operating conditions.
 impacts:
   - value: "6"
     label: WASH technologies designed
