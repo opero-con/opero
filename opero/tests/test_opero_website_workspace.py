@@ -34,6 +34,10 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		links = {row.label: row.link_to for row in doc.links if row.type == "Link"}
 		card_breaks = [row.label for row in doc.links if row.type == "Card Break"]
 		self.assertEqual(card_breaks, ["Home Page", "Other Content", "Setup"])
+		self.assertEqual(
+			[row.link_count for row in doc.links if row.type == "Card Break"],
+			[4, 5, 2],
+		)
 		cards = [block["data"]["card_name"] for block in json.loads(doc.content) if block["type"] == "card"]
 		self.assertEqual(cards, ["Home Page", "Other Content", "Setup"])
 		self.assertEqual(
@@ -41,12 +45,11 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			{
 				"Hero": "Hero",
 				"About": "About",
-				"Pillars": "Pillars",
 				"Impacts": "Impacts",
-				"Projects": "Projects",
+				"Our Work": "Our Work",
 				"Partners": "Partners",
 				"Team": "Team Member",
-				"Enterprises": "website-enterprises",
+				"Enterprises": "Enterprise",
 				"Publications": "Publication",
 				"Privacy policy": "Privacy policy",
 				"Deploy Center": "Deploy Center",
@@ -57,25 +60,19 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertNotIn("Office", links.values())
 
 		shortcuts = {row.label: row.link_to for row in doc.shortcuts}
-		self.assertEqual(shortcuts["Deploy Center"], "Deploy Center")
-		self.assertEqual(shortcuts["Settings"], "Site Settings")
-		self.assertEqual(shortcuts["Hero"], "Hero")
 		self.assertEqual(
 			set(shortcuts),
 			{
-				"Deploy Center",
-				"Settings",
-				"Hero",
 				"Team",
 				"Enterprises",
 				"Publications",
-				"Privacy policy",
 				"Website Enquiries",
 			},
 		)
 		enquiries = next(row for row in doc.shortcuts if row.label == "Website Enquiries")
 		enterprises = next(row for row in doc.links if row.label == "Enterprises")
-		self.assertEqual(enterprises.link_type, "Page")
+		self.assertEqual(enterprises.link_type, "DocType")
+		self.assertEqual(enterprises.link_to, "Enterprise")
 		self.assertEqual(enquiries.link_to, "Communication")
 		self.assertEqual(enquiries.doc_view, "List")
 		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
@@ -89,9 +86,8 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			"Home Page",
 			"Hero",
 			"About",
-			"Pillars",
 			"Impacts",
-			"Projects",
+			"Our Work",
 			"Partners",
 			"Team Member",
 			"Enterprise",

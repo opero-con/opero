@@ -12,7 +12,7 @@ UNPUBLISHED = "Unpublished"
 STATUSES = (DRAFT, TO_DEPLOY, PUBLISHED, TO_UNPUBLISH, UNPUBLISHED)
 ON_SITE = (TO_DEPLOY, PUBLISHED)
 OFF_SITE = (TO_UNPUBLISH, UNPUBLISHED)
-ALWAYS_ON_SITE = frozenset({"Home Page", "Privacy policy", "Site Settings"})
+ALWAYS_ON_SITE = frozenset({"Home Page", "Our Work", "Privacy policy", "Site Settings"})
 # CRM Enterprise keeps `status` for Identified/Onboarded/...; publish sync uses website_status.
 PUBLISH_STATUS_FIELD = {
 	"Enterprise": "website_status",

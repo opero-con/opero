@@ -115,33 +115,18 @@ class TestOperoSiteContent(FrappeTestCase):
 		about.about_body = "<p>Opero is a Kenyan WASH firm.</p>"
 		about.save(ignore_permissions=True)
 
-		pillars = frappe.get_single("Pillars")
-		pillars.set("pillars", [])
-		pillars.append("pillars", {"title": "Market research", "description": "Local market realities."})
-		pillars.save(ignore_permissions=True)
-
 		impacts = frappe.get_single("Impacts")
 		impacts.set("impacts", [])
 		impacts.append("impacts", {"value": "6", "metric_label": "WASH technologies designed"})
 		impacts.save(ignore_permissions=True)
 
-		projects = frappe.get_single("Projects")
-		projects.set("projects", [])
-		projects.append(
-			"projects",
-			{
-				"slug": "pupu-pump",
-				"title": "PuPu Pump",
-				"short_title": "PuPu",
-				"eyebrow": "Sanitation",
-				"summary": "Pit-emptying pump.",
-				"highlights": "Trash handling\nThick sludge",
-				"metric_value": "3",
-				"metric_label": "Technologies covered",
-				"detail_url": "https://opero-services.com/pupu-pump",
-			},
-		)
-		projects.save(ignore_permissions=True)
+		our_work = frappe.get_single("Our Work")
+		our_work.set("expertise", [])
+		our_work.append("expertise", {"title": "Market research", "description": "Local market realities."})
+		our_work.summary = "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research."
+		our_work.image = "/media/homepage/our-work.jpg"
+		our_work.image_alt = "Opero WASH work in practice"
+		our_work.save(ignore_permissions=True)
 
 		partners = frappe.get_single("Partners")
 		partners.set("partners", [])
@@ -171,10 +156,9 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertNotIn("note", payload["hero"])
 		self.assertEqual(payload["hero"]["title"], "From idea to lasting WASH impact.")
 		self.assertEqual(payload["about"]["paragraphs"], ["Opero is a Kenyan WASH firm."])
-		self.assertEqual(payload["pillars"][0]["title"], "Market research")
+		self.assertEqual(payload["ourWork"]["expertise"][0]["title"], "Market research")
 		self.assertEqual(payload["impacts"][0], {"value": "6", "label": "WASH technologies designed"})
-		self.assertEqual(payload["projects"][0]["highlights"], ["Trash handling", "Thick sludge"])
-		self.assertEqual(payload["projects"][0]["metricValue"], "3")
+		self.assertEqual(payload["ourWork"], {"summary": "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research.", "expertise": [{"title": "Market research", "description": "Local market realities."}], "image": "/media/homepage/our-work.jpg", "imageAlt": "Opero WASH work in practice"})
 		self.assertEqual(payload["partners"], [{"name": "Practica Foundation", "url": "https://www.practica.org"}])
 
 	def test_home_frontmatter_includes_hero_carousel(self):

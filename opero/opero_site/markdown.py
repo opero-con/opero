@@ -190,29 +190,7 @@ def _canonical_home(data: dict) -> dict:
 		hero["carousel"] = carousel
 
 	about_in = data.get("about") or {}
-	projects = []
-	for row in data.get("projects") or []:
-		if not isinstance(row, dict):
-			continue
-		project = {
-			"slug": _text(row.get("slug")),
-			"title": _text(row.get("title")),
-			"shortTitle": _text(row.get("shortTitle")),
-			"eyebrow": _text(row.get("eyebrow")),
-			"summary": _text(row.get("summary")),
-			"highlights": _as_lines(row.get("highlights")),
-		}
-		if row.get("image"):
-			project["image"] = cstr(row.get("image"))
-		if _text(row.get("imageAlt")):
-			project["imageAlt"] = _text(row.get("imageAlt"))
-		if row.get("metricValue") or row.get("metricLabel"):
-			project["metricValue"] = _text(row.get("metricValue"))
-			project["metricLabel"] = _text(row.get("metricLabel"))
-		if row.get("detailUrl"):
-			project["detailUrl"] = _text(row.get("detailUrl"))
-		projects.append(project)
-
+	our_work_in = data.get("ourWork") or {}
 	partners = []
 	raw_partners = [row for row in (data.get("partners") or []) if isinstance(row, dict)]
 	for row in sorted(raw_partners, key=lambda item: cint(item.get("order"))):
@@ -231,17 +209,19 @@ def _canonical_home(data: dict) -> dict:
 			"title": _text(about_in.get("title")),
 			"paragraphs": _as_paragraphs(about_in.get("paragraphs")),
 		},
-		"pillars": [
+		"ourWork": {
+			"summary": _text(our_work_in.get("summary")),
+			"expertise": [
 			{"title": _text(row.get("title")), "description": _text(row.get("description"))}
-			for row in (data.get("pillars") or [])
+			for row in (our_work_in.get("expertise") or [])
 			if isinstance(row, dict)
-		],
+			],
+		},
 		"impacts": [
 			{"value": _text(row.get("value")), "label": _text(row.get("label"))}
 			for row in (data.get("impacts") or [])
 			if isinstance(row, dict)
 		],
-		"projects": projects,
 		"partners": partners,
 	}
 
