@@ -113,3 +113,4 @@ opero.patches.v0_4.reload_opero_website_workspace_home_sections
 opero.patches.v0_4.rename_home_section_doctypes
 opero.patches.v0_4.filter_website_enterprises_workspace_link
 opero.patches.v0_4.fix_opero_website_enterprise_links
+opero.patches.v0_4.rename_our_work_homepage_summary

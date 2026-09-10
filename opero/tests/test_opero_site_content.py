@@ -24,6 +24,11 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(slugify("January 2025 Update"), "january-2025-update")
 		self.assertEqual(slugify("PuPu Pump Digest: Tackling Trash"), "pupu-pump-digest-tackling-trash")
 
+	def test_expertise_fields_are_visible_in_the_child_table(self):
+		meta = frappe.get_meta("Pillar")
+		self.assertTrue(meta.get_field("title").in_list_view)
+		self.assertTrue(meta.get_field("description").in_list_view)
+
 	def test_normalize_publication_type_maps_portfolio_to_overview(self):
 		self.assertEqual(normalize_publication_type("Portfolio"), "Overview")
 		self.assertEqual(normalize_publication_type("Project"), "Project")
@@ -123,9 +128,11 @@ class TestOperoSiteContent(FrappeTestCase):
 		our_work = frappe.get_single("Our Work")
 		our_work.set("expertise", [])
 		our_work.append("expertise", {"title": "Market research", "description": "Local market realities."})
-		our_work.summary = "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research."
+		our_work.homepage_summary = "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research."
+		our_work.page_introduction = "To solve WASH challenges, we bring together core expertise in:"
 		our_work.image = "/media/homepage/our-work.jpg"
 		our_work.image_alt = "Opero WASH work in practice"
+		our_work.page_conclusion = "Our work is grounded in real operating conditions."
 		our_work.save(ignore_permissions=True)
 
 		partners = frappe.get_single("Partners")
@@ -158,7 +165,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(payload["about"]["paragraphs"], ["Opero is a Kenyan WASH firm."])
 		self.assertEqual(payload["ourWork"]["expertise"][0]["title"], "Market research")
 		self.assertEqual(payload["impacts"][0], {"value": "6", "label": "WASH technologies designed"})
-		self.assertEqual(payload["ourWork"], {"summary": "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research.", "expertise": [{"title": "Market research", "description": "Local market realities."}], "image": "/media/homepage/our-work.jpg", "imageAlt": "Opero WASH work in practice"})
+		self.assertEqual(payload["ourWork"], {"homepageSummary": "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research.", "pageIntroduction": "To solve WASH challenges, we bring together core expertise in:", "expertise": [{"title": "Market research", "description": "Local market realities."}], "image": "/media/homepage/our-work.jpg", "imageAlt": "Opero WASH work in practice", "pageConclusion": "Our work is grounded in real operating conditions."})
 		self.assertEqual(payload["partners"], [{"name": "Practica Foundation", "url": "https://www.practica.org"}])
 
 	def test_home_frontmatter_includes_hero_carousel(self):

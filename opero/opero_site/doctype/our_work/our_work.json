@@ -4,12 +4,16 @@
  "creation": "2026-09-10 12:00:00.000000",
  "custom": 0,
  "doctype": "DocType",
- "field_order": ["summary", "expertise", "image", "image_alt", "status"],
+ "field_order": ["homepage_section", "homepage_summary", "page_section", "page_introduction", "expertise", "image", "image_alt", "page_conclusion", "status"],
  "fields": [
-  {"fieldname": "summary", "fieldtype": "Small Text", "label": "Summary"},
+  {"fieldname": "homepage_section", "fieldtype": "Section Break", "label": "Homepage"},
+  {"fieldname": "homepage_summary", "fieldtype": "Small Text", "label": "Homepage summary"},
+  {"fieldname": "page_section", "fieldtype": "Section Break", "label": "Our Work page"},
+  {"fieldname": "page_introduction", "fieldtype": "Small Text", "label": "Page introduction"},
   {"fieldname": "expertise", "fieldtype": "Table", "label": "Expertise", "options": "Pillar"},
   {"fieldname": "image", "fieldtype": "Attach Image", "label": "Image"},
   {"fieldname": "image_alt", "fieldtype": "Data", "label": "Image alt text"},
+  {"fieldname": "page_conclusion", "fieldtype": "Small Text", "label": "Page conclusion"},
   {"default": "To deploy", "fieldname": "status", "fieldtype": "Select", "hidden": 1, "label": "Status", "options": "Draft\nTo deploy\nPublished\nTo unpublish\nUnpublished", "read_only": 1, "reqd": 1}
  ],
  "issingle": 1,

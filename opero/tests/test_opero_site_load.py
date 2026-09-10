@@ -47,10 +47,14 @@ about:
   paragraphs:
     - Opero is a Kenyan WASH firm.
 ourWork:
-  summary: To solve WASH challenges.
+  homepageSummary: To solve WASH challenges.
+  pageIntroduction: "To solve WASH challenges, we bring together core expertise in:"
   expertise:
     - title: Market research
       description: Local market realities.
+  image: /media/homepage/our-work.jpg
+  imageAlt: Opero WASH work in practice
+  pageConclusion: Our work is grounded in real operating conditions.
 impacts:
   - value: "6"
     label: WASH technologies designed
@@ -186,6 +190,18 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(frappe.get_single("About").about_body, "<p>Opero is a Kenyan WASH firm.</p>")
 		self.assertEqual(
 			frappe.get_single("Impacts").impacts[0].metric_label, "WASH technologies designed"
+		)
+		self.assertEqual(
+			frappe.get_single("Our Work").homepage_summary,
+			"To solve WASH challenges.",
+		)
+		self.assertEqual(
+			frappe.get_single("Our Work").page_introduction,
+			"To solve WASH challenges, we bring together core expertise in:",
+		)
+		self.assertEqual(
+			frappe.get_single("Our Work").page_conclusion,
+			"Our work is grounded in real operating conditions.",
 		)
 		self.assertEqual(len(frappe.get_all("Team Member")), 1)
 

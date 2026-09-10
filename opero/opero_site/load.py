@@ -107,12 +107,14 @@ def apply_home_impacts(doc, data: dict):
 
 def apply_home_our_work(doc, data: dict):
 	our_work = data.get("ourWork") or {}
-	doc.summary = _text(our_work.get("summary"))
+	doc.homepage_summary = _text(our_work.get("homepageSummary"))
+	doc.page_introduction = _text(our_work.get("pageIntroduction"))
 	doc.set("expertise", [])
 	for row in our_work.get("expertise") or []:
 		doc.append("expertise", {"title": _text(row.get("title")), "description": _text(row.get("description"))})
 	doc.image = _text(our_work.get("image"))
 	doc.image_alt = _text(our_work.get("imageAlt"))
+	doc.page_conclusion = _text(our_work.get("pageConclusion"))
 
 
 def apply_home_partners(doc, data: dict):

@@ -19,6 +19,7 @@
   {
    "fieldname": "description",
    "fieldtype": "Small Text",
+   "in_list_view": 1,
    "label": "Description",
    "reqd": 1
   }
