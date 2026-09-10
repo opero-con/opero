@@ -754,6 +754,29 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		)
 		self.assertEqual(files, [])
 
+	def test_planned_changes_prunes_orphaned_enterprise_media(self):
+		files = planned_content_changes(
+			_FakeContentRepo(blobs={"media/enterprises/old-logo.png": "deadbeef"})
+		)
+		self.assertIn(("media/enterprises/old-logo.png", None), files)
+
+	def test_planned_changes_keeps_media_referenced_by_current_enterprise(self):
+		from frappe.utils.file_manager import save_file
+
+		doc = frappe.get_doc(
+			{
+				"doctype": "Enterprise",
+				"enterprise_name": "Gasia Poa",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		file_doc = save_file("gasia-poa.png", b"fake-png-bytes", "Enterprise", doc.name, is_private=0)
+		doc.logo = file_doc.file_url
+		doc.save(ignore_permissions=True)
+		repo_path = f"media/enterprises/{file_doc.file_name}"
+		files = planned_content_changes(_FakeContentRepo(blobs={repo_path: "deadbeef"}))
+		self.assertNotIn((repo_path, None), files)
+
 	def test_commit_files_sends_base64_for_binary(self):
 		calls = []
 

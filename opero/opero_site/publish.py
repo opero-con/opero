@@ -24,6 +24,7 @@ from opero.opero_site.publish_status import (
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
 MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/", "content/enterprises/")
+MEDIA_DELETE_PREFIXES = ("media/publications/", "media/team/", "media/enterprises/")
 DEPLOY_LOG_LIMIT = 10
 CONTENT_DOCTYPES = ("Publication", "Team Member", "Enterprise")
 CONTENT_SINGLES = ("Home Page", "Privacy policy", "Site Settings")
@@ -280,9 +281,11 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 		)
 	)
 	blobs = repo.tree_blobs(repo.base_branch)
+	media_paths = [path for path, _content in media]
 	for path, content in media:
 		if blobs.get(path) != git_blob_sha(content):
 			files.append((path, content))
+	files.extend(deleted_managed_files(media_paths, list(blobs), MEDIA_DELETE_PREFIXES))
 	return files
 
 
