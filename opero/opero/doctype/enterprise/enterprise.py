@@ -35,8 +35,10 @@ class Enterprise(Document):
 		self.enterprise_name = cstr(self.enterprise_name).strip()
 		if not self.enterprise_name:
 			frappe.throw(_("Enterprise Name is required."))
-		if not enterprise_content_slug(self.enterprise_name):
+		slug = enterprise_content_slug(self.enterprise_name)
+		if not slug:
 			frappe.throw(_("Enterprise Name must contain at least one letter or number."))
+		self._check_slug_collision(slug)
 
 		self.website = optional_url(self.website, "Website")
 		apply_publish_status(self)
@@ -52,6 +54,18 @@ class Enterprise(Document):
 		if self.logo:
 			payload["logo"] = cstr(self.logo)
 		return payload
+
+	def _check_slug_collision(self, slug: str) -> None:
+		"""Two enterprise names that slugify the same would overwrite each other's published file."""
+		for other_name in frappe.get_all(
+			"Enterprise", filters={"name": ["!=", self.name]}, pluck="enterprise_name"
+		):
+			if enterprise_content_slug(other_name) == slug:
+				frappe.throw(
+					_("Another enterprise's name also maps to the website slug '{0}'. Rename one of them.").format(
+						slug
+					)
+				)
 
 	def on_trash(self):
 		if self.enterprise_primary_contact:

@@ -88,3 +88,12 @@ class TestEnterprise(FrappeTestCase):
 			)[0][0],
 			address.name,
 		)
+
+	def test_enterprise_name_colliding_with_website_slug_is_rejected(self):
+		frappe.get_doc(
+			{"doctype": "Enterprise", "enterprise_name": f"{self.prefix} Acme"}
+		).insert(ignore_permissions=True)
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc(
+				{"doctype": "Enterprise", "enterprise_name": f"{self.prefix}, Acme!"}
+			).insert(ignore_permissions=True)
