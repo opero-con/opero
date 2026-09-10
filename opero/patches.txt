@@ -87,6 +87,9 @@ opero.patches.v0_4.add_website_enquiries
 opero.patches.v0_4.allow_website_manager_communication
 opero.patches.v0_4.convert_privacy_body_to_html
 opero.patches.v0_4.dedupe_privacy_body_sections
+opero.patches.v0_4.remove_opero_website_single_shortcuts
+opero.patches.v0_4.move_our_work_workspace_link
+opero.patches.v0_4.remove_pillars_doctype
 opero.patches.v0_4.rename_privacy_to_privacy_policy
 opero.patches.v0_4.rename_accomodation_to_accommodation
 opero.patches.v0_4.convert_home_about_to_html

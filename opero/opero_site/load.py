@@ -99,37 +99,20 @@ def apply_home_about(doc, data: dict):
 	doc.about_body = paragraphs_to_html(about.get("paragraphs"))
 
 
-def apply_home_pillars(doc, data: dict):
-	doc.set("pillars", [])
-	for row in data.get("pillars") or []:
-		doc.append("pillars", {"title": _text(row.get("title")), "description": _text(row.get("description"))})
-
-
 def apply_home_impacts(doc, data: dict):
 	doc.set("impacts", [])
 	for row in data.get("impacts") or []:
 		doc.append("impacts", {"value": _text(row.get("value")), "metric_label": _text(row.get("label"))})
 
 
-def apply_home_projects(doc, data: dict):
-	doc.set("projects", [])
-	for row in data.get("projects") or []:
-		doc.append(
-			"projects",
-			{
-				"slug": _text(row.get("slug")),
-				"title": _text(row.get("title")),
-				"short_title": _text(row.get("shortTitle")),
-				"eyebrow": _text(row.get("eyebrow")),
-				"summary": _text(row.get("summary")),
-				"image": _text(row.get("image")),
-				"image_alt": _text(row.get("imageAlt")),
-				"highlights": _join_lines(row.get("highlights")),
-				"metric_value": _text(row.get("metricValue")),
-				"metric_label": _text(row.get("metricLabel")),
-				"detail_url": _text(row.get("detailUrl")),
-			},
-		)
+def apply_home_our_work(doc, data: dict):
+	our_work = data.get("ourWork") or {}
+	doc.summary = _text(our_work.get("summary"))
+	doc.set("expertise", [])
+	for row in our_work.get("expertise") or []:
+		doc.append("expertise", {"title": _text(row.get("title")), "description": _text(row.get("description"))})
+	doc.image = _text(our_work.get("image"))
+	doc.image_alt = _text(our_work.get("imageAlt"))
 
 
 def apply_home_partners(doc, data: dict):
@@ -305,9 +288,8 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 				for section_doctype, apply_section in (
 					("Hero", apply_home_hero),
 					("About", apply_home_about),
-					("Pillars", apply_home_pillars),
 					("Impacts", apply_home_impacts),
-					("Projects", apply_home_projects),
+					("Our Work", apply_home_our_work),
 					("Partners", apply_home_partners),
 				):
 					section_doc = frappe.get_single(section_doctype)

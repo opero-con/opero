@@ -290,13 +290,10 @@ doc_events = {
 	"About": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Pillars": {
-		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
-	},
 	"Impacts": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Projects": {
+	"Our Work": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
 	"Partners": {
