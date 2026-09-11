@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import frappe
 from frappe import _
 from frappe.utils import now_datetime
@@ -259,6 +261,19 @@ def content_repo_from_conf() -> ContentRepo:
 	return ContentRepo(token=token, repo=repo, base_branch=base_branch)
 
 
+# Frontmatter is plain YAML scalars, which may contain unescaped spaces
+# (e.g. "cover: /media/publications/Workshop 2 - 8 (1).jpg"), so a
+# reference runs to end of line, not to the first whitespace.
+_MEDIA_REFERENCE_PATTERN = re.compile(r"/media/[^\r\n]+")
+
+
+def _media_refs_in_text(text: str) -> set[str]:
+	refs = set()
+	for match in _MEDIA_REFERENCE_PATTERN.findall(text):
+		refs.add(match.strip().strip("\"'").lstrip("/"))
+	return refs
+
+
 def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | bytes | None]]:
 	planned, keep = collect_content_plan()
 	planned, media = export_planned_media(planned)
@@ -285,7 +300,22 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 	for path, content in media:
 		if blobs.get(path) != git_blob_sha(content):
 			files.append((path, content))
-	files.extend(deleted_managed_files(media_paths, list(blobs), MEDIA_DELETE_PREFIXES))
+
+	# A media file is still wanted if it was freshly re-exported this pass,
+	# OR if any content file that will remain in the repo after this deploy
+	# still references it. Without the latter, any doc whose media field
+	# survived load_from_website() as a plain /media/... string (the normal
+	# state for publications and team members, and the fallback for
+	# enterprises whenever the logo re-download fails) looks orphaned and
+	# gets pruned on the very next publish, even though nothing changed.
+	referenced_media = set(media_paths)
+	for _path, content in merged:
+		referenced_media.update(_media_refs_in_text(content))
+	if keep:
+		for content in repo.existing_files(keep, repo.base_branch).values():
+			referenced_media.update(_media_refs_in_text(content))
+
+	files.extend(deleted_managed_files(list(referenced_media), list(blobs), MEDIA_DELETE_PREFIXES))
 	return files
 
 
