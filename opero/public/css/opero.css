@@ -35,3 +35,41 @@
 .opero-hours-summary__meta strong {
   font-weight: 600;
 }
+
+.opero-pending-group + .opero-pending-group {
+  margin-top: 12px;
+}
+
+.opero-pending-group__title {
+  margin: 0 0 4px;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.opero-diff {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 8px;
+}
+
+.opero-diff__line {
+  padding: 0 4px;
+}
+
+.opero-diff__line.is-add {
+  background-color: var(--green-100, #e6f4ea);
+}
+
+.opero-diff__line.is-del {
+  background-color: var(--red-100, #fbe9e9);
+}
+
+.opero-diff__line.is-hunk {
+  color: var(--text-muted);
+}

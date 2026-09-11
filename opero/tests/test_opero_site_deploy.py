@@ -13,6 +13,8 @@ from opero.opero_site.publish import (
 	clear_pending_cache,
 	collect_content_files,
 	collect_content_plan,
+	content_diff,
+	content_label_for,
 	desk_pending_entries,
 	notify_pending_website_changes,
 	pending_entries,
@@ -102,8 +104,24 @@ class TestOperoSitePublish(FrappeTestCase):
 				]
 			),
 			[
-				{"path": "content/team/anita-onyango.md", "action": "update"},
-				{"path": "content/publications/old-update.md", "action": "delete"},
+				{
+					"path": "content/team/anita-onyango.md",
+					"action": "update",
+					"title": "Anita Onyango",
+					"group": "Team",
+					"doctype": None,
+					"docname": None,
+					"is_single": False,
+				},
+				{
+					"path": "content/publications/old-update.md",
+					"action": "delete",
+					"title": "Old Update",
+					"group": "Publications",
+					"doctype": None,
+					"docname": None,
+					"is_single": False,
+				},
 			],
 		)
 
@@ -144,15 +162,18 @@ class TestOperoSitePublish(FrappeTestCase):
 			}
 		).insert(ignore_permissions=True)
 		notify_pending_website_changes(doc, "on_update")
-		self.assertIn(
-			{"path": "content/publications/cached-pending.md", "action": "update"},
-			desk_pending_entries(),
-		)
+		expected = {
+			"path": "content/publications/cached-pending.md",
+			"action": "update",
+			"title": "Cached Pending",
+			"group": "Publications",
+			"doctype": "Publication",
+			"docname": "cached-pending",
+			"is_single": False,
+		}
+		self.assertIn(expected, desk_pending_entries())
 		payload = preview_pending()
-		self.assertIn(
-			{"path": "content/publications/cached-pending.md", "action": "update"},
-			payload["files"],
-		)
+		self.assertIn(expected, payload["files"])
 
 	def test_draft_publication_does_not_push_pending(self):
 		doc = frappe.get_doc(
@@ -653,6 +674,59 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertEqual(doc.status, "Unpublished")
 		self.assertFalse(doc.show_on_website)
 
+	def test_content_label_for_resolves_live_docs_and_falls_back(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Q1 Newsletter",
+				"slug": "q1-newsletter",
+				"publication_type": "Newsletter",
+				"published_on": "2026-01-01",
+				"summary": "Summary",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(
+			content_label_for(f"content/publications/{doc.slug}.md"),
+			{
+				"title": "Q1 Newsletter",
+				"group": "Publications",
+				"doctype": "Publication",
+				"docname": "q1-newsletter",
+				"is_single": False,
+			},
+		)
+		self.assertEqual(
+			content_label_for("content/publications/gone-forever.md"),
+			{
+				"title": "Gone Forever",
+				"group": "Publications",
+				"doctype": None,
+				"docname": None,
+				"is_single": False,
+			},
+		)
+		self.assertEqual(
+			content_label_for("content/homepage/home.md"),
+			{
+				"title": "Home Page",
+				"group": "Site pages",
+				"doctype": "Home Page",
+				"docname": None,
+				"is_single": True,
+			},
+		)
+
+	def test_content_label_for_enterprise_matches_by_slug_not_name(self):
+		frappe.get_doc(
+			{"doctype": "Enterprise", "enterprise_name": "Acme Water Ltd", "show_on_website": 1}
+		).insert(ignore_permissions=True)
+		label = content_label_for("content/enterprises/acme-water-ltd.md")
+		self.assertEqual(label["title"], "Acme Water Ltd")
+		self.assertEqual(label["group"], "Enterprises")
+		self.assertEqual(label["doctype"], "Enterprise")
+		self.assertIsNotNone(label["docname"])
+
 
 class _FakeContentRepo:
 	base_branch = "main"
@@ -749,6 +823,61 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		self.assertIn(f"/{repo_path}", files["content/homepage/home.md"])
 		self.assertNotIn("/private/files/", files["content/homepage/home.md"])
 		self.assertNotIn("/files/", files["content/homepage/home.md"])
+
+	def test_content_diff_reports_unified_diff_for_a_changed_publication(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Change Log",
+				"slug": "change-log",
+				"publication_type": "Newsletter",
+				"published_on": "2026-01-01",
+				"summary": "New summary",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		path = f"content/publications/{doc.slug}.md"
+		planned = dict(collect_content_files())[path]
+		existing = planned.replace("New summary", "Old summary")
+		repo = _FakeContentRepo(
+			existing={
+				"content/settings/general.md": SETTINGS_MD,
+				"content/homepage/home.md": HOME_MD,
+				"content/privacy/privacy.md": PRIVACY_MD,
+				path: existing,
+			}
+		)
+		result = content_diff(repo, path)
+		self.assertEqual(result["title"], "Change Log")
+		self.assertEqual(result["group"], "Publications")
+		self.assertEqual(result["doctype"], "Publication")
+		self.assertEqual(result["docname"], "change-log")
+		self.assertTrue(any(line.startswith("-") and "Old summary" in line for line in result["diff"]))
+		self.assertTrue(any(line.startswith("+") and "New summary" in line for line in result["diff"]))
+
+	def test_content_diff_marks_brand_new_publication(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Brand New",
+				"slug": "brand-new",
+				"publication_type": "Newsletter",
+				"published_on": "2026-01-01",
+				"summary": "Summary",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		path = f"content/publications/{doc.slug}.md"
+		repo = _FakeContentRepo(
+			existing={
+				"content/settings/general.md": SETTINGS_MD,
+				"content/homepage/home.md": HOME_MD,
+				"content/privacy/privacy.md": PRIVACY_MD,
+			}
+		)
+		result = content_diff(repo, path)
+		self.assertTrue(result["is_new"])
+		self.assertTrue(any("Brand New" in line for line in result["diff"]))
 
 	def test_planned_changes_skips_identical_media_blob(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
