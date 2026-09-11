@@ -113,19 +113,130 @@ function bindProgress(wrap) {
 	};
 }
 
+const GROUP_ORDER = ["Site pages", "Publications", "Team", "Enterprises", "Other"];
+
 function renderPending(wrap, payload) {
 	const files = (payload && payload.files) || [];
 	if (!files.length) {
 		wrap.html(`<p class="text-muted">${frappe.utils.escape_html(payload.message || __("Nothing due."))}</p>`);
 		return;
 	}
-	const items = files
-		.map((row) => {
-			const action = row.action === "delete" ? __("Remove") : __("Update");
-			return `<li><strong>${frappe.utils.escape_html(action)}</strong> ${frappe.utils.escape_html(row.path)}</li>`;
+	const groups = {};
+	for (const row of files) {
+		const group = row.group || __("Other");
+		(groups[group] = groups[group] || []).push(row);
+	}
+	const names = Object.keys(groups).sort((a, b) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b));
+	const sections = names
+		.map((name) => {
+			const items = groups[name]
+				.slice()
+				.sort((a, b) => (a.title || a.path).localeCompare(b.title || b.path))
+				.map((row) => `<li>${pendingRowHtml(row)}</li>`)
+				.join("");
+			return `<div class="opero-pending-group">
+				<p class="opero-pending-group__title">${frappe.utils.escape_html(__(name))}</p>
+				<ul>${items}</ul>
+			</div>`;
 		})
 		.join("");
-	wrap.html(`<ul>${items}</ul>`);
+	wrap.html(sections);
+	bindPendingRowClicks(wrap);
+}
+
+function pendingRowHtml(row) {
+	const action = row.action === "delete" ? __("Remove") : __("Update");
+	const title = frappe.utils.escape_html(row.title || row.path);
+	const path = frappe.utils.escape_html(row.path);
+	const diffLink = `<a href="#" class="opero-pending-diff" data-path="${path}">${title}</a>`;
+	let openLink = "";
+	if (row.is_single && row.doctype) {
+		const doctype = frappe.utils.escape_html(row.doctype);
+		openLink = ` <a href="#" class="text-muted opero-pending-open" data-doctype="${doctype}" title="${__("Open record")}">↗</a>`;
+	} else if (row.doctype && row.docname) {
+		const doctype = frappe.utils.escape_html(row.doctype);
+		const docname = frappe.utils.escape_html(row.docname);
+		openLink = ` <a href="#" class="text-muted opero-pending-open" data-doctype="${doctype}" data-docname="${docname}" title="${__("Open record")}">↗</a>`;
+	}
+	return `<strong>${frappe.utils.escape_html(action)}</strong> ${diffLink}${openLink}`;
+}
+
+function bindPendingRowClicks(wrap) {
+	wrap.find(".opero-pending-diff").on("click", (e) => {
+		e.preventDefault();
+		showContentDiff($(e.currentTarget).data("path"));
+	});
+	wrap.find(".opero-pending-open").on("click", (e) => {
+		e.preventDefault();
+		const el = $(e.currentTarget);
+		const doctype = el.data("doctype");
+		const docname = el.data("docname");
+		if (docname) {
+			frappe.set_route("Form", doctype, docname);
+		} else {
+			frappe.set_route("Form", doctype);
+		}
+	});
+}
+
+function diffLineClass(line) {
+	if (line.startsWith("+")) {
+		return "is-add";
+	}
+	if (line.startsWith("-")) {
+		return "is-del";
+	}
+	if (line.startsWith("@@")) {
+		return "is-hunk";
+	}
+	return "";
+}
+
+function renderDiffHtml(payload) {
+	if (payload.is_binary) {
+		return `<p class="text-muted">${__("Binary file changed; no text diff available.")}</p>`;
+	}
+	if (payload.is_new) {
+		const lines = (payload.diff || [])
+			.map((line) => `<div class="opero-diff__line is-add">+ ${frappe.utils.escape_html(line)}</div>`)
+			.join("");
+		return `<div class="opero-diff">${lines}</div>`;
+	}
+	if (payload.is_delete) {
+		const lines = (payload.diff || [])
+			.map((line) => `<div class="opero-diff__line is-del">- ${frappe.utils.escape_html(line)}</div>`)
+			.join("");
+		return `<div class="opero-diff">${lines}</div>`;
+	}
+	const lines = (payload.diff || []).filter((line) => !line.startsWith("---") && !line.startsWith("+++"));
+	if (!lines.length) {
+		return `<p class="text-muted">${frappe.utils.escape_html(payload.message || __("No differences."))}</p>`;
+	}
+	const rendered = lines
+		.map((line) => `<div class="opero-diff__line ${diffLineClass(line)}">${frappe.utils.escape_html(line)}</div>`)
+		.join("");
+	return `<div class="opero-diff">${rendered}</div>`;
+}
+
+function showContentDiff(path) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Pending change"),
+		fields: [{ fieldtype: "HTML", fieldname: "diff" }],
+	});
+	dialog.fields_dict.diff.$wrapper.html(`<p class="text-muted">${__("Loading...")}</p>`);
+	dialog.show();
+	frappe.call({
+		method: "opero.opero_site.publish.preview_content_diff",
+		args: { path },
+		callback(r) {
+			const payload = r.message || {};
+			dialog.set_title(payload.title || path);
+			dialog.fields_dict.diff.$wrapper.html(renderDiffHtml(payload));
+		},
+		error() {
+			dialog.fields_dict.diff.$wrapper.html(`<p class="text-danger">${__("Could not load the diff.")}</p>`);
+		},
+	});
 }
 
 function bindPendingPush(frm) {
@@ -161,16 +272,16 @@ function applyPendingQueue(frm) {
 function applyPendingFiles(frm, incoming) {
 	const byPath = {};
 	for (const row of frm._opero_pending_files || []) {
-		byPath[row.path] = row.action;
+		byPath[row.path] = row;
 	}
 	for (const row of incoming) {
 		if (row && row.path) {
-			byPath[row.path] = row.action;
+			byPath[row.path] = row;
 		}
 	}
 	const files = Object.keys(byPath)
 		.sort()
-		.map((path) => ({ path, action: byPath[path] }));
+		.map((path) => byPath[path]);
 	frm._opero_pending_files = files;
 	renderPending(frm.get_field("pending_html").$wrapper, { files });
 }

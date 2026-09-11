@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import re
 
 import frappe
@@ -56,6 +57,67 @@ def content_path_for(doc) -> str | None:
 	if doc.doctype == "Team Member":
 		return f"content/team/{slug}.md"
 	return None
+
+
+_FIXED_PATH_LABELS = {path: (doctype, "Site pages") for doctype, path in CONTENT_PATHS.items()}
+_CONTENT_PATH_GROUPS = (
+	("content/publications/", "Publication", "Publications", "title"),
+	("content/team/", "Team Member", "Team", "member_name"),
+	("content/enterprises/", "Enterprise", "Enterprises", None),
+)
+
+
+def _slug_from_path(path: str) -> str:
+	return path.rsplit("/", 1)[-1].removesuffix(".md")
+
+
+def _prettify_slug(slug: str) -> str:
+	return slug.replace("-", " ").replace("_", " ").strip().title()
+
+
+def _live_enterprise(slug: str) -> tuple[str, str] | None:
+	for row in frappe.get_all("Enterprise", fields=["name", "enterprise_name"]):
+		if enterprise_content_slug(row.enterprise_name) == slug:
+			return row.enterprise_name, row.name
+	return None
+
+
+def content_label_for(path: str) -> dict:
+	"""Human title, content-type group, and (when the doc still exists) its route."""
+	fixed = _FIXED_PATH_LABELS.get(path)
+	if fixed:
+		doctype, group = fixed
+		return {"title": doctype, "group": group, "doctype": doctype, "docname": None, "is_single": True}
+
+	for prefix, doctype, group, title_field in _CONTENT_PATH_GROUPS:
+		if not path.startswith(prefix):
+			continue
+		slug = _slug_from_path(path)
+		if doctype == "Enterprise":
+			found = _live_enterprise(slug)
+			title, docname = found if found else (None, None)
+		else:
+			title = frappe.db.get_value(doctype, slug, title_field)
+			docname = slug if title else None
+		return {
+			"title": title or _prettify_slug(slug),
+			"group": group,
+			"doctype": doctype if docname else None,
+			"docname": docname,
+			"is_single": False,
+		}
+
+	return {
+		"title": _prettify_slug(_slug_from_path(path)),
+		"group": "Other",
+		"doctype": None,
+		"docname": None,
+		"is_single": False,
+	}
+
+
+def _enrich_pending(rows: list[dict]) -> list[dict]:
+	return [{**row, **content_label_for(row["path"])} for row in rows]
 
 
 def _doc_is_ready(doc) -> bool:
@@ -176,7 +238,8 @@ def pending_from_status() -> list[dict]:
 def desk_pending_entries() -> list[dict]:
 	by_path = {row["path"]: row["action"] for row in pending_from_status()}
 	by_path.update(_pending_cache())
-	return [{"path": path, "action": action} for path, action in sorted(by_path.items())]
+	rows = [{"path": path, "action": action} for path, action in sorted(by_path.items())]
+	return _enrich_pending(rows)
 
 
 def queue_home_page_deploy(doc=None, method: str | None = None) -> None:
@@ -198,7 +261,7 @@ def notify_pending_website_changes(doc, method: str | None = None) -> None:
 	merge_pending_cache(files)
 	frappe.publish_realtime(
 		PENDING_EVENT,
-		{"files": files},
+		{"files": _enrich_pending(files)},
 		user=frappe.session.user,
 		after_commit=True,
 	)
@@ -320,10 +383,11 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 
 
 def pending_entries(files: list[tuple[str, str | None]]) -> list[dict]:
-	return [
+	rows = [
 		{"path": path, "action": "delete" if content is None else "update"}
 		for path, content in files
 	]
+	return _enrich_pending(rows)
 
 
 def record_deploy(commit_url: str, sha: str, files: list[tuple[str, str | None]]) -> None:
@@ -439,3 +503,42 @@ def deploy_to_website() -> dict:
 	settle_publish_statuses()
 	clear_pending_cache()
 	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}
+
+
+def content_diff(repo: ContentRepo, path: str) -> dict:
+	"""What one pending file will look like on the site, compared with what's live now."""
+	files = planned_content_changes(repo)
+	label = content_label_for(path)
+	match = next(((p, content) for p, content in files if p == path), None)
+	if not match:
+		return {"path": path, **label, "diff": [], "message": _("Nothing pending for {0}.").format(label["title"])}
+
+	_, planned_content = match
+	if planned_content is not None and not isinstance(planned_content, str):
+		return {"path": path, **label, "is_binary": True, "diff": []}
+
+	existing = repo.existing_files([path], repo.base_branch).get(path)
+	if planned_content is None:
+		return {"path": path, **label, "is_delete": True, "diff": (existing or "").splitlines()}
+	if existing is None:
+		return {"path": path, **label, "is_new": True, "diff": planned_content.splitlines()}
+
+	diff = list(
+		difflib.unified_diff(
+			existing.splitlines(),
+			planned_content.splitlines(),
+			fromfile="published",
+			tofile="pending",
+			lineterm="",
+		)
+	)
+	return {"path": path, **label, "diff": diff}
+
+
+@frappe.whitelist()
+def preview_content_diff(path: str) -> dict:
+	_require_deploy_permission()
+	try:
+		return content_diff(content_repo_from_conf(), path)
+	except GithubError as exc:
+		frappe.throw(str(exc))
