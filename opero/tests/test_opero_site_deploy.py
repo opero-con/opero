@@ -783,6 +783,36 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		files = planned_content_changes(_FakeContentRepo(blobs={repo_path: "deadbeef"}))
 		self.assertNotIn((repo_path, None), files)
 
+	def test_planned_changes_keeps_media_loaded_as_plain_reference(self):
+		"""Reproduces dfb3a26: load_from_website() sets Publication.cover (and
+		Team Member.portrait) to a plain /media/... string rather than
+		re-uploading it as a Desk file — that's the normal state for every
+		publication and team member after an ordinary load. A deploy must
+		still recognize that reference as wanted, not orphaned."""
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Honey Dipper",
+				"published_on": "2024-10-18",
+				"publication_type": "Case study",
+				"summary": "Waterless toilet testing.",
+				"cover": "/media/publications/honey-dipper.webp",
+				"status": "Published",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		repo_path = "media/publications/honey-dipper.webp"
+		files = planned_content_changes(_FakeContentRepo(blobs={repo_path: "deadbeef"}))
+		self.assertNotIn((repo_path, None), files)
+
+	def test_planned_changes_still_prunes_media_for_deleted_publication(self):
+		"""The fix must not defeat the original point of a865eb9: media for a
+		publication that no longer exists at all should still be pruned."""
+		files = planned_content_changes(
+			_FakeContentRepo(blobs={"media/publications/deleted-report.pdf": "deadbeef"})
+		)
+		self.assertIn(("media/publications/deleted-report.pdf", None), files)
+
 	def test_commit_files_sends_base64_for_binary(self):
 		calls = []
 
