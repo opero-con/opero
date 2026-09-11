@@ -10,7 +10,6 @@ from frappe import _
 from frappe.utils import add_days
 from frappe.utils import cint
 from frappe.utils import date_diff
-from frappe.utils import flt
 from frappe.utils import cstr
 from frappe.utils import get_datetime
 from frappe.utils import getdate
@@ -260,54 +259,6 @@ def get_todo_entities(rows: list) -> dict[str, str]:
 	}
 
 
-def get_completion_metrics(filters=None, default_days: int = 30) -> dict[str, float]:
-	from_date, to_date = get_reporting_window(filters, default_days=default_days)
-	closed_on_expr = _date_expr("custom_closed_on")
-	cancelled_on_expr = _date_expr("custom_cancelled_on")
-
-	rows = frappe.db.sql(
-		f"""
-			SELECT status, date, custom_closed_on, custom_cancelled_on
-			FROM `tabToDo`
-			WHERE date IS NOT NULL
-				AND (
-					(status = 'Closed' AND custom_closed_on IS NOT NULL
-						AND {closed_on_expr} BETWEEN %s AND %s)
-					OR
-					(status = 'Cancelled' AND custom_cancelled_on IS NOT NULL
-						AND {cancelled_on_expr} BETWEEN %s AND %s)
-				)
-		""",
-		[from_date, to_date, from_date, to_date],
-		as_dict=True,
-	)
-
-	total = 0
-	on_time = 0
-	delay_sum = 0.0
-
-	for row in rows:
-		due_date = _to_date(row.date)
-		completion_date = _get_completion_date(row)
-		if not due_date or not completion_date:
-			continue
-
-		total += 1
-		delay_days = date_diff(completion_date, due_date)
-		delay_sum += delay_days
-		if delay_days <= 0:
-			on_time += 1
-
-	return {
-		"from_date": from_date,
-		"to_date": to_date,
-		"total": total,
-		"on_time": on_time,
-		"on_time_rate": flt((on_time / total) * 100 if total else 0, 2),
-		"avg_delay": flt((delay_sum / total) if total else 0, 2),
-	}
-
-
 @frappe.whitelist()
 def update_todo_from_flow_hub(todo_name: str, values=None, expected_modified: str | None = None):
 	"""Update a live ToDo from Flow Hub after checking the row is still current."""
@@ -450,146 +401,6 @@ def _assert_flow_hub_todo_is_current(doc, expected_modified: str | None = None):
 
 	if doc.status not in ACTIVE_STATUSES:
 		frappe.throw(_("This ToDo is no longer active. Refresh Flow Hub."))
-
-
-@frappe.whitelist()
-def get_todo_on_time_close_rate(filters=None):
-	metrics = get_completion_metrics(filters=filters, default_days=30)
-	return {
-		"value": metrics["on_time_rate"],
-		"fieldtype": "Percent",
-		"route": ["query-report", "ToDo Explorer"],
-		"route_options": {
-			"status": ["Closed", "Cancelled"],
-			"from_date": str(metrics["from_date"]),
-			"to_date": str(metrics["to_date"]),
-		},
-	}
-
-
-@frappe.whitelist()
-def get_todo_avg_closure_delay(filters=None):
-	metrics = get_completion_metrics(filters=filters, default_days=30)
-	return {
-		"value": metrics["avg_delay"],
-		"fieldtype": "Float",
-		"route": ["query-report", "ToDo Explorer"],
-		"route_options": {
-			"status": ["Closed", "Cancelled"],
-			"from_date": str(metrics["from_date"]),
-			"to_date": str(metrics["to_date"]),
-		},
-	}
-
-
-@frappe.whitelist()
-def get_my_overdue_todos_count(filters=None):
-	today = getdate(nowdate())
-	value = _count_todos_for_user(
-		statuses=ACTIVE_STATUSES,
-		extra_conditions=["todo.date IS NOT NULL", "todo.date < %s"],
-		extra_params=[today],
-	)
-	return {
-		"value": value,
-		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Explorer"],
-		"route_options": {"status": list(ACTIVE_STATUSES), "show_only_overdue": 1},
-	}
-
-
-@frappe.whitelist()
-def get_my_todos_due_today_count(filters=None):
-	today = getdate(nowdate())
-	value = _count_todos_for_user(
-		statuses=ACTIVE_STATUSES,
-		extra_conditions=["todo.date = %s"],
-		extra_params=[today],
-	)
-	return {
-		"value": value,
-		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Explorer"],
-		"route_options": {
-			"status": list(ACTIVE_STATUSES),
-			"from_date": str(today),
-			"to_date": str(today),
-		},
-	}
-
-
-@frappe.whitelist()
-def get_my_in_progress_todos_count(filters=None):
-	value = _count_todos_for_user(statuses=["In Progress"])
-	return {
-		"value": value,
-		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Explorer"],
-		"route_options": {"status": ["In Progress"]},
-	}
-
-
-@frappe.whitelist()
-def get_todo_due_next_days_count(filters=None):
-	parsed = parse_filters(filters)
-	window_days = max(1, cint(parsed.get("window_days") or 3))
-	today = getdate(nowdate())
-	from_date = getdate(add_days(today, 1))
-	to_date = getdate(add_days(today, window_days))
-	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
-
-	count = frappe.db.sql(
-		f"""
-			SELECT COUNT(DISTINCT todo.name)
-				FROM `tabToDo` todo
-				WHERE todo.status IN ('Open', 'In Progress')
-					AND todo.date IS NOT NULL
-					AND todo.date BETWEEN %s AND %s
-					AND {user_scope_sql}
-			""",
-		[from_date, to_date, *user_scope_params],
-	)[0][0]
-
-	return {
-		"value": cint(count or 0),
-		"fieldtype": "Int",
-		"route": ["query-report", "ToDo Explorer"],
-		"route_options": {
-			"status": ["Open", "In Progress"],
-			"from_date": str(from_date),
-			"to_date": str(to_date),
-		},
-	}
-
-
-@frappe.whitelist()
-def get_todo_stale_in_progress_count(filters=None):
-	parsed = parse_filters(filters)
-	stale_days = max(1, cint(parsed.get("stale_days") or 7))
-	cutoff_date = getdate(add_days(nowdate(), -stale_days))
-	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
-	modified_expr = _date_expr("todo.modified")
-
-	count = frappe.db.sql(
-		f"""
-			SELECT COUNT(DISTINCT todo.name)
-			FROM `tabToDo` todo
-			WHERE todo.status = 'In Progress'
-				AND {modified_expr} <= %s
-				AND {user_scope_sql}
-		""",
-		[cutoff_date, *user_scope_params],
-	)[0][0]
-
-	return {
-		"value": cint(count or 0),
-		"fieldtype": "Int",
-		"route": ["query-report", "ToDo In Progress Aging"],
-		"route_options": {
-			"status": ["In Progress"],
-			"min_days": stale_days,
-		},
-	}
 
 
 @frappe.whitelist()
@@ -1323,41 +1134,6 @@ def _date_expr(fieldname: str) -> str:
 	if frappe.db.db_type == "postgres":
 		return f"CAST({fieldname} AS DATE)"
 	return f"DATE({fieldname})"
-
-
-def _count_todos_for_user(
-	statuses: list[str] | tuple[str, ...] | None = None,
-	extra_conditions: list[str] | None = None,
-	extra_params: list | None = None,
-) -> int:
-	conditions = []
-	params = []
-
-	if statuses:
-		placeholders = ", ".join(["%s"] * len(statuses))
-		conditions.append(f"todo.status IN ({placeholders})")
-		params.extend(statuses)
-
-	if extra_conditions:
-		conditions.extend(extra_conditions)
-		params.extend(extra_params or [])
-
-	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
-	conditions.append(user_scope_sql)
-	params.extend(user_scope_params)
-
-	if not conditions:
-		conditions.append("1 = 1")
-
-	count = frappe.db.sql(
-		f"""
-			SELECT COUNT(DISTINCT todo.name)
-			FROM `tabToDo` todo
-			WHERE {' AND '.join(conditions)}
-		""",
-		params,
-	)[0][0]
-	return cint(count or 0)
 
 
 def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
