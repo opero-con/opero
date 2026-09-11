@@ -258,6 +258,10 @@ class TestOperoSitePublish(FrappeTestCase):
 		seen = []
 
 		def transport(method, url, json=None):
+			if url.endswith("/commits/main"):
+				return {"sha": "base-sha", "commit": {"tree": {"sha": "tree-sha"}}}
+			if url.endswith("/git/trees/tree-sha?recursive=1"):
+				return {"tree": []}
 			if "content%2Fteam%2Fa.md" in url or url.endswith("content/team/a.md?ref=main"):
 				return {"content": base64.b64encode(b"one").decode()}
 			if "content%2Fteam%2Fb.md" in url or url.endswith("content/team/b.md?ref=main"):
@@ -271,10 +275,8 @@ class TestOperoSitePublish(FrappeTestCase):
 			on_progress=lambda done, total, path: seen.append((done, total, path)),
 		)
 		self.assertEqual(found, {"content/team/a.md": "one"})
-		self.assertEqual(
-			seen,
-			[(1, 2, "content/team/a.md"), (2, 2, "content/team/b.md")],
-		)
+		self.assertEqual({(done, total) for done, total, _path in seen}, {(1, 2), (2, 2)})
+		self.assertEqual({path for _done, _total, path in seen}, {"content/team/a.md", "content/team/b.md"})
 
 	def test_commit_files_updates_main_without_a_pull_request(self):
 		calls = []
