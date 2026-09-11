@@ -89,7 +89,6 @@ doctype_js = {
 	"Item": "public/js/custom/item.js",
 	"Leave Application": "public/js/custom/leave_application.js",
 	"Material Request": "public/js/custom/material_request.js",
-	"My ToDo": "public/js/custom/my_todo.js",
 	"Project": "public/js/custom/project.js",
 	"Project Budget": "public/js/custom/project_budget.js",
 	"Project Time Allocation": "public/js/custom/project_time_allocation.js",
