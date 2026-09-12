@@ -9,7 +9,7 @@ from frappe.utils.file_manager import save_file
 
 from opero.opero_site.body_html import body_sections_to_html, paragraphs_to_html
 from opero.opero_site.github import ContentRepo, GithubError
-from opero.opero_site.markdown import parse_frontmatter
+from opero.opero_site.markdown import parse_frontmatter, same_managed_content, to_markdown
 from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
 from opero.opero_site.publish_status import DRAFT, PUBLISHED, UNPUBLISHED
 from opero.opero_site.utils import (
@@ -286,17 +286,39 @@ def _enterprise_name_for_slug(slug: str) -> str | None:
 	return find_enterprise(slug)
 
 
+def matches_website(doc, path: str, text: str) -> bool:
+	return not doc.is_new() and same_managed_content(path, text, to_markdown(doc.to_site_frontmatter()))
+
+
+def _content_snapshot(value):
+	"""Compare section values without generated child-row bookkeeping."""
+	if isinstance(value, dict):
+		return {
+			key: _content_snapshot(item) for key, item in value.items()
+			if key not in {"name", "creation", "modified", "modified_by", "owner", "parent", "parenttype", "parentfield", "idx", "__islocal", "__unsaved"}
+		}
+	if isinstance(value, list):
+		return [_content_snapshot(item) for item in value]
+	return value
+
+
 def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[str, int]:
 	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0, "enterprises": 0}
+	previous_syncing = frappe.flags.opero_site_syncing
 	frappe.flags.opero_site_syncing = True
 	try:
 		for path, text in files.items():
 			if path == "content/settings/general.md":
 				doc = frappe.get_single("Site Settings")
+				if matches_website(doc, path, text):
+					continue
 				apply_settings(doc, parse_frontmatter(text))
 				doc.save(ignore_permissions=True)
 				counts["settings"] += 1
 			elif path == "content/homepage/home.md":
+				home = frappe.get_single("Home Page")
+				if matches_website(home, path, text):
+					continue
 				data = parse_frontmatter(text)
 				for section_doctype, apply_section in (
 					("Hero", apply_home_hero),
@@ -306,14 +328,18 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 					("Partners", apply_home_partners),
 				):
 					section_doc = frappe.get_single(section_doctype)
+					before = _content_snapshot(section_doc.as_dict())
 					apply_section(section_doc, data)
-					section_doc.save(ignore_permissions=True)
+					if before != _content_snapshot(section_doc.as_dict()):
+						section_doc.save(ignore_permissions=True)
 				home = frappe.get_single("Home Page")
 				home.status = PUBLISHED
 				home.save(ignore_permissions=True)
 				counts["home"] += 1
 			elif path == "content/privacy/privacy.md":
 				doc = frappe.get_single("Privacy policy")
+				if matches_website(doc, path, text):
+					continue
 				apply_privacy(doc, parse_frontmatter(text))
 				doc.save(ignore_permissions=True)
 				counts["privacy"] += 1
@@ -323,6 +349,8 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 					doc = frappe.get_doc("Publication", slug)
 				else:
 					doc = frappe.new_doc("Publication")
+				if matches_website(doc, path, text):
+					continue
 				apply_publication(doc, parse_frontmatter(text), slug)
 				doc.save(ignore_permissions=True)
 				counts["publications"] += 1
@@ -338,6 +366,8 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 							_text(data.get("name")) or slug
 						)
 					)
+				if matches_website(doc, path, text):
+					continue
 				apply_employee_profile(doc, data, slug)
 				doc.save(ignore_permissions=True)
 				counts["team"] += 1
@@ -349,6 +379,8 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 					doc = frappe.get_doc("Enterprise", name)
 				else:
 					doc = frappe.new_doc("Enterprise")
+				if matches_website(doc, path, text):
+					continue
 				apply_enterprise(doc, data, slug)
 				if doc.is_new():
 					doc.insert(ignore_permissions=True)
@@ -358,8 +390,9 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 					doc.save(ignore_permissions=True)
 				counts["enterprises"] += 1
 	finally:
-		frappe.flags.opero_site_syncing = False
-		clear_pending_cache()
+		frappe.flags.opero_site_syncing = previous_syncing
+		if sum(counts.values()):
+			clear_pending_cache()
 	return counts
 
 
@@ -377,5 +410,5 @@ def load_from_website() -> dict:
 	total = sum(counts.values())
 	return {
 		"counts": counts,
-		"message": _("Loaded {0} content files from the public site repository.").format(total),
+		"message": _("Loaded {0} changed content files from the public site repository. Unchanged content was skipped.").format(total),
 	}

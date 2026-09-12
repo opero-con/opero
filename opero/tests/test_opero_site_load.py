@@ -1,11 +1,13 @@
 """Load opero-content Markdown into Opero Site DocTypes."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.load import load_files, slug_from_path
-from opero.opero_site.markdown import parse_frontmatter, to_markdown
+from opero.opero_site.markdown import canonical_frontmatter, parse_frontmatter, to_markdown
 from opero.tests.website_employee import clear_website_test_employees, make_website_employee
 
 SETTINGS_MD = """---
@@ -139,7 +141,34 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 
 class TestOperoSiteLoad(FrappeTestCase):
+	def test_reloading_identical_content_skips_all_saves(self):
+		make_website_employee("Anita Onyango", show_on_website=0)
+		files = {
+			"content/settings/general.md": SETTINGS_MD,
+			"content/homepage/home.md": HOME_MD,
+			"content/privacy/privacy.md": PRIVACY_MD,
+			"content/publications/january-2025-update.md": PUBLICATION_MD,
+			"content/team/anita-onyango.md": TEAM_MD,
+		}
+		load_files(files)
+		publication = frappe.get_doc("Publication", "january-2025-update")
+		self.assertEqual(
+			canonical_frontmatter("content/publications/january-2025-update.md", parse_frontmatter(PUBLICATION_MD)),
+			canonical_frontmatter("content/publications/january-2025-update.md", publication.to_site_frontmatter()),
+		)
+		with patch("frappe.model.document.Document.save", side_effect=AssertionError("unexpected save")):
+			self.assertEqual(sum(load_files(files).values()), 0)
+
+	def test_load_only_updates_changed_employee_profile(self):
+		doc = make_website_employee("Anita Onyango", show_on_website=0)
+		path = "content/team/anita-onyango.md"
+		load_files({path: TEAM_MD})
+		self.assertEqual(load_files({path: TEAM_MD.replace("Communications", "Director")})["team"], 1)
+		doc.reload()
+		self.assertEqual(doc.role, "Director")
+
 	def setUp(self):
+		frappe.db.delete("Topic", {"parenttype": "Publication"})
 		frappe.db.delete("Publication")
 		clear_website_test_employees()
 		frappe.db.delete("Enterprise")
