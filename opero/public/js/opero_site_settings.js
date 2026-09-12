@@ -4,21 +4,21 @@ frappe.ui.form.on("Site Settings", {
 			return;
 		}
 		frm.add_custom_button(
-			__("Load from website content"),
+			__("Import website content"),
 			() => {
 				frappe.confirm(
 					__(
-						"Replace Opero Site records with Markdown from the public content repository? Extra team members on this site are kept."
+						"Import changed website content from the public repository? This overwrites corresponding local website fields. Extra personnel on this site are kept."
 					),
 					() => {
 						frappe.call({
 							method: "opero.opero_site.load.load_from_website",
 							freeze: true,
-							freeze_message: __("Loading content from GitHub..."),
+							freeze_message: __("Importing website content..."),
 							callback(r) {
 								const payload = r.message || {};
 								frm.reload_doc();
-								frappe.msgprint(payload.message || __("Content loaded."));
+								frappe.msgprint(payload.message || __("Website content imported."));
 							},
 						});
 					}
