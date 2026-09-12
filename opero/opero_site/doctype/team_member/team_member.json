@@ -72,7 +72,6 @@
   },
   {
    "default": "0",
-   "description": "Takes effect on the next Publish to website.",
    "fieldname": "show_on_website",
    "fieldtype": "Check",
    "label": "Show on website"

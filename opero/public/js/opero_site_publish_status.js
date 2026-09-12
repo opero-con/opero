@@ -56,6 +56,7 @@ function bindPublishStatus(doctype) {
 			if (INDICATOR_SITE_DOCTYPES.includes(doctype)) {
 				setPublishStatusPill(frm);
 			}
+			setDeployRibbon(frm);
 		},
 	};
 	if (OPTIONAL_SITE_DOCTYPES.includes(doctype)) {
@@ -71,6 +72,7 @@ function bindPublishStatus(doctype) {
 			if (INDICATOR_SITE_DOCTYPES.includes(doctype)) {
 				setPublishStatusPill(frm);
 			}
+			setDeployRibbon(frm);
 		};
 	}
 	frappe.ui.form.on(doctype, handlers);
@@ -97,29 +99,27 @@ function setPublishStatusPill(frm) {
 	if (indicator) {
 		frm.page.set_indicator(indicator[0], indicator[1]);
 	}
-	if (frm.doctype === "Publication") {
-		setPublicationDeployRibbon(frm);
-	}
 }
 
-function setPublicationDeployRibbon(frm) {
+function setDeployRibbon(frm) {
 	if (!frm.layout) {
 		return;
 	}
 	frm.layout.show_message();
-	if (frm.doc.status !== "To deploy" && frm.doc.status !== "To unpublish") {
+	const status = frm.doc[publishStatusField(frm.doctype)];
+	if (status !== "To deploy" && status !== "To unpublish") {
 		return;
 	}
 	const link = frappe.utils.get_form_link(
 		"Deploy Center",
 		"Deploy Center",
 		true,
-		__("Deploy to website")
+		__("Deploy Center")
 	);
-	const queued_off = frm.doc.status === "To unpublish";
+	const queued_off = status === "To unpublish";
 	const text = queued_off
-		? __("This publication is queued to come off the website. {0}", [link])
-		: __("This publication is queued for the next website deploy. {0}", [link]);
+		? __("This {0} is queued to come off the website. {1}", [__(frm.doctype), link])
+		: __("This {0} is queued for the next website deploy. {1}", [__(frm.doctype), link]);
 	frm.layout.show_message(`<span>${text}</span>`, queued_off ? "red" : "blue", true);
 }
 
