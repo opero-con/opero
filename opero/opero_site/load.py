@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import quote
+
+import requests
 
 import frappe
 from frappe import _
@@ -281,11 +284,21 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 	if repo and legacy_portrait:
 		site_repo = ContentRepo(repo.token, "opero-con/opero-site", repo.base_branch)
 		blob = site_repo.get_bytes(f"public/{repo_path}", site_repo.base_branch)
+		if not blob and repo_path == f"team/{filename}":
+			# The content token need not have access to the separate site repository.
+			# Fetch only a flat portrait path from the known public site, without credentials.
+			response = requests.get(
+				f"https://opero-services.com/team/{quote(filename, safe='')}",
+				timeout=30,
+				allow_redirects=False,
+			)
+			if response.status_code == 200 and response.headers.get("Content-Type", "").startswith("image/"):
+				blob = response.content
 	else:
 		blob = repo.get_bytes(repo_path, repo.base_branch) if repo else None
 	if not blob:
 		if repo and field == "portrait":
-			frappe.throw(_("Website portrait file is missing from the content repository: {0}").format(repo_path))
+			frappe.throw(_("Website portrait could not be imported from its repository or website: {0}").format(repo_path))
 		doc.set(field, f"/{repo_path}")
 		return previous != _text(doc.get(field))
 

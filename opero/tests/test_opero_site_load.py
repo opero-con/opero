@@ -141,6 +141,27 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 
 class TestOperoSiteLoad(FrappeTestCase):
+	def test_legacy_portrait_falls_back_to_public_website(self):
+		import base64
+		doc = make_website_employee("Aggrey Ochieng", show_on_website=0)
+		text = TEAM_MD.replace("Anita Onyango", "Aggrey Ochieng").replace("/media/team/anita.jpg", "/team/aggrey-ochieng.jpg")
+		path = "content/team/aggrey-ochieng.md"
+		load_files({path: text})
+		repo = MagicMock(token="test-token", base_branch="main")
+		site_repo = MagicMock()
+		site_repo.get_bytes.return_value = None
+		response = MagicMock(status_code=200, headers={"Content-Type": "image/jpeg"})
+		response.content = base64.b64decode(
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII="
+		)
+		with patch("opero.opero_site.load.ContentRepo", return_value=site_repo), patch("opero.opero_site.load.requests.get", return_value=response) as fetch:
+			self.assertEqual(load_files({path: text}, repo=repo)["team"], 1)
+			fetch.assert_called_once_with("https://opero-services.com/team/aggrey-ochieng.jpg", timeout=30, allow_redirects=False)
+			doc.reload()
+			self.assertTrue(doc.portrait.startswith("/files/"))
+			self.assertEqual(sum(load_files({path: text}, repo=repo).values()), 0)
+			self.assertEqual(fetch.call_count, 1)
+
 	def test_legacy_team_portrait_imports_from_site_repository(self):
 		import base64
 		doc = make_website_employee("Wycliffe Odongo", show_on_website=0)
