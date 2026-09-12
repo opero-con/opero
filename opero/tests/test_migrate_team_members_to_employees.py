@@ -15,6 +15,26 @@ from opero.patches.v0_4.migrate_team_members_to_employees import (
 
 class TestMigrateTeamMembersToEmployees(FrappeTestCase):
 	@patch("opero.patches.v0_4.migrate_team_members_to_employees.frappe.get_all")
+	@patch("opero.patches.v0_4.migrate_team_members_to_employees.frappe.db.exists")
+	def test_confirmed_employee_id_takes_precedence_over_name(self, exists, get_all):
+		exists.return_value = True
+		get_all.return_value = [SimpleNamespace(name="edwin-mariita", member_name="Edwin Mariita")]
+
+		self.assertEqual(get_employee_matches(), [("edwin-mariita", "OSL_EMP_002")])
+		get_all.assert_called_once_with("Team Member", fields=["name", "member_name"])
+
+	@patch("opero.patches.v0_4.migrate_team_members_to_employees.frappe.get_all")
+	@patch("opero.patches.v0_4.migrate_team_members_to_employees.frappe.db.exists")
+	def test_preflight_rejects_missing_confirmed_employee_id(self, exists, get_all):
+		exists.return_value = False
+		get_all.return_value = [SimpleNamespace(name="pato", member_name="Pato")]
+
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "mapped Employee 'OSL_CON_012' for 'Pato' does not exist"
+		):
+			get_employee_matches()
+
+	@patch("opero.patches.v0_4.migrate_team_members_to_employees.frappe.get_all")
 	def test_preflight_rejects_missing_employee(self, get_all):
 		get_all.side_effect = [[SimpleNamespace(name="TM-1", member_name="Missing Person")], []]
 		with self.assertRaisesRegex(frappe.ValidationError, "no Employee matches 'Missing Person'"):

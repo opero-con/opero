@@ -8,6 +8,17 @@ FIELDS = (
 	"linkedin",
 )
 
+# Production Team Member labels are not all identical to Employee names. These
+# IDs were confirmed by the site administrator and are the authoritative links.
+EMPLOYEE_BY_TEAM_MEMBER = {
+	"Edwin Mariita": "OSL_EMP_002",
+	"Victoria Aluko": "OSL_EMP_009",
+	"Collins Oluoch": "OSL_CON_014",
+	"Olivia Kyule": "OSL_CON_008",
+	"Wycliffe Odongo": "OSL_CON_002",
+	"Pato": "OSL_CON_012",
+}
+
 
 def execute():
 	if not frappe.db.exists("DocType", "Team Member"):
@@ -30,6 +41,15 @@ def get_employee_matches():
 	matches = []
 	issues = []
 	for row in frappe.get_all("Team Member", fields=["name", "member_name"]):
+		mapped_employee = EMPLOYEE_BY_TEAM_MEMBER.get(row.member_name)
+		if mapped_employee:
+			if not frappe.db.exists("Employee", mapped_employee):
+				issues.append(
+					f"mapped Employee '{mapped_employee}' for '{row.member_name}' does not exist"
+				)
+				continue
+			matches.append((row.name, mapped_employee))
+			continue
 		employees = frappe.get_all("Employee", filters={"employee_name": row.member_name}, pluck="name")
 		if not employees:
 			issues.append(f"no Employee matches '{row.member_name}'")
