@@ -73,8 +73,8 @@
    "is_query_report": 0,
    "label": "Team",
    "link_count": 0,
-   "link_to": "Employee",
-   "link_type": "DocType",
+   "link_to": "website-team",
+   "link_type": "Page",
    "onboard": 1,
    "type": "Link"
   },
@@ -147,7 +147,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-10 12:56:10.224193",
+ "modified": "2026-09-13 00:04:16.917945",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Opero Website",
@@ -168,11 +168,11 @@
  "sequence_id": 15.0,
  "shortcuts": [
   {
-   "doc_view": "List",
+   "doc_view": "",
    "label": "Team",
-   "link_to": "Employee",
-   "stats_filter": "{\"show_on_website\":1}",
-   "type": "DocType"
+   "link_to": "website-team",
+   "stats_filter": "",
+   "type": "Page"
   },
   {
    "label": "Enterprises",

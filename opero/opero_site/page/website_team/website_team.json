@@ -1,0 +1,9 @@
+{
+ "doctype": "Page",
+ "module": "Opero Site",
+ "name": "website-team",
+ "page_name": "website-team",
+ "standard": "Yes",
+ "title": "Website Team",
+ "roles": [{"role": "System Manager"}, {"role": "Website Manager"}]
+}
