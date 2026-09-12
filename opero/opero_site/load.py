@@ -255,7 +255,8 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		return previous != logo_path
 
 	repo_path = logo_path[1:] if logo_path.startswith("/") else logo_path
-	if not repo_path.startswith("media/"):
+	legacy_portrait = field == "portrait" and repo_path.startswith("team/")
+	if not repo_path.startswith("media/") and not legacy_portrait:
 		doc.set(field, logo_path)
 		return previous != _text(doc.get(field))
 
@@ -277,7 +278,11 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		doc.set(field, existing)
 		return previous != existing
 
-	blob = repo.get_bytes(repo_path, repo.base_branch) if repo else None
+	if repo and legacy_portrait:
+		site_repo = ContentRepo(repo.token, "opero-con/opero-site", repo.base_branch)
+		blob = site_repo.get_bytes(f"public/{repo_path}", site_repo.base_branch)
+	else:
+		blob = repo.get_bytes(repo_path, repo.base_branch) if repo else None
 	if not blob:
 		if repo and field == "portrait":
 			frappe.throw(_("Website portrait file is missing from the content repository: {0}").format(repo_path))
@@ -302,7 +307,7 @@ def matches_website(doc, path: str, text: str) -> bool:
 	planned = doc.to_site_frontmatter()
 	if doc.doctype == "Employee":
 		incoming_image = _text(parse_frontmatter(text).get("image"))
-		if incoming_image.lstrip("/").startswith("media/") and frappe.db.exists(
+		if incoming_image.lstrip("/").startswith(("media/", "team/")) and frappe.db.exists(
 			"File", {"attached_to_doctype": doc.doctype, "attached_to_name": doc.name,
 			"file_name": os.path.basename(incoming_image), "file_url": planned.get("image")}
 		):
