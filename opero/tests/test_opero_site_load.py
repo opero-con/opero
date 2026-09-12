@@ -141,6 +141,26 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 
 class TestOperoSiteLoad(FrappeTestCase):
+	def test_legacy_team_portrait_imports_from_site_repository(self):
+		import base64
+		doc = make_website_employee("Wycliffe Odongo", show_on_website=0)
+		path = "content/team/wycliffe-odongo.md"
+		text = TEAM_MD.replace("Anita Onyango", "Wycliffe Odongo").replace("/media/team/anita.jpg", "/team/wycliffe-odongo.jpg")
+		load_files({path: text})
+		repo = MagicMock(token="test-token", base_branch="main")
+		site_repo = MagicMock(base_branch="main")
+		site_repo.get_bytes.return_value = base64.b64decode(
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII="
+		)
+		with patch("opero.opero_site.load.ContentRepo", return_value=site_repo) as factory:
+			self.assertEqual(load_files({path: text}, repo=repo)["team"], 1)
+			factory.assert_called_once_with("test-token", "opero-con/opero-site", "main")
+		site_repo.get_bytes.assert_called_once_with("public/team/wycliffe-odongo.jpg", "main")
+		doc.reload()
+		self.assertTrue(doc.portrait.startswith("/files/"))
+		with patch("frappe.model.document.Document.save", side_effect=AssertionError("unexpected save")):
+			self.assertEqual(sum(load_files({path: text}, repo=repo).values()), 0)
+
 	def test_import_repairs_repository_portrait_and_skips_repeat(self):
 		import base64
 		doc = make_website_employee("Anita Onyango", show_on_website=0)
