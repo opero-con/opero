@@ -213,6 +213,7 @@ has_permission = {
 }
 
 override_doctype_class = {
+	"Employee": "opero.opero_site.employee.Employee",
 	"Email Group": "opero.mailing.overrides.MailingList",
 	"Email Group Member": "opero.mailing.overrides.MailingListMember",
 	"Newsletter": "opero.mailing.overrides.MailingNewsletter",
@@ -273,7 +274,7 @@ doc_events = {
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
 	},
-	"Team Member": {
+	"Employee": {
 		"after_insert": "opero.opero_site.publish.notify_pending_website_changes",
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",

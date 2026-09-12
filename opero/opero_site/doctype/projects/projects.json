@@ -12,7 +12,7 @@
  ],
  "fields": [
   {
-   "description": "Team members are Team Member records, not this form.",
+   "description": "Website team profiles are maintained on Employee records, not this form.",
    "fieldname": "projects",
    "fieldtype": "Table",
    "label": "Projects",

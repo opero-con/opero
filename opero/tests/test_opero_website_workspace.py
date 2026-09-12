@@ -48,7 +48,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Impacts": "Impacts",
 				"Our Work": "Our Work",
 				"Partners": "Partners",
-				"Team": "Team Member",
+				"Team": "Employee",
 				"Enterprises": "Enterprise",
 				"Publications": "Publication",
 				"Privacy policy": "Privacy policy",
@@ -70,12 +70,16 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			},
 		)
 		enquiries = next(row for row in doc.shortcuts if row.label == "Website Enquiries")
+		team = next(row for row in doc.shortcuts if row.label == "Team")
 		enterprises = next(row for row in doc.links if row.label == "Enterprises")
 		self.assertEqual(enterprises.link_type, "DocType")
 		self.assertEqual(enterprises.link_to, "Enterprise")
 		self.assertEqual(enquiries.link_to, "Communication")
 		self.assertEqual(enquiries.doc_view, "List")
 		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
+		self.assertEqual(team.link_to, "Employee")
+		self.assertEqual(team.doc_view, "List")
+		self.assertEqual(team.stats_filter, '{"show_on_website":1}')
 		self.assertEqual(
 			{row.role for row in doc.roles},
 			{"System Manager", "Website Manager"},
@@ -89,7 +93,6 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			"Impacts",
 			"Our Work",
 			"Partners",
-			"Team Member",
 			"Enterprise",
 			"Publication",
 			"Privacy policy",
@@ -103,11 +106,18 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			self.assertIn("System Manager", roles, doctype)
 			self.assertIn("Website Manager", roles, doctype)
 
+		personnel_roles = {
+			row.role for row in frappe.get_meta("Employee").permissions if row.read
+		}
+		self.assertIn("HR User", personnel_roles)
+		self.assertNotIn("Website Manager", personnel_roles)
+
 	def test_always_on_site_singles_have_no_show_on_website(self):
 		for doctype in ("Home Page", "Privacy policy", "Site Settings"):
 			self.assertFalse(frappe.get_meta(doctype).has_field("show_on_website"), doctype)
 		self.assertTrue(frappe.get_meta("Publication").has_field("show_on_website"))
-		self.assertTrue(frappe.get_meta("Team Member").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Employee").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Employee").has_field("website_status"))
 		self.assertTrue(frappe.get_meta("Enterprise").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Partner").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Enterprise").has_field("website_status"))

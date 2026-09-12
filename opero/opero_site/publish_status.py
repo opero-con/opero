@@ -16,6 +16,7 @@ ALWAYS_ON_SITE = frozenset({"Home Page", "Our Work", "Privacy policy", "Site Set
 # CRM Enterprise keeps `status` for Identified/Onboarded/...; publish sync uses website_status.
 PUBLISH_STATUS_FIELD = {
 	"Enterprise": "website_status",
+	"Employee": "website_status",
 }
 
 

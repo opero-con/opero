@@ -25,6 +25,7 @@ from opero.opero_site.publish import (
 	settle_publish_statuses,
 )
 from opero.tests.test_opero_site_load import HOME_MD, PRIVACY_MD, SETTINGS_MD, TEAM_MD
+from opero.tests.website_employee import clear_website_test_employees, make_website_employee
 
 HOME_WITH_TEAM_AND_PARTNERS = """---
 hero:
@@ -86,7 +87,10 @@ body:
 class TestOperoSitePublish(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
-		frappe.db.delete("Team Member")
+		clear_website_test_employees()
+		frappe.db.set_value(
+			"Employee", {"slug": ["is", "set"]}, {"show_on_website": 0, "website_status": "Draft"}
+		)
 		frappe.db.delete("Enterprise")
 		clear_pending_cache()
 		for name in ("Home Page", "Privacy policy", "Site Settings"):
@@ -219,6 +223,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		)
 
 	def test_changed_files_skips_load_backup_noise(self):
+		make_website_employee("Anita Onyango", show_on_website=0)
 		github = {
 			"content/settings/general.md": SETTINGS_MD,
 			"content/homepage/home.md": HOME_WITH_TEAM_AND_PARTNERS,
@@ -262,15 +267,7 @@ class TestOperoSitePublish(FrappeTestCase):
 			}
 		)
 		settings.save(ignore_permissions=True)
-		frappe.get_doc(
-			{
-				"doctype": "Team Member",
-				"member_name": "Anita Onyango",
-				"role": "Communications",
-				"show_on_website": 1,
-				"sort_order": 10,
-			}
-		).insert(ignore_permissions=True)
+		make_website_employee("Anita Onyango", role="Communications")
 		paths = [path for path, _content in collect_content_files()]
 		self.assertIn("content/settings/general.md", paths)
 		self.assertIn("content/team/anita-onyango.md", paths)
@@ -482,22 +479,16 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertNotIn(path, dict(files))
 		self.assertNotIn(path, keep)
 
-	def test_unpublished_team_member_is_written_inactive(self):
-		doc = frappe.get_doc(
-			{
-				"doctype": "Team Member",
-				"member_name": "Hidden Editor",
-				"role": "Editor",
-				"show_on_website": 1,
-				"sort_order": 40,
-			}
-		).insert(ignore_permissions=True)
+	def test_unpublished_employee_is_written_inactive(self):
+		doc = make_website_employee("Hidden Editor", role="Editor", sort_order=40)
 		settle_publish_statuses()
 		doc.reload()
-		self.assertEqual(doc.status, "Published")
+		self.assertEqual(doc.status, "Active")
+		self.assertEqual(doc.website_status, "Published")
 		doc.show_on_website = 0
 		doc.save(ignore_permissions=True)
-		self.assertEqual(doc.status, "To unpublish")
+		self.assertEqual(doc.status, "Active")
+		self.assertEqual(doc.website_status, "To unpublish")
 		files, _keep = collect_content_plan()
 		path = "content/team/hidden-editor.md"
 		self.assertIn(path, dict(files))
@@ -565,7 +556,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		for doctype in ("Home Page", "Privacy policy", "Site Settings"):
 			self.assertFalse(frappe.get_meta(doctype).has_field("show_on_website"), doctype)
 		self.assertTrue(frappe.get_meta("Publication").has_field("show_on_website"))
-		self.assertTrue(frappe.get_meta("Team Member").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Employee").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Enterprise").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Partner").has_field("show_on_website"))
 
@@ -748,7 +739,7 @@ class _FakeContentRepo:
 class TestOperoSitePublishMedia(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
-		frappe.db.delete("Team Member")
+		clear_website_test_employees()
 		frappe.db.delete("Enterprise")
 		load_files(
 			{
@@ -916,7 +907,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 	def test_planned_changes_keeps_media_loaded_as_plain_reference(self):
 		"""Reproduces dfb3a26: load_from_website() sets Publication.cover (and
-		Team Member.portrait) to a plain /media/... string rather than
+		Employee.portrait) to a plain /media/... string rather than
 		re-uploading it as a Desk file — that's the normal state for every
 		publication and team member after an ordinary load. A deploy must
 		still recognize that reference as wanted, not orphaned."""

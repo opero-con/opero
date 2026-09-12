@@ -4,7 +4,7 @@ import os
 
 import frappe
 from frappe import _
-from frappe.utils import cint, cstr, flt, getdate
+from frappe.utils import cint, cstr, getdate
 from frappe.utils.file_manager import save_file
 
 from opero.opero_site.body_html import body_sections_to_html, paragraphs_to_html
@@ -173,26 +173,37 @@ def apply_publication(doc, data: dict, slug: str):
 	doc.body = body_sections_to_html(data.get("body"))
 
 
-def apply_team_member(doc, data: dict, slug: str):
+def apply_employee_profile(doc, data: dict, slug: str):
 	active = data.get("active")
-	doc.member_name = _text(data.get("name"))
 	doc.role = _text(data.get("role"))
 	doc.slug = slug
 	doc.sort_order = cint(data.get("order"))
 	if active is False:
-		doc.status = UNPUBLISHED
+		doc.website_status = UNPUBLISHED
 		doc.show_on_website = 0
 	else:
-		doc.status = PUBLISHED
+		doc.website_status = PUBLISHED
 		doc.show_on_website = 1
 	doc.portrait = _text(data.get("image"))
-	doc.portrait_alt = _text(data.get("imageAlt"))
-	doc.portrait_position = _text(data.get("imagePosition"))
-	doc.portrait_scale = flt(data.get("imageScale")) if data.get("imageScale") not in (None, "") else None
-	doc.portrait_hover_scale = (
-		flt(data.get("imageHoverScale")) if data.get("imageHoverScale") not in (None, "") else None
-	)
+	doc.use_employee_image = 0
 	doc.linkedin = _text(data.get("linkedin"))
+
+
+def find_employee(slug: str, display_name: str = "") -> str | None:
+	"""Match website team content to one existing Employee without changing HR identity."""
+	by_slug = frappe.get_all("Employee", filters={"slug": slug}, pluck="name")
+	if len(by_slug) > 1:
+		frappe.throw(_("Multiple Employees use website slug '{0}'.").format(slug))
+	if by_slug:
+		return by_slug[0]
+
+	name = _text(display_name)
+	if not name:
+		return None
+	by_name = frappe.get_all("Employee", filters={"employee_name": name}, pluck="name")
+	if len(by_name) > 1:
+		frappe.throw(_("Multiple Employees are named '{0}'. Resolve the duplicate before loading website content.").format(name))
+	return by_name[0] if by_name else None
 
 
 def apply_enterprise(doc, data: dict, slug: str):
@@ -317,11 +328,17 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 				counts["publications"] += 1
 			elif path.startswith("content/team/") and path.endswith(".md"):
 				slug = slug_from_path(path)
-				if frappe.db.exists("Team Member", slug):
-					doc = frappe.get_doc("Team Member", slug)
+				data = parse_frontmatter(text)
+				name = find_employee(slug, _text(data.get("name")))
+				if name:
+					doc = frappe.get_doc("Employee", name)
 				else:
-					doc = frappe.new_doc("Team Member")
-				apply_team_member(doc, parse_frontmatter(text), slug)
+					frappe.throw(
+						_("No Employee matches website team member '{0}'. Create the Employee before loading website content.").format(
+							_text(data.get("name")) or slug
+						)
+					)
+				apply_employee_profile(doc, data, slug)
 				doc.save(ignore_permissions=True)
 				counts["team"] += 1
 			elif path.startswith("content/enterprises/") and path.endswith(".md"):

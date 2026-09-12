@@ -6,6 +6,7 @@ from frappe.tests.utils import FrappeTestCase
 from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.load import load_files, slug_from_path
 from opero.opero_site.markdown import parse_frontmatter, to_markdown
+from opero.tests.website_employee import clear_website_test_employees, make_website_employee
 
 SETTINGS_MD = """---
 organizationName: Opero Services Ltd
@@ -140,7 +141,7 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 class TestOperoSiteLoad(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
-		frappe.db.delete("Team Member")
+		clear_website_test_employees()
 		frappe.db.delete("Enterprise")
 
 	def test_parse_frontmatter_and_slug_from_path(self):
@@ -150,6 +151,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 			parse_frontmatter("no frontmatter here")
 
 	def test_load_maps_content_files_and_ignores_home_team(self):
+		member = make_website_employee("Anita Onyango", show_on_website=0)
 		counts = load_files(
 			{
 				"content/settings/general.md": SETTINGS_MD,
@@ -203,7 +205,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 			frappe.get_single("Our Work").page_conclusion,
 			"Our work is grounded in real operating conditions.",
 		)
-		self.assertEqual(len(frappe.get_all("Team Member")), 1)
+		self.assertEqual(frappe.db.count("Employee", {"name": member.name}), 1)
 
 		privacy = frappe.get_single("Privacy policy")
 		self.assertEqual(str(privacy.last_reviewed), "2026-07-23")
@@ -232,11 +234,12 @@ class TestOperoSiteLoad(FrappeTestCase):
 			],
 		)
 
-		member = frappe.get_doc("Team Member", "anita-onyango")
-		self.assertEqual(member.member_name, "Anita Onyango")
+		member.reload()
+		self.assertEqual(member.employee_name, "Anita Onyango")
 		self.assertEqual(member.portrait, "/media/team/anita.jpg")
 		self.assertEqual(member.sort_order, 10)
-		self.assertEqual(member.status, "Published")
+		self.assertEqual(member.status, "Active")
+		self.assertEqual(member.website_status, "Published")
 		self.assertTrue(member.show_on_website)
 		self.assertEqual(publication.status, "Published")
 		self.assertTrue(publication.show_on_website)
@@ -254,18 +257,12 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(doc.page_url, "/pupu-pump.html")
 		self.assertEqual(doc.to_site_frontmatter()["pageUrl"], "/pupu-pump.html")
 
-	def test_load_keeps_extra_local_team_members(self):
-		frappe.get_doc(
-			{
-				"doctype": "Team Member",
-				"member_name": "Local Only",
-				"role": "Editor",
-				"status": "Draft",
-			}
-		).insert(ignore_permissions=True)
+	def test_load_keeps_extra_local_employees(self):
+		local = make_website_employee("Local Only", role="Editor", show_on_website=0)
+		remote = make_website_employee("Anita Onyango", show_on_website=0)
 		load_files({"content/team/anita-onyango.md": TEAM_MD})
-		names = set(frappe.get_all("Team Member", pluck="name"))
-		self.assertEqual(names, {"local-only", "anita-onyango"})
+		self.assertTrue(frappe.db.exists("Employee", local.name))
+		self.assertTrue(frappe.db.exists("Employee", remote.name))
 
 	def test_load_roundtrip_matches_settings_frontmatter(self):
 		load_files({"content/settings/general.md": SETTINGS_MD})
@@ -330,7 +327,8 @@ draft: true
 		self.assertEqual(doc.status, "Draft")
 		self.assertFalse(doc.show_on_website)
 
-	def test_load_inactive_team_member_is_unpublished(self):
+	def test_load_inactive_employee_is_unpublished(self):
+		doc = make_website_employee("Hidden Person", show_on_website=0)
 		load_files(
 			{
 				"content/team/hidden-person.md": """---
@@ -342,8 +340,9 @@ active: false
 """
 			}
 		)
-		doc = frappe.get_doc("Team Member", "hidden-person")
-		self.assertEqual(doc.status, "Unpublished")
+		doc.reload()
+		self.assertEqual(doc.status, "Active")
+		self.assertEqual(doc.website_status, "Unpublished")
 		self.assertFalse(doc.show_on_website)
 
 	def test_load_enterprise_matches_existing_by_name_and_attaches_logo(self):

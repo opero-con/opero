@@ -8,7 +8,7 @@
 
 Show on website was added to every Opero Site DocType so Cubenet could queue
 publish and unpublish without editing the hidden Status field. That control
-belongs on optional records: Publication, Team Member, and Home Page partner
+belongs on optional records: Publication, Employee website profiles, and Home Page partner
 rows.
 
 Home Page, Privacy policy, and Site Settings are the public site itself. Unchecking
@@ -26,7 +26,7 @@ Deploy to website keep writing their Markdown whenever the record has the requir
 copy. After a successful deploy (or an up-to-date check), settle moves **To deploy**
 back to **Published**.
 
-Publication, Team Member, Enterprise, and partner rows keep Show on website.
+Publication, Employee website profiles, Enterprise, and partner rows keep Show on website.
 
 ## Consequences
 
