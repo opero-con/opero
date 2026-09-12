@@ -14,6 +14,19 @@ from opero.patches.v0_4.migrate_team_members_to_employees import (
 
 
 class TestMigrateTeamMembersToEmployees(FrappeTestCase):
+	def test_legacy_controller_can_load_without_doctype_schema(self):
+		from pathlib import Path
+		from frappe.model.base_document import import_controller
+		from frappe.model.document import Document
+		from frappe.modules.utils import load_doctype_module
+		module = load_doctype_module("Team Member", "Opero Site")
+		self.assertTrue(issubclass(module.TeamMember, Document))
+		self.assertFalse(Path(module.__file__).with_suffix(".json").exists())
+		with patch.object(
+			frappe.db, "get_value", return_value=frappe._dict(module="Opero Site", custom=0, is_tree=0)
+		):
+			self.assertIs(import_controller("Team Member"), module.TeamMember)
+
 	@patch("opero.patches.v0_4.migrate_team_members_to_employees.frappe.get_all")
 	@patch("opero.patches.v0_4.migrate_team_members_to_employees.frappe.db.exists")
 	def test_confirmed_employee_id_takes_precedence_over_name(self, exists, get_all):
