@@ -239,25 +239,30 @@ def find_enterprise(slug: str, display_name: str = "") -> str | None:
 
 def attach_content_logo(doc, logo_path: str, repo: ContentRepo | None) -> bool:
 	"""Download `/media/...` logos into Desk File attachments. Returns True if doc.logo changed."""
+	return attach_content_image(doc, "logo", logo_path, repo)
+
+
+def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | None) -> bool:
+	"""Resolve repository media into a public Desk attachment for an image field."""
 	logo_path = _text(logo_path)
-	previous = _text(doc.logo)
+	previous = _text(doc.get(field))
 	if not logo_path:
-		doc.logo = ""
+		doc.set(field, "")
 		return previous != ""
 
 	if logo_path.startswith(("/files/", "/private/files/")):
-		doc.logo = logo_path
+		doc.set(field, logo_path)
 		return previous != logo_path
 
 	repo_path = logo_path[1:] if logo_path.startswith("/") else logo_path
 	if not repo_path.startswith("media/"):
-		doc.logo = logo_path if logo_path.startswith("/") else f"/{logo_path}"
-		return previous != _text(doc.logo)
+		doc.set(field, logo_path)
+		return previous != _text(doc.get(field))
 
 	filename = os.path.basename(repo_path)
 	if not filename or filename in (".", ".."):
-		doc.logo = f"/{repo_path}"
-		return previous != _text(doc.logo)
+		doc.set(field, f"/{repo_path}")
+		return previous != _text(doc.get(field))
 
 	existing = frappe.db.get_value(
 		"File",
@@ -269,17 +274,22 @@ def attach_content_logo(doc, logo_path: str, repo: ContentRepo | None) -> bool:
 		"file_url",
 	)
 	if existing:
-		doc.logo = existing
+		doc.set(field, existing)
 		return previous != existing
 
 	blob = repo.get_bytes(repo_path, repo.base_branch) if repo else None
 	if not blob:
-		doc.logo = f"/{repo_path}"
-		return previous != _text(doc.logo)
+		if repo and field == "portrait":
+			frappe.throw(_("Website portrait file is missing from the content repository: {0}").format(repo_path))
+		doc.set(field, f"/{repo_path}")
+		return previous != _text(doc.get(field))
 
 	file_doc = save_file(filename, blob, doc.doctype, doc.name, is_private=0)
-	doc.logo = file_doc.file_url
-	return previous != _text(doc.logo)
+	if field == "portrait" and file_doc.file_name != filename:
+		# Keep the source attachment label even when Frappe hashes its storage URL.
+		file_doc.db_set("file_name", filename)
+	doc.set(field, file_doc.file_url)
+	return previous != _text(doc.get(field))
 
 
 def _enterprise_name_for_slug(slug: str) -> str | None:
@@ -287,7 +297,17 @@ def _enterprise_name_for_slug(slug: str) -> str | None:
 
 
 def matches_website(doc, path: str, text: str) -> bool:
-	return not doc.is_new() and same_managed_content(path, text, to_markdown(doc.to_site_frontmatter()))
+	if doc.is_new():
+		return False
+	planned = doc.to_site_frontmatter()
+	if doc.doctype == "Employee":
+		incoming_image = _text(parse_frontmatter(text).get("image"))
+		if incoming_image.lstrip("/").startswith("media/") and frappe.db.exists(
+			"File", {"attached_to_doctype": doc.doctype, "attached_to_name": doc.name,
+			"file_name": os.path.basename(incoming_image), "file_url": planned.get("image")}
+		):
+			planned["image"] = incoming_image
+	return same_managed_content(path, text, to_markdown(planned))
 
 
 def _content_snapshot(value):
@@ -367,8 +387,13 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 						)
 					)
 				if matches_website(doc, path, text):
+					if repo and not doc.use_employee_image and attach_content_image(doc, "portrait", _text(data.get("image")), repo):
+						doc.save(ignore_permissions=True)
+						counts["team"] += 1
 					continue
 				apply_employee_profile(doc, data, slug)
+				if repo:
+					attach_content_image(doc, "portrait", _text(data.get("image")), repo)
 				doc.save(ignore_permissions=True)
 				counts["team"] += 1
 			elif path.startswith("content/enterprises/") and path.endswith(".md"):

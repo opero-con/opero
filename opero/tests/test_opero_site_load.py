@@ -1,6 +1,6 @@
 """Load opero-content Markdown into Opero Site DocTypes."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -141,6 +141,24 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 
 class TestOperoSiteLoad(FrappeTestCase):
+	def test_import_repairs_repository_portrait_and_skips_repeat(self):
+		import base64
+		doc = make_website_employee("Anita Onyango", show_on_website=0)
+		path = "content/team/anita-onyango.md"
+		load_files({path: TEAM_MD})
+		repo = MagicMock()
+		repo.base_branch = "main"
+		repo.get_bytes.return_value = base64.b64decode(
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII="
+		)
+		self.assertEqual(load_files({path: TEAM_MD}, repo=repo)["team"], 1)
+		doc.reload()
+		self.assertTrue(doc.portrait.startswith("/files/"))
+		self.assertFalse(doc.use_employee_image)
+		repo.get_bytes.assert_called_once_with("media/team/anita.jpg", "main")
+		with patch("frappe.model.document.Document.save", side_effect=AssertionError("unexpected save")):
+			self.assertEqual(sum(load_files({path: TEAM_MD}, repo=repo).values()), 0)
+
 	def test_reloading_identical_content_skips_all_saves(self):
 		make_website_employee("Anita Onyango", show_on_website=0)
 		files = {
