@@ -333,12 +333,6 @@ def _canonical_team(data: dict) -> dict:
 	}
 	if data.get("linkedin"):
 		payload["linkedin"] = _text(data.get("linkedin"))
-	if _text(data.get("imagePosition")):
-		payload["imagePosition"] = _text(data.get("imagePosition"))
-	if data.get("imageScale") not in (None, ""):
-		payload["imageScale"] = flt(data.get("imageScale"))
-	if data.get("imageHoverScale") not in (None, ""):
-		payload["imageHoverScale"] = flt(data.get("imageHoverScale"))
 	return payload
 
 

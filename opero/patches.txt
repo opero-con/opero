@@ -116,3 +116,5 @@ opero.patches.v0_4.fix_opero_website_enterprise_links
 opero.patches.v0_4.rename_our_work_homepage_summary
 
 opero.patches.v0_4.drop_my_todo_doctype
+opero.patches.v0_4.add_employee_website_fields
+opero.patches.v0_4.migrate_team_members_to_employees

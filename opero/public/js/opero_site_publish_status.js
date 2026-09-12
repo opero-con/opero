@@ -1,10 +1,11 @@
-const OPTIONAL_SITE_DOCTYPES = ["Publication", "Team Member", "Enterprise"];
+const OPTIONAL_SITE_DOCTYPES = ["Publication", "Employee", "Enterprise"];
 const ALWAYS_ON_SITE_DOCTYPES = ["Home Page", "Privacy policy", "Site Settings"];
 const SITE_CONTENT_DOCTYPES = OPTIONAL_SITE_DOCTYPES.concat(ALWAYS_ON_SITE_DOCTYPES);
 // Enterprise CRM Status stays on the Details tab; do not drive the form/list indicator.
 const INDICATOR_SITE_DOCTYPES = SITE_CONTENT_DOCTYPES.filter((name) => name !== "Enterprise");
 const PUBLISH_STATUS_FIELD = {
 	Enterprise: "website_status",
+	Employee: "website_status",
 };
 
 if (!window._opero_publish_status_bound) {

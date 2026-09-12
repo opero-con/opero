@@ -29,7 +29,7 @@ DEFAULT_BRANCH = "main"
 MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/", "content/enterprises/")
 MEDIA_DELETE_PREFIXES = ("media/publications/", "media/team/", "media/enterprises/")
 DEPLOY_LOG_LIMIT = 10
-CONTENT_DOCTYPES = ("Publication", "Team Member", "Enterprise")
+CONTENT_DOCTYPES = ("Publication", "Employee", "Enterprise")
 CONTENT_SINGLES = ("Home Page", "Privacy policy", "Site Settings")
 SITE_CONTENT_DOCTYPES = CONTENT_DOCTYPES + CONTENT_SINGLES
 PENDING_EVENT = "opero_site_pending"
@@ -54,7 +54,7 @@ def content_path_for(doc) -> str | None:
 		return None
 	if doc.doctype == "Publication":
 		return f"content/publications/{slug}.md"
-	if doc.doctype == "Team Member":
+	if doc.doctype == "Employee":
 		return f"content/team/{slug}.md"
 	return None
 
@@ -62,7 +62,7 @@ def content_path_for(doc) -> str | None:
 _FIXED_PATH_LABELS = {path: (doctype, "Site pages") for doctype, path in CONTENT_PATHS.items()}
 _CONTENT_PATH_GROUPS = (
 	("content/publications/", "Publication", "Publications", "title"),
-	("content/team/", "Team Member", "Team", "member_name"),
+	("content/team/", "Employee", "Team", "employee_name"),
 	("content/enterprises/", "Enterprise", "Enterprises", None),
 )
 
@@ -82,6 +82,11 @@ def _live_enterprise(slug: str) -> tuple[str, str] | None:
 	return None
 
 
+def _live_employee(slug: str) -> tuple[str, str] | None:
+	row = frappe.db.get_value("Employee", {"slug": slug}, ["employee_name", "name"], as_dict=True)
+	return (row.employee_name, row.name) if row else None
+
+
 def content_label_for(path: str) -> dict:
 	"""Human title, content-type group, and (when the doc still exists) its route."""
 	fixed = _FIXED_PATH_LABELS.get(path)
@@ -95,6 +100,9 @@ def content_label_for(path: str) -> dict:
 		slug = _slug_from_path(path)
 		if doctype == "Enterprise":
 			found = _live_enterprise(slug)
+			title, docname = found if found else (None, None)
+		elif doctype == "Employee":
+			found = _live_employee(slug)
 			title, docname = found if found else (None, None)
 		else:
 			title = frappe.db.get_value(doctype, slug, title_field)
@@ -142,7 +150,7 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 			is_on_site(previous) or is_off_site(previous) or is_on_site(doc) or is_off_site(doc)
 		):
 			entries.append({"path": old_path, "action": "delete"})
-		elif renamed and doc.doctype in ("Team Member", "Enterprise") and (
+		elif renamed and doc.doctype in ("Employee", "Enterprise") and (
 			is_on_site(previous) or is_off_site(previous)
 		):
 			entries.append({"path": old_path, "action": "delete"})
@@ -168,7 +176,7 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 			entries.append({"path": path, "action": "delete"})
 		return _unique_pending(entries)
 
-	if doc.doctype in ("Team Member", "Enterprise"):
+	if doc.doctype in ("Employee", "Enterprise"):
 		if is_on_site(doc) or is_off_site(doc):
 			entries.append({"path": path, "action": "update"})
 		return _unique_pending(entries)
@@ -299,8 +307,8 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	for name in frappe.get_all("Publication", pluck="name"):
 		doc = frappe.get_doc("Publication", name)
 		consider(f"content/publications/{doc.slug}.md", doc, True)
-	for name in frappe.get_all("Team Member", pluck="name"):
-		doc = frappe.get_doc("Team Member", name)
+	for name in frappe.get_all("Employee", pluck="name", filters={"slug": ["is", "set"]}):
+		doc = frappe.get_doc("Employee", name)
 		consider(f"content/team/{doc.slug}.md", doc, True, hide_when_unpublished=True)
 	for name in frappe.get_all("Enterprise", pluck="name"):
 		doc = frappe.get_doc("Enterprise", name)
