@@ -48,7 +48,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Impacts": "Impacts",
 				"Our Work": "Our Work",
 				"Partners": "Partners",
-				"Team": "website-team",
+				"Team": "Employee",
 				"Enterprises": "Enterprise",
 				"Publications": "Publication",
 				"Privacy policy": "Privacy policy",
@@ -77,10 +77,13 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(enquiries.link_to, "Communication")
 		self.assertEqual(enquiries.doc_view, "List")
 		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
-		self.assertEqual(team.link_to, "website-team")
-		self.assertEqual(team.type, "Page")
+		self.assertEqual(team.link_to, "Employee")
+		self.assertEqual(team.type, "DocType")
+		self.assertEqual(team.doc_view, "List")
+		self.assertEqual(json.loads(team.stats_filter), {"show_on_website": 1})
 		team_link = next(row for row in doc.links if row.label == "Team")
-		self.assertEqual(team_link.link_type, "Page")
+		self.assertEqual(team_link.link_type, "DocType")
+		self.assertEqual(team_link.link_to, "Employee")
 		self.assertEqual(
 			{row.role for row in doc.roles},
 			{"System Manager", "Website Manager"},
