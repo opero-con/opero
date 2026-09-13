@@ -141,6 +141,35 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 
 class TestOperoSiteLoad(FrappeTestCase):
+	def test_reimport_repairs_stale_portrait_attachments(self):
+		import base64
+		from opero.opero_site.load import local_portrait_attachment
+
+		for stale_url in ("/team/anita.jpg", "/files/missing-portrait.jpg"):
+			with self.subTest(stale_url=stale_url):
+				clear_website_test_employees()
+				doc = make_website_employee("Anita Onyango", show_on_website=0)
+				repo = MagicMock(base_branch="main")
+				repo.get_bytes.return_value = base64.b64decode(
+					"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII="
+				)
+				files = {"content/team/anita-onyango.md": TEAM_MD}
+				load_files(files, repo=repo)
+				attachment = frappe.get_doc("File", {"attached_to_doctype": "Employee", "attached_to_name": doc.name, "file_name": "anita.jpg"})
+				attachment.db_set("file_url", stale_url)
+				doc.reload()
+				doc.db_set("portrait", stale_url)
+				repo.get_bytes.reset_mock()
+				self.assertEqual(load_files(files, repo=repo)["team"], 1)
+				repo.get_bytes.assert_called_once_with("media/team/anita.jpg", "main")
+				doc.reload()
+				self.assertTrue(doc.portrait.startswith("/files/"))
+				self.assertNotEqual(doc.portrait, stale_url)
+				self.assertEqual(local_portrait_attachment(doc, "anita.jpg"), doc.portrait)
+				repo.get_bytes.reset_mock()
+				self.assertEqual(sum(load_files(files, repo=repo).values()), 0)
+				repo.get_bytes.assert_not_called()
+
 	def test_legacy_portrait_falls_back_to_public_website(self):
 		import base64
 		doc = make_website_employee("Aggrey Ochieng", show_on_website=0)

@@ -245,6 +245,18 @@ def attach_content_logo(doc, logo_path: str, repo: ContentRepo | None) -> bool:
 	return attach_content_image(doc, "logo", logo_path, repo)
 
 
+def local_portrait_attachment(doc, filename: str) -> str | None:
+	"""A File row alone is not proof that a portrait was downloaded."""
+	for name in frappe.get_all(
+		"File", filters={"attached_to_doctype": doc.doctype,
+		"attached_to_name": doc.name, "file_name": filename, "is_private": 0}, pluck="name",
+	):
+		attachment = frappe.get_doc("File", name)
+		if _text(attachment.file_url).startswith("/files/") and attachment.exists_on_disk():
+			return attachment.file_url
+	return None
+
+
 def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | None) -> bool:
 	"""Resolve repository media into a public Desk attachment for an image field."""
 	logo_path = _text(logo_path)
@@ -268,7 +280,7 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		doc.set(field, f"/{repo_path}")
 		return previous != _text(doc.get(field))
 
-	existing = frappe.db.get_value(
+	existing = local_portrait_attachment(doc, filename) if field == "portrait" else frappe.db.get_value(
 		"File",
 		{
 			"attached_to_doctype": doc.doctype,
@@ -302,7 +314,20 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		doc.set(field, f"/{repo_path}")
 		return previous != _text(doc.get(field))
 
-	file_doc = save_file(filename, blob, doc.doctype, doc.name, is_private=0)
+	if field == "portrait":
+		# Explicitly write the blob before inserting its attachment record: both
+		# hash-deduplication paths can encounter an invalid legacy /team URL.
+		file_doc = frappe.get_doc({"doctype": "File", "file_name": filename,
+			"content": blob, "attached_to_doctype": doc.doctype,
+			"attached_to_name": doc.name, "attached_to_field": field, "is_private": 0,
+		})
+		file_doc.flags.new_file = True
+		file_doc.save_file(content=blob, ignore_existing_file_check=True)
+		frappe.db.after_rollback.add(file_doc.on_rollback)
+		file_doc.flags.copy_from_existing_file = True
+		file_doc.insert(ignore_permissions=True)
+	else:
+		file_doc = save_file(filename, blob, doc.doctype, doc.name, is_private=0)
 	if field == "portrait" and file_doc.file_name != filename:
 		# Keep the source attachment label even when Frappe hashes its storage URL.
 		file_doc.db_set("file_name", filename)
@@ -320,9 +345,9 @@ def matches_website(doc, path: str, text: str) -> bool:
 	planned = doc.to_site_frontmatter()
 	if doc.doctype == "Employee":
 		incoming_image = _text(parse_frontmatter(text).get("image"))
-		if incoming_image.lstrip("/").startswith(("media/", "team/")) and frappe.db.exists(
-			"File", {"attached_to_doctype": doc.doctype, "attached_to_name": doc.name,
-			"file_name": os.path.basename(incoming_image), "file_url": planned.get("image")}
+		if incoming_image.lstrip("/").startswith(("media/", "team/")) and (
+			local_portrait_attachment(doc, os.path.basename(incoming_image)) == planned.get("image")
+			and planned.get("image")
 		):
 			planned["image"] = incoming_image
 	return same_managed_content(path, text, to_markdown(planned))
