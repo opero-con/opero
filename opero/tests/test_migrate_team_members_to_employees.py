@@ -75,5 +75,5 @@ class TestMigrateTeamMembersToEmployees(FrappeTestCase):
 			new.set.assert_any_call(field, value)
 		self.assertEqual(new.website_status, "Published")
 		self.assertEqual(new.status, "Active")
-		self.assertEqual(new.use_employee_image, 0)
+		self.assertEqual(new.use_alternative_image, 1)
 		new.save.assert_called_once_with(ignore_permissions=True)

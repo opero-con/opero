@@ -10,6 +10,31 @@ from opero.tests.website_employee import clear_website_test_employees, make_webs
 
 
 class TestEmployeeWebsiteTeam(FrappeTestCase):
+	def test_alternative_image_defaults_off_and_can_be_toggled(self):
+		doc = make_website_employee("Image Choice", image="/files/profile.jpg", portrait="/files/alternative.jpg")
+		self.assertFalse(doc.use_alternative_image)
+		self.assertEqual(doc.to_site_frontmatter()["image"], "/files/profile.jpg")
+		doc.use_alternative_image = 1
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.to_site_frontmatter()["image"], "/files/alternative.jpg")
+		doc.use_alternative_image = 0
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.to_site_frontmatter()["image"], "/files/profile.jpg")
+		self.assertEqual(doc.portrait, "/files/alternative.jpg")
+
+	def test_alternative_image_migration_preserves_existing_selection(self):
+		from opero.patches.v0_4.use_alternative_personnel_image import execute
+
+		doc = make_website_employee("Existing Alternative", image="/files/profile.jpg", portrait="/files/alternative.jpg", use_alternative_image=1)
+		execute()
+		doc.reload()
+		self.assertTrue(doc.use_alternative_image)
+		self.assertEqual(doc.image, "/files/profile.jpg")
+		meta = frappe.get_meta("Employee")
+		self.assertFalse(meta.has_field("use_employee_image"))
+		self.assertEqual(meta.get_field("portrait").label, "Alternative image")
+		self.assertEqual(meta.get_field("portrait").depends_on, "eval:doc.use_alternative_image")
+
 	def test_personnel_type_and_series_layout_is_stable(self):
 		from opero.patches.v0_4.swap_personnel_type_and_series import execute
 
@@ -75,7 +100,7 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 			role="Director",
 			linkedin="https://www.linkedin.com/in/anita-onyango",
 			image="/files/anita.jpg",
-			use_employee_image=1,
+			use_alternative_image=0,
 		)
 		self.assertEqual(
 			doc.to_site_frontmatter(),
@@ -92,6 +117,6 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 
 	def test_frontmatter_can_use_separate_portrait(self):
 		doc = make_website_employee(
-			"Custom Portrait", use_employee_image=0, portrait="/files/custom.jpg"
+			"Custom Portrait", use_alternative_image=1, portrait="/files/custom.jpg"
 		)
 		self.assertEqual(doc.to_site_frontmatter()["image"], "/files/custom.jpg")

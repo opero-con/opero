@@ -188,7 +188,7 @@ def apply_employee_profile(doc, data: dict, slug: str):
 		doc.website_status = PUBLISHED
 		doc.show_on_website = 1
 	doc.portrait = _text(data.get("image"))
-	doc.use_employee_image = 0
+	doc.use_alternative_image = 1
 	doc.linkedin = _text(data.get("linkedin"))
 
 
@@ -243,6 +243,19 @@ def find_enterprise(slug: str, display_name: str = "") -> str | None:
 def attach_content_logo(doc, logo_path: str, repo: ContentRepo | None) -> bool:
 	"""Download `/media/...` logos into Desk File attachments. Returns True if doc.logo changed."""
 	return attach_content_image(doc, "logo", logo_path, repo)
+
+
+def adopt_imported_portrait(doc) -> bool:
+	"""Fill an empty HR profile image only from a downloaded public portrait."""
+	if _text(doc.image) or not _text(doc.portrait).startswith("/files/"):
+		return False
+	name = frappe.db.get_value("File", {"attached_to_doctype": "Employee",
+		"attached_to_name": doc.name, "file_url": doc.portrait, "is_private": 0}, "name")
+	if not name or not frappe.get_doc("File", name).exists_on_disk():
+		return False
+	doc.image = doc.portrait
+	doc.use_alternative_image = 0
+	return True
 
 
 def local_portrait_attachment(doc, filename: str) -> str | None:
@@ -430,13 +443,17 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 						)
 					)
 				if matches_website(doc, path, text):
-					if repo and not doc.use_employee_image and attach_content_image(doc, "portrait", _text(data.get("image")), repo):
+					portrait_changed = False
+					if repo and doc.use_alternative_image:
+						portrait_changed = attach_content_image(doc, "portrait", _text(data.get("image")), repo)
+					if adopt_imported_portrait(doc) or portrait_changed:
 						doc.save(ignore_permissions=True)
 						counts["team"] += 1
 					continue
 				apply_employee_profile(doc, data, slug)
 				if repo:
 					attach_content_image(doc, "portrait", _text(data.get("image")), repo)
+				adopt_imported_portrait(doc)
 				doc.save(ignore_permissions=True)
 				counts["team"] += 1
 			elif path.startswith("content/enterprises/") and path.endswith(".md"):
