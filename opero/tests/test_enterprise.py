@@ -5,6 +5,18 @@ from opero.opero.doctype.enterprise.enterprise import get_enterprise_primary
 
 
 class TestEnterprise(FrappeTestCase):
+	def test_logo_is_the_native_form_image(self):
+		meta = frappe.get_meta("Enterprise")
+		self.assertEqual(meta.image_field, "logo")
+		self.assertEqual(meta.get_field(meta.image_field).fieldtype, "Attach Image")
+		self.assertFalse(meta.has_field("image"))
+		enterprise = frappe.get_doc({
+			"doctype": "Enterprise", "enterprise_name": "Logo Profile Test",
+			"status": "Onboarded", "logo": "/files/enterprise-logo.png",
+		}).insert()
+		enterprise.reload()
+		self.assertEqual(enterprise.get(meta.image_field), enterprise.to_site_frontmatter()["logo"])
+
 	def setUp(self):
 		frappe.set_user("Administrator")
 		frappe.db.savepoint("enterprise_test")
