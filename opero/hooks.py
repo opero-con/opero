@@ -77,6 +77,7 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
+	"Employee": "public/js/custom/employee.js",
 	"Contact": "public/js/mailing_contact.js",
 	"Email Group": "public/js/mailing_list.js",
 	"Email Group Member": "public/js/mailing_member.js",

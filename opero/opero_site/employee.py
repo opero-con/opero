@@ -14,6 +14,11 @@ class Employee(FrappeEmployee):
 	"""Keep Employee's HR behavior and add the public team profile contract."""
 
 	def before_naming(self):
+		series = {"Staff": "OSL_EMP_.###", "Consultant": "OSL_CON_.###"}.get(
+			self.get("custom_personnel_type")
+		)
+		if series:
+			self.naming_series = series
 		self.set_employee_name()
 		self.slug = slugify(self.employee_name)
 		if not self.slug:
