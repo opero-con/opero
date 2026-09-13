@@ -3,17 +3,51 @@
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
 
+import frappe
+
 from opero.opero_site.utils import slugify
 from opero.tests.website_employee import clear_website_test_employees, make_website_employee
 
 
 class TestEmployeeWebsiteTeam(FrappeTestCase):
+	def test_personnel_type_and_series_layout_is_stable(self):
+		from opero.patches.v0_4.swap_personnel_type_and_series import execute
+
+		order = [field.fieldname for field in frappe.get_meta("Employee").fields]
+		self.assertLess(order.index("custom_personnel_type"), order.index("naming_series"))
+		self.assertLess(order.index("branch"), order.index("opero_website_tab"))
+		execute()
+		self.assertEqual(order, [field.fieldname for field in frappe.get_meta("Employee").fields])
+
 	def setUp(self):
 		clear_website_test_employees()
 
 	def test_slugify_matches_content_filenames(self):
 		self.assertEqual(slugify("Nicola Greene"), "nicola-greene")
 		self.assertEqual(slugify("  Anita  Onyango "), "anita-onyango")
+
+	def test_personnel_type_determines_new_employee_series(self):
+		for personnel_type, prefix, wrong_series in (
+			("Staff", "OSL_EMP_", "OSL_CON_.###"),
+			("Consultant", "OSL_CON_", "OSL_EMP_.###"),
+		):
+			with self.subTest(personnel_type=personnel_type):
+				doc = make_website_employee(
+					f"New {personnel_type}",
+					custom_personnel_type=personnel_type,
+					naming_series=wrong_series,
+				)
+				self.assertEqual(doc.naming_series, f"{prefix}.###")
+				self.assertRegex(doc.name, f"^{prefix}[0-9]{{3,}}$")
+
+	def test_changing_existing_personnel_type_does_not_rename(self):
+		doc = make_website_employee("Existing Staff", custom_personnel_type="Staff")
+		name, series = doc.name, doc.naming_series
+		doc.custom_personnel_type = "Consultant"
+		doc.save(ignore_permissions=True)
+		doc.reload()
+		self.assertEqual(doc.name, name)
+		self.assertEqual(doc.naming_series, series)
 
 	def test_slug_is_generated_from_employee_name(self):
 		doc = make_website_employee("Nicola Greene")

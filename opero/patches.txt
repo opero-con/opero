@@ -120,3 +120,4 @@ opero.patches.v0_4.add_employee_website_fields
 opero.patches.v0_4.migrate_team_members_to_employees
 opero.patches.v0_4.filter_website_team_workspace
 opero.patches.v0_4.restore_native_team_navigation
+opero.patches.v0_4.swap_personnel_type_and_series
