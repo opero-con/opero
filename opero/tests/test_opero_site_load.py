@@ -141,6 +141,45 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 
 class TestOperoSiteLoad(FrappeTestCase):
+	def test_import_adopts_portrait_without_overwriting_profile_image(self):
+		import base64
+		for existing_image in ("", "/files/existing-profile.jpg"):
+			with self.subTest(existing_image=existing_image):
+				clear_website_test_employees()
+				doc = make_website_employee("Anita Onyango", image=existing_image, show_on_website=0)
+				repo = MagicMock(base_branch="main")
+				repo.get_bytes.return_value = base64.b64decode(
+					"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII="
+				)
+				files = {"content/team/anita-onyango.md": TEAM_MD}
+				load_files(files, repo=repo)
+				doc.reload()
+				self.assertTrue(doc.portrait.startswith("/files/"))
+				self.assertEqual(doc.image, existing_image or doc.portrait)
+				self.assertEqual(bool(doc.use_alternative_image), bool(existing_image))
+				repo.get_bytes.reset_mock()
+				self.assertEqual(sum(load_files(files, repo=repo).values()), 0)
+				repo.get_bytes.assert_not_called()
+
+	def test_reimport_adopts_previously_imported_portrait(self):
+		import base64
+		doc = make_website_employee("Anita Onyango", show_on_website=0)
+		repo = MagicMock(base_branch="main")
+		repo.get_bytes.return_value = base64.b64decode(
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII="
+		)
+		files = {"content/team/anita-onyango.md": TEAM_MD}
+		load_files(files, repo=repo)
+		doc.reload()
+		doc.db_set("image", "")
+		doc.db_set("use_alternative_image", 1)
+		repo.get_bytes.reset_mock()
+		self.assertEqual(load_files(files, repo=repo)["team"], 1)
+		doc.reload()
+		self.assertEqual(doc.image, doc.portrait)
+		self.assertFalse(doc.use_alternative_image)
+		repo.get_bytes.assert_not_called()
+
 	def test_reimport_repairs_stale_portrait_attachments(self):
 		import base64
 		from opero.opero_site.load import local_portrait_attachment
@@ -224,7 +263,8 @@ class TestOperoSiteLoad(FrappeTestCase):
 		self.assertEqual(load_files({path: TEAM_MD}, repo=repo)["team"], 1)
 		doc.reload()
 		self.assertTrue(doc.portrait.startswith("/files/"))
-		self.assertFalse(doc.use_employee_image)
+		self.assertFalse(doc.use_alternative_image)
+		self.assertEqual(doc.image, doc.portrait)
 		repo.get_bytes.assert_called_once_with("media/team/anita.jpg", "main")
 		with patch("frappe.model.document.Document.save", side_effect=AssertionError("unexpected save")):
 			self.assertEqual(sum(load_files({path: TEAM_MD}, repo=repo).values()), 0)

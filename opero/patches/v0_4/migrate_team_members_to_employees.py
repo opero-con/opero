@@ -68,6 +68,9 @@ def migrate_profile(team_member, employee):
 	new = frappe.get_doc("Employee", employee)
 	for field in FIELDS:
 		new.set(field, old.get(field))
-	new.use_employee_image = 0
+	if new.meta.has_field("use_alternative_image"):
+		new.use_alternative_image = 1
+	else:
+		new.use_employee_image = 0
 	new.website_status = old.status
 	new.save(ignore_permissions=True)

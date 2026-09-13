@@ -122,3 +122,4 @@ opero.patches.v0_4.filter_website_team_workspace
 opero.patches.v0_4.restore_native_team_navigation
 opero.patches.v0_4.swap_personnel_type_and_series
 opero.patches.v0_4.filter_website_enterprises_shortcut
+opero.patches.v0_4.use_alternative_personnel_image

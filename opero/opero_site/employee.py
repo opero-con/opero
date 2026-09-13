@@ -38,7 +38,7 @@ class Employee(FrappeEmployee):
 		payload = {
 			"name": self.employee_name,
 			"role": cstr(self.role).strip(),
-			"image": cstr(self.image if cint(self.use_employee_image) else self.portrait),
+			"image": cstr(self.portrait if cint(self.use_alternative_image) else self.image),
 			"imageAlt": f"Portrait of {self.employee_name}",
 			"order": cint(self.sort_order),
 			"active": is_on_site(self),
