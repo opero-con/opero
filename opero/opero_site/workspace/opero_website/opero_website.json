@@ -147,7 +147,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-13 00:41:36.720484",
+ "modified": "2026-09-13 14:19:49.774982",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Opero Website",
@@ -175,9 +175,11 @@
    "type": "DocType"
   },
   {
+   "doc_view": "List",
    "label": "Enterprises",
-   "link_to": "website-enterprises",
-   "type": "Page"
+   "link_to": "Enterprise",
+   "stats_filter": "{\"show_on_website\":1}",
+   "type": "DocType"
   },
   {
    "label": "Publications",
