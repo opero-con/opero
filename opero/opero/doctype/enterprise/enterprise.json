@@ -200,6 +200,7 @@
    "label": "Notes"
   }
  ],
+ "image_field": "logo",
  "index_web_pages_for_search": 1,
  "is_submittable": 0,
  "is_tree": 0,
@@ -207,7 +208,7 @@
  "issingle": 0,
  "istable": 0,
  "links": [],
- "modified": "2026-09-08 23:30:00.000000",
+ "modified": "2026-09-13 23:45:02.000000",
  "modified_by": "Administrator",
  "module": "Opero",
  "name": "Enterprise",
