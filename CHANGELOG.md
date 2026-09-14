@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.3.0 — 2026-09-14
+
+### Added
+
+- Deploy Center (formerly Opero Site Publisher) batches public-site commits, shows pending items with a diff preview, deploy ribbons, and publish history as commit plus short SHA
+- Home Page split into focused, independently editable sections; Privacy renamed to Privacy policy with auto-set last reviewed date
+- Rich text editor and PDF attachments for publication bodies; Table MultiSelect for publication topics
+- Website checkbox-based publish flow (To publish / To unpublish / Published) replaces the old site status field; website enquiries captured as Communication
+- Enterprise party records, published to the website, using the Enterprise logo as the native form image
+- Contact mailing lists with subscription confirmation, readable member identifiers, and duplicate/format validation
+- Employee profile images with optional website alternatives; personnel naming series derived from personnel type
+- Legacy Team portraits and profiles migrated to Employee as local attachments and website alternatives
+- Timesheet rows show task names and Monday-Sunday calendar weeks; balances are enforced with reliable accounting sync
+
+### Changed
+
+- Publisher doctype renamed to Deploy Center; its actions renamed from publish to deploy
+- GitHub reads during deploy are cached and parallelized
+- Site Settings Offices renamed to Address; Timesheet `employee_name` exports as Personnel
+
+### Fixed
+
+- Orphaned enterprise, team, and publication media pruned on deploy; unchanged website content and logo imports are skipped
+- Enterprise names that collide on website slug are rejected; Enterprise category renamed and E##### IDs assigned
+- Cubenet migrate no longer dies on legacy Home Page hero fields; duplicated Privacy policy body sections collapsed
+
+### Removed
+
+- Legacy My ToDo doctype and its orphaned dashboard number-card endpoints
+- Mailing member confirmation status in favor of unsubscribe
+
 ## 0.2.52 — 2026-08-25
 
 ### Added
