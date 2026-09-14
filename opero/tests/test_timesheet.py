@@ -168,6 +168,22 @@ class TestTimesheetBalances(FrappeTestCase):
 		)
 		timesheet._validate_allocated_hours(doc)
 
+	def test_submission_blocked_after_cutoff_day(self):
+		doc = self._draft([2], date="2026-01-15")
+		with patch.object(frappe, "get_roles", return_value=["Projects User"]):
+			with patch.object(timesheet, "nowdate", return_value="2026-02-04"):
+				with self.assertRaises(frappe.ValidationError):
+					timesheet._validate_submission_cutoff(doc)
+			with patch.object(timesheet, "nowdate", return_value="2026-02-03"):
+				timesheet._validate_submission_cutoff(doc)
+
+	def test_submission_cutoff_bypassed_for_projects_manager(self):
+		doc = self._draft([2], date="2026-01-15")
+		with patch.object(timesheet, "nowdate", return_value="2026-02-04"), patch.object(
+			frappe, "get_roles", return_value=["Projects Manager"]
+		):
+			timesheet._validate_submission_cutoff(doc)
+
 
 class TestTimesheetZoho(FrappeTestCase):
 	def test_submission_only_queues_after_commit(self):
