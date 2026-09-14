@@ -1,0 +1,7 @@
+# Timesheet balances and accounting sync
+
+Timesheets enforce monthly Task Time Distribution allocations per employee and task. Submitted entries consume the allocation; drafts do not reserve it. Validation includes every entry in the current document and excludes that document from historical usage. An employee row lock serializes concurrent submissions; the usage query uses a locking read to avoid an earlier transaction snapshot. Changing an allocation requires PM review rather than silently allowing an overrun.
+
+Reports count submitted entries by each detail row's date. An entry ending exactly at midnight belongs to its start day. Entries continuing into the next day must be split without changing their original start or end times.
+
+Zoho work runs after the local transaction commits. Successful entry mappings are committed individually and reused on retry. Timesheet jobs are serialized and re-read the current document status so cancellation queues deletion. Persisting a create intent before the HTTP request prevents an uncertain response or worker crash from generating a duplicate create on retry. An uncertain entry requires an accounting administrator to check Zoho, then use Resolve Zoho entry to record its remote ID or explicitly confirm it is absent before retrying. There is no automatic reconciliation of unknown remote outcomes. Failed and partial jobs expose a permission-checked retry in the form.

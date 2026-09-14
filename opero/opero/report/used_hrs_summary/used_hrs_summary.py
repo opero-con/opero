@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate
 
+from opero.opero.report.timesheet_permissions import match_conditions
+
 
 def execute(filters=None):
 	filters = filters or {}
@@ -49,7 +51,14 @@ def execute(filters=None):
 		},
 	]
 
-	values = {"year": year, "project": project, "company": company}
+	values = {
+		"start": getdate(f"{year}-01-01"),
+		"end": getdate(f"{year + 1}-01-01"),
+		"project": project,
+		"company": company,
+	}
+	permissions = match_conditions("Timesheet", "ts")
+	permissions += match_conditions("Project", "project")
 
 	data = frappe.db.sql(
 		f"""
@@ -57,23 +66,25 @@ def execute(filters=None):
 			ts.employee_name AS contributor,
 			project.company AS company,
 			ts.parent_project AS project,
-			MONTHNAME(ts.start_date) AS month,
+			MONTHNAME(tl.from_time) AS month,
 			SUM(tl.hours) AS posted_hrs
 		FROM `tabTimesheet` ts
 		JOIN `tabTimesheet Detail` tl ON ts.name = tl.parent
 		LEFT JOIN `tabProject` project ON project.name = ts.parent_project
-		WHERE YEAR(ts.start_date) = %(year)s
+		WHERE ts.docstatus = 1 AND tl.from_time >= %(start)s AND tl.from_time < %(end)s
 		  AND (%(project)s IS NULL OR ts.parent_project = %(project)s)
 		  AND (%(company)s IS NULL OR project.company = %(company)s)
+		{permissions}
 		GROUP BY
+			ts.employee,
 			ts.employee_name,
 			project.company,
 			ts.parent_project,
-			MONTH(ts.start_date),
-			MONTHNAME(ts.start_date)
+			MONTH(tl.from_time),
+			MONTHNAME(tl.from_time)
 		ORDER BY
 			FIELD(
-				MONTHNAME(ts.start_date),
+				MONTHNAME(tl.from_time),
 				'January', 'February', 'March', 'April', 'May', 'June',
 				'July', 'August', 'September', 'October', 'November', 'December'
 			),

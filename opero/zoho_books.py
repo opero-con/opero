@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+from typing import Any
+
 import frappe
 import requests
-from datetime import datetime, timedelta
 from frappe.utils import get_datetime, get_url
-from typing import Optional, Dict, Any
 
 
 class ZohoBooksException(Exception):
@@ -19,7 +20,8 @@ _INTEGRATION = "zoho_books"
 
 # : Mapping registry helpers
 
-def _get_mapping(entity_type: str, local_name: str) -> Optional[str]:
+
+def _get_mapping(entity_type: str, local_name: str) -> str | None:
 	return frappe.db.get_value(
 		"Integration Mapping",
 		{"integration": _INTEGRATION, "entity_type": entity_type, "local_name": local_name},
@@ -34,16 +36,20 @@ def _set_mapping(entity_type: str, local_name: str, remote_id: str, remote_name:
 		"name",
 	)
 	if existing:
-		frappe.db.set_value("Integration Mapping", existing, {"remote_id": remote_id, "remote_name": remote_name})
+		frappe.db.set_value(
+			"Integration Mapping", existing, {"remote_id": remote_id, "remote_name": remote_name}
+		)
 	else:
-		frappe.get_doc({
-			"doctype": "Integration Mapping",
-			"integration": _INTEGRATION,
-			"entity_type": entity_type,
-			"local_name": local_name,
-			"remote_id": remote_id,
-			"remote_name": remote_name,
-		}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Integration Mapping",
+				"integration": _INTEGRATION,
+				"entity_type": entity_type,
+				"local_name": local_name,
+				"remote_id": remote_id,
+				"remote_name": remote_name,
+			}
+		).insert(ignore_permissions=True)
 
 
 def _delete_mapping(entity_type: str, local_name: str) -> None:
@@ -58,21 +64,109 @@ def _delete_mapping(entity_type: str, local_name: str) -> None:
 
 # : Sync entry points
 
+
 def sync_timesheet_to_zoho(doc, method: str = "submit"):
-	if method == "on_cancel":
-		_delete_timesheet_entries(doc)
-	elif method == "on_amend":
-		_sync_timesheet_entries(doc, is_update=True)
-	else:
-		_sync_timesheet_entries(doc, is_update=False)
+	settings = _get_settings()
+	if not settings or not settings.enabled:
+		return
+	frappe.db.set_value(
+		"Timesheet",
+		doc.name,
+		{"custom_zoho_sync_status": "Pending", "custom_zoho_sync_error": ""},
+		update_modified=False,
+	)
+	frappe.enqueue(
+		"opero.zoho_books.run_timesheet_sync",
+		timesheet_name=doc.name,
+		queue="long",
+		timeout=1260,
+		enqueue_after_commit=True,
+	)
+
+
+@frappe.whitelist()
+def retry_timesheet_sync(timesheet_name):
+	doc = frappe.get_doc("Timesheet", timesheet_name)
+	doc.check_permission("write")
+	if doc.docstatus not in (1, 2):
+		frappe.throw("Only submitted or cancelled timesheets can be synced.")
+	settings = _get_settings()
+	if not settings or not settings.enabled:
+		frappe.throw("Enable Zoho Books integration before retrying.")
+	sync_timesheet_to_zoho(doc)
+	return {"status": "Pending"}
+
+
+@frappe.whitelist()
+def reconcile_timesheet_entry(timesheet_name, row_number, remote_id=None, confirmed_absent=False):
+	"""Resolve an unknown create outcome after an accounting administrator checks Zoho."""
+	from frappe.utils import cint
+
+	frappe.get_doc("Zoho Books Settings").check_permission("write")
+	with frappe.cache().lock(
+		f"opero:{frappe.local.site}:zoho:timesheet:{timesheet_name}", timeout=30, blocking_timeout=1
+	):
+		doc = frappe.get_doc("Timesheet", timesheet_name)
+		doc.check_permission("write")
+		if doc.docstatus not in (1, 2) or doc.custom_zoho_sync_status not in ("Failed", "Partial"):
+			frappe.throw("Only failed or partial timesheet syncs can be reconciled.")
+		row = next((row for row in doc.time_logs if row.idx == cint(row_number)), None)
+		if not row or not row.get("custom_zoho_sync_uncertain"):
+			frappe.throw("Choose a row that needs Zoho review.")
+		remote_id = str(remote_id or "").strip()
+		if bool(remote_id) == bool(cint(confirmed_absent)):
+			frappe.throw("Provide the existing Zoho entry ID, or confirm that the entry is absent in Zoho.")
+		if remote_id:
+			_set_mapping("Timesheet Detail", row.name, remote_id)
+		frappe.db.set_value(
+			"Timesheet Detail", row.name, "custom_zoho_sync_uncertain", 0, update_modified=False
+		)
+		frappe.db.commit()
+	return {"status": "Resolved"}
+
+
+def run_timesheet_sync(timesheet_name):
+	# Serialize retries and cancellations; always use the latest document status.
+	with frappe.cache().lock(
+		f"opero:{frappe.local.site}:zoho:timesheet:{timesheet_name}", timeout=1320, blocking_timeout=600
+	):
+		doc = frappe.get_doc("Timesheet", timesheet_name)
+		try:
+			if doc.docstatus == 2:
+				_delete_timesheet_entries(doc)
+				status = "Cancelled"
+			elif doc.docstatus == 1:
+				_sync_timesheet_entries(doc)
+				status = "Synced"
+			else:
+				return
+			frappe.db.set_value(
+				"Timesheet",
+				doc.name,
+				{"custom_zoho_sync_status": status, "custom_zoho_sync_error": ""},
+				update_modified=False,
+			)
+		except Exception as exc:
+			frappe.db.rollback()
+			# Keep successful row mappings committed so a retry skips those rows.
+			mapped = sum(bool(_get_mapping("Timesheet Detail", row.name)) for row in doc.time_logs)
+			frappe.db.set_value(
+				"Timesheet",
+				doc.name,
+				{
+					"custom_zoho_sync_status": "Partial" if mapped else "Failed",
+					"custom_zoho_sync_error": str(exc),
+				},
+				update_modified=False,
+			)
+			frappe.log_error(title="Zoho Books Sync", message=frappe.get_traceback())
 
 
 def _sync_timesheet_entries(doc, is_update: bool = False):
 	try:
 		settings = _get_settings()
 		if not settings or not settings.enabled:
-			frappe.logger().info(f"Zoho Books: sync skipped for {doc.name} — integration not enabled")
-			return
+			raise ZohoBooksException("Zoho Books integration is disabled.")
 
 		_validate_settings(settings)
 		access_token = _get_or_refresh_token(settings)
@@ -88,9 +182,9 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
 			)
 			frappe.log_error(
 				f"Zoho Books sync skipped — no personnel mapping for employee '{doc.employee}' on timesheet {doc.name}",
-				"Zoho Books Sync"
+				"Zoho Books Sync",
 			)
-			return
+			raise ZohoBooksException("No personnel mapping found. Add it in Zoho Books Settings.")
 
 		ts_note = frappe.utils.strip_html(doc.note or "") if getattr(doc, "note", None) else ""
 		errors = []
@@ -98,57 +192,78 @@ def _sync_timesheet_entries(doc, is_update: bool = False):
 			try:
 				notes = getattr(time_log, "description", None) or ts_note
 				existing_entry_id = _get_mapping("Timesheet Detail", time_log.name)
-				if is_update and existing_entry_id:
-					_update_time_entry(time_log, zoho_user_id, access_token, org_id, notes, existing_entry_id)
+				if existing_entry_id:
+					if time_log.get("custom_zoho_sync_uncertain"):
+						frappe.db.set_value(
+							"Timesheet Detail",
+							time_log.name,
+							"custom_zoho_sync_uncertain",
+							0,
+							update_modified=False,
+						)
+					if is_update:
+						_update_time_entry(
+							time_log, zoho_user_id, access_token, org_id, notes, existing_entry_id
+						)
 				else:
+					if time_log.get("custom_zoho_sync_uncertain"):
+						raise ZohoBooksException(
+							f"Row {time_log.idx}: a previous create request has an unknown outcome. "
+							"Check Zoho and add its time entry ID to Integration Mapping before retrying."
+						)
 					_create_time_entry(time_log, zoho_user_id, access_token, org_id, notes)
+				frappe.db.commit()
 			except ZohoBooksException as e:
 				frappe.logger().error(f"Failed to sync time log: {e}")
 				errors.append(str(e))
 
-		count = len(doc.time_logs) - len(errors)
 		if errors:
-			frappe.msgprint(
-				f"Zoho Books: {count} of {len(doc.time_logs)} entries synced.<br>"
-				+ "<br>".join(errors),
-				indicator="red",
-				alert=True,
-			)
-		else:
-			frappe.msgprint(
-				f"Zoho Books: {count} time entries synced successfully.",
-				indicator="green",
-				alert=True,
-			)
+			raise ZohoBooksException("; ".join(errors))
 
-	except ZohoBooksException as e:
-		frappe.msgprint(f"Zoho Books sync failed: {e}", indicator="red", alert=True)
+	except ZohoBooksException:
+		raise
 
 
 def _delete_timesheet_entries(doc):
 	try:
 		settings = _get_settings()
 		if not settings or not settings.enabled:
-			return
+			raise ZohoBooksException("Zoho Books integration is disabled.")
 
 		_validate_settings(settings)
 		access_token = _get_or_refresh_token(settings)
 		org_id = settings.organization_id
 
+		errors = []
 		for time_log in doc.time_logs:
 			entry_id = _get_mapping("Timesheet Detail", time_log.name)
+			if not entry_id and time_log.get("custom_zoho_sync_uncertain"):
+				errors.append(
+					f"Row {time_log.idx}: check Zoho and map the uncertain entry before cancellation can finish."
+				)
 			if entry_id:
 				try:
 					_delete_time_entry(entry_id, access_token, org_id)
 					_delete_mapping("Timesheet Detail", time_log.name)
+					frappe.db.set_value(
+						"Timesheet Detail",
+						time_log.name,
+						"custom_zoho_sync_uncertain",
+						0,
+						update_modified=False,
+					)
+					frappe.db.commit()
 				except ZohoBooksException as e:
-					frappe.logger().error(f"Failed to delete time entry: {e}")
+					errors.append(str(e))
+		if errors:
+			raise ZohoBooksException("; ".join(errors))
 
-	except ZohoBooksException as e:
-		frappe.logger().error(f"Failed to delete timesheet entries: {e}")
+	except ZohoBooksException:
+		raise
 
 
 # : OAuth
+
 
 @frappe.whitelist(allow_guest=True)
 def oauth_callback():
@@ -156,11 +271,15 @@ def oauth_callback():
 	error = frappe.request.args.get("error")
 
 	if error:
-		frappe.respond_as_web_page("Zoho Auth Failed", f"<p>Zoho returned error: {error}</p>", http_status_code=400)
+		frappe.respond_as_web_page(
+			"Zoho Auth Failed", f"<p>Zoho returned error: {error}</p>", http_status_code=400
+		)
 		return
 
 	if not code:
-		frappe.respond_as_web_page("Zoho Auth Failed", "<p>No authorization code received.</p>", http_status_code=400)
+		frappe.respond_as_web_page(
+			"Zoho Auth Failed", "<p>No authorization code received.</p>", http_status_code=400
+		)
 		return
 
 	settings = frappe.get_doc("Zoho Books Settings")
@@ -181,7 +300,9 @@ def oauth_callback():
 		data = response.json()
 
 		if "error" in data:
-			frappe.respond_as_web_page("Zoho Auth Failed", f"<p>Token error: {data['error']}</p>", http_status_code=400)
+			frappe.respond_as_web_page(
+				"Zoho Auth Failed", f"<p>Token error: {data['error']}</p>", http_status_code=400
+			)
 			return
 
 		new_expiry = datetime.now() + timedelta(seconds=data.get("expires_in", 3600))
@@ -204,18 +325,22 @@ def oauth_callback():
 def get_authorization_url():
 	settings = frappe.get_doc("Zoho Books Settings")
 	import urllib.parse
-	params = urllib.parse.urlencode({
-		"response_type": "code",
-		"client_id": settings.client_id,
-		"scope": settings.scope or "ZohoBooks.timetracking.ALL ZohoBooks.projects.ALL",
-		"redirect_uri": _get_redirect_uri(),
-		"access_type": "offline",
-		"prompt": "consent",
-	})
+
+	params = urllib.parse.urlencode(
+		{
+			"response_type": "code",
+			"client_id": settings.client_id,
+			"scope": settings.scope or "ZohoBooks.timetracking.ALL ZohoBooks.projects.ALL",
+			"redirect_uri": _get_redirect_uri(),
+			"access_type": "offline",
+			"prompt": "consent",
+		}
+	)
 	return f"{settings.authorization_uri}?{params}"
 
 
 # : Zoho data fetch
+
 
 @frappe.whitelist()
 def get_zoho_users():
@@ -228,12 +353,8 @@ def get_zoho_users():
 
 @frappe.whitelist()
 def test_sync_timesheet(timesheet_name):
-	"""Manually trigger Zoho sync for a submitted timesheet — for diagnosing silent failures."""
-	doc = frappe.get_doc("Timesheet", timesheet_name)
-	if doc.docstatus != 1:
-		frappe.throw(f"Timesheet {timesheet_name} is not submitted (docstatus={doc.docstatus})")
-	_sync_timesheet_entries(doc, is_update=False)
-	return {"status": "done"}
+	"""Queue a permission-checked retry, preserving successful entry mappings."""
+	return retry_timesheet_sync(timesheet_name)
 
 
 @frappe.whitelist()
@@ -245,7 +366,9 @@ def debug_project_tasks(project):
 	settings = _get_settings()
 	_validate_settings(settings)
 	access_token = _get_or_refresh_token(settings)
-	response = _make_api_request("GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id)
+	response = _make_api_request(
+		"GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id
+	)
 	return {"zoho_project_id": zoho_project_id, "response": response}
 
 
@@ -260,14 +383,18 @@ def get_zoho_projects():
 
 # : Mapping read/write (whitelisted for UI)
 
+
 @frappe.whitelist()
 def get_unmapped_employees():
 	"""Return Employees not yet mapped in Integration Mapping."""
-	mapped = set(frappe.db.get_all(
-		"Integration Mapping",
-		filters={"integration": _INTEGRATION, "entity_type": "Employee"},
-		pluck="local_name",
-	) or [])
+	mapped = set(
+		frappe.db.get_all(
+			"Integration Mapping",
+			filters={"integration": _INTEGRATION, "entity_type": "Employee"},
+			pluck="local_name",
+		)
+		or []
+	)
 	all_employees = frappe.db.get_all(
 		"Employee",
 		fields=["name", "employee_name"],
@@ -295,6 +422,7 @@ def delete_personnel_mapping(mapping_name):
 @frappe.whitelist()
 def save_personnel_mappings(mappings):
 	import json
+
 	if isinstance(mappings, str):
 		mappings = json.loads(mappings)
 	saved = []
@@ -313,7 +441,14 @@ def save_personnel_mappings(mappings):
 				{"integration": _INTEGRATION, "entity_type": "Employee", "local_name": m["local_name"]},
 				"name",
 			)
-			saved.append({"name": doc_name, "local_name": m["local_name"], "remote_id": m["remote_id"], "remote_name": m.get("remote_name", "")})
+			saved.append(
+				{
+					"name": doc_name,
+					"local_name": m["local_name"],
+					"remote_id": m["remote_id"],
+					"remote_name": m.get("remote_name", ""),
+				}
+			)
 	frappe.db.commit()
 	return {"status": "ok", "count": len(saved), "saved": saved}
 
@@ -321,11 +456,14 @@ def save_personnel_mappings(mappings):
 @frappe.whitelist()
 def get_unmapped_projects():
 	"""Return Projects not yet mapped in Integration Mapping."""
-	mapped = set(frappe.db.get_all(
-		"Integration Mapping",
-		filters={"integration": _INTEGRATION, "entity_type": "Project"},
-		pluck="local_name",
-	) or [])
+	mapped = set(
+		frappe.db.get_all(
+			"Integration Mapping",
+			filters={"integration": _INTEGRATION, "entity_type": "Project"},
+			pluck="local_name",
+		)
+		or []
+	)
 	all_projects = frappe.db.get_all(
 		"Project",
 		fields=["name", "project_name"],
@@ -360,6 +498,7 @@ def delete_task_mapping(mapping_name):
 @frappe.whitelist()
 def save_project_mappings(mappings):
 	import json
+
 	if isinstance(mappings, str):
 		mappings = json.loads(mappings)
 	saved = []
@@ -371,14 +510,23 @@ def save_project_mappings(mappings):
 				"remote_id",
 			)
 			if existing_remote and existing_remote != m["remote_id"]:
-				frappe.throw(f"'{m['local_name']}' is already mapped to another Zoho project. Unmap it first.")
+				frappe.throw(
+					f"'{m['local_name']}' is already mapped to another Zoho project. Unmap it first."
+				)
 			_set_mapping("Project", m["local_name"], m["remote_id"], m.get("remote_name", ""))
 			doc_name = frappe.db.get_value(
 				"Integration Mapping",
 				{"integration": _INTEGRATION, "entity_type": "Project", "local_name": m["local_name"]},
 				"name",
 			)
-			saved.append({"name": doc_name, "local_name": m["local_name"], "remote_id": m["remote_id"], "remote_name": m.get("remote_name", "")})
+			saved.append(
+				{
+					"name": doc_name,
+					"local_name": m["local_name"],
+					"remote_id": m["remote_id"],
+					"remote_name": m.get("remote_name", ""),
+				}
+			)
 	frappe.db.commit()
 	return {"status": "ok", "count": len(saved), "saved": saved}
 
@@ -397,11 +545,19 @@ def get_task_mapping_data(project):
 	)
 	cubenet_task_names = [t.name for t in all_cubenet_tasks]
 
-	existing_mappings = frappe.db.get_all(
-		"Integration Mapping",
-		filters={"integration": _INTEGRATION, "entity_type": "Task", "local_name": ["in", cubenet_task_names]},
-		fields=["name", "local_name", "remote_id", "remote_name"],
-	) if cubenet_task_names else []
+	existing_mappings = (
+		frappe.db.get_all(
+			"Integration Mapping",
+			filters={
+				"integration": _INTEGRATION,
+				"entity_type": "Task",
+				"local_name": ["in", cubenet_task_names],
+			},
+			fields=["name", "local_name", "remote_id", "remote_name"],
+		)
+		if cubenet_task_names
+		else []
+	)
 
 	mapped_remote_ids = {m.remote_id for m in existing_mappings}
 	mapped_local_names = {m.local_name for m in existing_mappings}
@@ -410,7 +566,9 @@ def get_task_mapping_data(project):
 	settings = _get_settings()
 	_validate_settings(settings)
 	access_token = _get_or_refresh_token(settings)
-	response = _make_api_request("GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id)
+	response = _make_api_request(
+		"GET", f"projects/{zoho_project_id}/tasks", access_token, settings.organization_id
+	)
 
 	if response.get("code") not in (None, 0):
 		frappe.throw(f"Zoho API error fetching tasks: {response.get('message', response)}")
@@ -428,6 +586,7 @@ def get_task_mapping_data(project):
 @frappe.whitelist()
 def save_task_mappings(mappings):
 	import json
+
 	if isinstance(mappings, str):
 		mappings = json.loads(mappings)
 	saved = []
@@ -446,12 +605,20 @@ def save_task_mappings(mappings):
 				{"integration": _INTEGRATION, "entity_type": "Task", "local_name": m["local_name"]},
 				"name",
 			)
-			saved.append({"name": doc_name, "local_name": m["local_name"], "remote_id": m["remote_id"], "remote_name": m.get("remote_name", "")})
+			saved.append(
+				{
+					"name": doc_name,
+					"local_name": m["local_name"],
+					"remote_id": m["remote_id"],
+					"remote_name": m.get("remote_name", ""),
+				}
+			)
 	frappe.db.commit()
 	return {"status": "ok", "count": len(saved), "saved": saved}
 
 
 # : Internal sync helpers
+
 
 def _get_project_id(time_log) -> str:
 	settings = _get_settings()
@@ -467,10 +634,10 @@ def _get_project_id(time_log) -> str:
 	raise ZohoBooksException("No Zoho project ID found. Set a Fallback Project ID in Zoho Books Settings.")
 
 
-_zoho_task_cache: Dict[str, Dict[str, str]] = {}
+_zoho_task_cache: dict[str, dict[str, str]] = {}
 
 
-def _get_task_id(time_log, project_id: str, access_token: str, org_id: str) -> Optional[str]:
+def _get_task_id(time_log, project_id: str, access_token: str, org_id: str) -> str | None:
 	cubenet_task = getattr(time_log, "task", None)
 	if cubenet_task:
 		stored = _get_mapping("Task", cubenet_task)
@@ -501,24 +668,25 @@ def _get_task_id(time_log, project_id: str, access_token: str, org_id: str) -> O
 	return None
 
 
-def _match_zoho_task_by_name(project_id: str, task_name: str, access_token: str, org_id: str) -> Optional[str]:
+def _match_zoho_task_by_name(project_id: str, task_name: str, access_token: str, org_id: str) -> str | None:
 	if project_id not in _zoho_task_cache:
 		try:
 			response = _make_api_request("GET", f"projects/{project_id}/tasks", access_token, org_id)
 			tasks = response.get("task", response.get("tasks", []))
-			_zoho_task_cache[project_id] = {
-				t["task_name"].strip().lower(): t["task_id"] for t in tasks
-			}
+			_zoho_task_cache[project_id] = {t["task_name"].strip().lower(): t["task_id"] for t in tasks}
 		except ZohoBooksException:
 			return None
 
 	return _zoho_task_cache[project_id].get(task_name.strip().lower())
 
 
-def _create_zoho_task(project_id: str, task_name: str, access_token: str, org_id: str) -> Optional[str]:
+def _create_zoho_task(project_id: str, task_name: str, access_token: str, org_id: str) -> str | None:
 	try:
 		response = _make_api_request(
-			"POST", f"projects/{project_id}/tasks", access_token, org_id,
+			"POST",
+			f"projects/{project_id}/tasks",
+			access_token,
+			org_id,
 			data={"task_name": task_name},
 		)
 		task = response.get("task", {})
@@ -538,7 +706,9 @@ def _create_time_entry(time_log, zoho_user_id: str, access_token: str, org_id: s
 		log_date = from_time.date().isoformat() if from_time else ""
 		task_id = _get_task_id(time_log, project_id, access_token, org_id)
 		if not task_id:
-			raise ZohoBooksException("No task ID available. Configure a Fallback Task ID in Zoho Books Settings.")
+			raise ZohoBooksException(
+				"No task ID available. Configure a Fallback Task ID in Zoho Books Settings."
+			)
 
 		payload = {
 			"project_id": project_id,
@@ -551,11 +721,21 @@ def _create_time_entry(time_log, zoho_user_id: str, access_token: str, org_id: s
 			"bill_status": "billable" if time_log.is_billable else "non_billable",
 		}
 
+		# Persist intent before sending: a lost response or worker crash must not cause a duplicate POST.
+		frappe.db.set_value(
+			"Timesheet Detail", time_log.name, "custom_zoho_sync_uncertain", 1, update_modified=False
+		)
+		frappe.db.commit()
 		response = _make_api_request("POST", "projects/timeentries", access_token, org_id, payload)
 		timelog_data = response.get("timelog") or response.get("time_entry") or {}
 		entry_id = timelog_data.get("timelog_id") or timelog_data.get("time_entry_id")
-		if entry_id and time_log.name:
+		if not entry_id:
+			raise ZohoBooksException("Zoho returned no time entry ID; check Zoho before retrying this entry.")
+		if time_log.name:
 			_set_mapping("Timesheet Detail", time_log.name, entry_id)
+			frappe.db.set_value(
+				"Timesheet Detail", time_log.name, "custom_zoho_sync_uncertain", 0, update_modified=False
+			)
 
 	except ZohoBooksException:
 		raise
@@ -563,7 +743,9 @@ def _create_time_entry(time_log, zoho_user_id: str, access_token: str, org_id: s
 		raise ZohoBooksException(f"Failed to create Zoho time entry: {e}")
 
 
-def _update_time_entry(time_log, zoho_user_id: str, access_token: str, org_id: str, notes: str = "", entry_id: str = ""):
+def _update_time_entry(
+	time_log, zoho_user_id: str, access_token: str, org_id: str, notes: str = "", entry_id: str = ""
+):
 	if not entry_id:
 		_create_time_entry(time_log, zoho_user_id, access_token, org_id, notes)
 		return
@@ -575,7 +757,9 @@ def _update_time_entry(time_log, zoho_user_id: str, access_token: str, org_id: s
 		log_date = from_time.date().isoformat() if from_time else ""
 		task_id = _get_task_id(time_log, project_id, access_token, org_id)
 		if not task_id:
-			raise ZohoBooksException("No task ID available. Configure a Fallback Task ID in Zoho Books Settings.")
+			raise ZohoBooksException(
+				"No task ID available. Configure a Fallback Task ID in Zoho Books Settings."
+			)
 
 		payload = {
 			"project_id": project_id,
@@ -603,12 +787,14 @@ def _delete_time_entry(entry_id: str, access_token: str, org_id: str):
 
 # : Token management
 
+
 def _get_redirect_uri() -> str:
 	return get_url(ZOHO_OAUTH_CALLBACK_PATH)
 
 
 def _save_tokens(access_token=None, refresh_token=None, token_expiry=None):
 	from frappe.utils.password import set_encrypted_password
+
 	if access_token:
 		set_encrypted_password("Zoho Books Settings", "Zoho Books Settings", access_token, "access_token")
 	if refresh_token:
@@ -620,13 +806,16 @@ def _save_tokens(access_token=None, refresh_token=None, token_expiry=None):
 
 def _get_token(fieldname: str) -> str:
 	from frappe.utils.password import get_decrypted_password
+
 	try:
-		return get_decrypted_password("Zoho Books Settings", "Zoho Books Settings", fieldname, raise_exception=False)
+		return get_decrypted_password(
+			"Zoho Books Settings", "Zoho Books Settings", fieldname, raise_exception=False
+		)
 	except Exception:
 		return None
 
 
-def _get_settings() -> Optional[Any]:
+def _get_settings() -> Any | None:
 	try:
 		return frappe.get_doc("Zoho Books Settings")
 	except frappe.DoesNotExistError:
@@ -646,7 +835,9 @@ def _get_or_refresh_token(settings) -> str:
 	if _is_token_expired(settings.token_expiry):
 		refresh_token = _get_token("refresh_token")
 		if not refresh_token:
-			raise ZohoBooksException("No refresh token available. Please reconfigure Zoho Books authentication.")
+			raise ZohoBooksException(
+				"No refresh token available. Please reconfigure Zoho Books authentication."
+			)
 		_refresh_access_token(settings)
 		settings.reload()
 
@@ -694,8 +885,8 @@ def _make_api_request(
 	endpoint: str,
 	access_token: str,
 	org_id: str,
-	data: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+	data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
 	url = f"https://www.zohoapis.com/books/v3/{endpoint}"
 	params = {"organization_id": org_id}
 	headers = {
