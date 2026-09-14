@@ -5,27 +5,55 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
+from frappe.utils import getdate
+
+from opero.opero.report.timesheet_permissions import match_conditions
 
 
 def execute(filters=None):
 	filters = filters or {}
-	months = frappe.db.sql(
-		"""
-		SELECT DISTINCT MONTH(tsd.from_time) AS month, MONTHNAME(tsd.from_time) AS month_name
+	conditions = ["ts.docstatus = 1", "tsd.from_time IS NOT NULL"]
+	values = {}
+	for field, expression in (("company", "project.company"), ("project", "t.project")):
+		if filters.get(field):
+			conditions.append(f"{expression} = %({field})s")
+			values[field] = filters[field]
+	if filters.get("from_date"):
+		conditions.append("tsd.from_time >= %(from_date)s")
+		values["from_date"] = getdate(filters["from_date"])
+	if filters.get("to_date"):
+		from frappe.utils import add_days
+
+		conditions.append("tsd.from_time < %(until)s")
+		values["until"] = add_days(getdate(filters["to_date"]), 1)
+	if (
+		filters.get("from_date")
+		and filters.get("to_date")
+		and getdate(filters["from_date"]) > getdate(filters["to_date"])
+	):
+		frappe.throw(_("From Date must be on or before To Date"))
+	permissions = match_conditions("Timesheet", "ts")
+	permissions += match_conditions("Task", "t")
+	permissions += match_conditions("Project", "project")
+	rows = frappe.db.sql(
+		f"""
+		SELECT t.name AS task, t.subject AS task_subject, project.company,
+		       DATE_FORMAT(tsd.from_time, '%%Y-%%m') AS month, SUM(tsd.hours) AS hours
 		FROM `tabTimesheet Detail` tsd
-		WHERE tsd.from_time IS NOT NULL
-		ORDER BY MONTH(tsd.from_time)
+		JOIN `tabTimesheet` ts ON ts.name = tsd.parent
+		JOIN `tabTask` t ON t.name = tsd.task
+		JOIN `tabProject` project ON project.name = t.project
+		WHERE {' AND '.join(conditions)} {permissions}
+		GROUP BY t.name, t.subject, project.company, DATE_FORMAT(tsd.from_time, '%%Y-%%m')
+		ORDER BY t.subject, t.name, month
 		""",
+		values,
 		as_dict=True,
 	)
-
+	months = sorted({row.month for row in rows})
 	columns = [
-		{
-			"fieldname": "task_subject",
-			"label": _("Task Subject"),
-			"fieldtype": "Data",
-			"width": 220,
-		},
+		{"fieldname": "task", "label": _("Task"), "fieldtype": "Link", "options": "Task", "width": 160},
+		{"fieldname": "task_subject", "label": _("Task Subject"), "fieldtype": "Data", "width": 220},
 		{
 			"fieldname": "company",
 			"label": _("Company"),
@@ -34,59 +62,19 @@ def execute(filters=None):
 			"width": 140,
 		},
 	]
-	month_selects = []
 	for month in months:
-		fieldname = f"month_{int(month.month)}"
 		columns.append(
 			{
-				"fieldname": fieldname,
-				"label": _(month.month_name),
+				"fieldname": "month_" + month.replace("-", "_"),
+				"label": getdate(month + "-01").strftime("%b %Y"),
 				"fieldtype": "Float",
 				"width": 110,
 			}
 		)
-		month_selects.append(
-			f'SUM(CASE WHEN MONTH(tsd.from_time) = {int(month.month)} THEN tsd.hours ELSE 0 END) AS `{fieldname}`'
+	data = {}
+	for row in rows:
+		item = data.setdefault(
+			row.task, {"task": row.task, "task_subject": row.task_subject, "company": row.company}
 		)
-
-	if not month_selects:
-		return columns, []
-
-	month_columns_sql = ", ".join(month_selects)
-	conditions = []
-	values = {}
-	if filters.get("company"):
-		conditions.append("project.company = %(company)s")
-		values["company"] = filters["company"]
-
-	if filters.get("project"):
-		conditions.append("t.project = %(project)s")
-		values["project"] = filters["project"]
-	if filters.get("from_date"):
-		conditions.append("DATE(tsd.from_time) >= %(from_date)s")
-		values["from_date"] = filters["from_date"]
-	if filters.get("to_date"):
-		conditions.append("DATE(tsd.from_time) <= %(to_date)s")
-		values["to_date"] = filters["to_date"]
-
-	where_sql = (" AND " + " AND ".join(conditions)) if conditions else ""
-
-	data = frappe.db.sql(
-		f"""
-		SELECT
-			t.subject AS task_subject,
-			project.company AS company,
-			{month_columns_sql}
-		FROM `tabTask` t
-		LEFT JOIN `tabProject` project ON project.name = t.project
-		LEFT JOIN `tabTimesheet Detail` tsd ON tsd.task = t.name
-		LEFT JOIN `tabTimesheet` ts ON ts.name = tsd.parent
-		WHERE 1=1 {where_sql}
-		GROUP BY t.name, t.subject, project.company
-		ORDER BY t.subject
-		""",
-		values,
-		as_dict=True,
-	)
-
-	return columns, data
+		item["month_" + row.month.replace("-", "_")] = row.hours
+	return columns, list(data.values())
