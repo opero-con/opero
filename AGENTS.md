@@ -92,7 +92,9 @@ No `--no-verify`. No co-author lines — never add `Co-Authored-By` or any AI to
 
 Do not bump the version in feature PRs. Merge is not a release. Desk asset URLs cache-bust on this version, so cubenet picks up JS/CSS when you ship, not when you merge.
 
-Cut a tag only when unreleased work on `main` has accumulated and you intend to install or deploy that snapshot. Then, in a `bump/` PR (never a direct push to `main`):
+Cut a tag only when unreleased work on `main` has accumulated and you intend to install or deploy that snapshot. Treat 8-10 merged PRs, or 2 weeks since the last tag, whichever comes first, as a prompt to flag a release candidate — not an automatic bump. A single landed PR, or a production hotfix that needs to reach cubenet immediately, can also justify a tag on its own; the count is a backstop, not the trigger.
+
+In a `bump/` PR (never a direct push to `main`):
 
 1. Set `__version__` to the new version
 2. Add one `CHANGELOG.md` section covering the whole batch since the last tag
