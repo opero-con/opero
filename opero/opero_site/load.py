@@ -341,7 +341,7 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		file_doc.insert(ignore_permissions=True)
 	else:
 		file_doc = save_file(filename, blob, doc.doctype, doc.name, is_private=0)
-	if field == "portrait" and file_doc.file_name != filename:
+	if file_doc.file_name != filename:
 		# Keep the source attachment label even when Frappe hashes its storage URL.
 		file_doc.db_set("file_name", filename)
 	doc.set(field, file_doc.file_url)
@@ -356,6 +356,11 @@ def matches_website(doc, path: str, text: str) -> bool:
 	if doc.is_new():
 		return False
 	planned = doc.to_site_frontmatter()
+	if doc.doctype == "Enterprise":
+		incoming_logo = _text(parse_frontmatter(text).get("logo"))
+		if incoming_logo.lstrip("/").startswith("media/") and planned.get("logo"):
+			if local_portrait_attachment(doc, os.path.basename(incoming_logo)) == planned["logo"]:
+				planned["logo"] = incoming_logo
 	if doc.doctype == "Employee":
 		incoming_image = _text(parse_frontmatter(text).get("image"))
 		if incoming_image.lstrip("/").startswith(("media/", "team/")) and (

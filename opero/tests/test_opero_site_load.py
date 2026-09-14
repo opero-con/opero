@@ -6,7 +6,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from opero.opero_site.github import ContentRepo, GithubError
-from opero.opero_site.load import load_files, slug_from_path
+from opero.opero_site.load import load_files, matches_website, slug_from_path
 from opero.opero_site.markdown import canonical_frontmatter, parse_frontmatter, to_markdown
 from opero.tests.website_employee import clear_website_test_employees, make_website_employee
 
@@ -548,3 +548,27 @@ logo: /media/enterprises/gasia-poa.png
 			existing.logo.startswith("/files/") or existing.logo.startswith("/private/files/")
 		)
 		self.assertEqual(frappe.db.count("Enterprise", {"enterprise_name": "Gasia Poa"}), 1)
+		files = {"content/enterprises/gasia-poa.md": """---
+name: Gasia Poa
+order: 10
+active: true
+logo: /media/enterprises/gasia-poa.png
+---
+"""}
+		modified = existing.modified
+		attachment_count = frappe.db.count("File", {"attached_to_doctype": "Enterprise", "attached_to_name": existing.name})
+		for _ in range(2):
+			self.assertEqual(load_files(files, repo=_Repo())["enterprises"], 0)
+			existing.reload()
+			self.assertEqual(existing.modified, modified)
+			self.assertEqual(frappe.db.count("File", {"attached_to_doctype": "Enterprise", "attached_to_name": existing.name}), attachment_count)
+		# A real content edit must still import.
+		files["content/enterprises/gasia-poa.md"] = files["content/enterprises/gasia-poa.md"].replace("order: 10", "order: 11")
+		self.assertEqual(load_files(files, repo=_Repo())["enterprises"], 1)
+		existing.reload()
+		self.assertEqual(existing.sort_order, 11)
+		text = files["content/enterprises/gasia-poa.md"]
+		with patch("frappe.core.doctype.file.file.File.exists_on_disk", return_value=False):
+			self.assertFalse(matches_website(existing, "content/enterprises/gasia-poa.md", text))
+		existing.logo = "/files/different-logo.png"
+		self.assertFalse(matches_website(existing, "content/enterprises/gasia-poa.md", text))
