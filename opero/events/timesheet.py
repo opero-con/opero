@@ -7,9 +7,24 @@ from frappe.utils import add_to_date, escape_html, get_datetime
 
 
 def validate_timesheet(doc, _method=None):
+	_set_week_of_month(doc)
 	_anti_spill(doc)
 	_fetch_pm_email(doc)
 	_validate_allocated_hours(doc)
+
+
+def week_of_month(from_time):
+	"""Monday-Sunday weeks, with the partial week containing the 1st as Week 1."""
+	if not from_time:
+		return ""
+	date = get_datetime(from_time)
+	week = (date.day - 1 + date.replace(day=1).weekday()) // 7 + 1
+	return f"Week {week}"
+
+
+def _set_week_of_month(doc):
+	for row in doc.time_logs or []:
+		row.custom_week_of_month = week_of_month(row.from_time)
 
 
 def before_submit_timesheet(doc, _method=None):

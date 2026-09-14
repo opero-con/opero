@@ -20,11 +20,17 @@ function loadForm() {
 				"is_billable",
 				"activity_type",
 				"zoho_entry_id",
+				"custom_week_of_month",
 				"custom_zoho_sync_uncertain",
 			].map((fieldname) => ({ fieldname })),
 		}),
+		get_doc: (doctype, name) => rows.get(name),
 		model: {
-			set_value: async (doctype, name, values) => Object.assign(rows.get(name), values),
+			set_value: async (doctype, name, values, value) =>
+				Object.assign(
+					rows.get(name),
+					typeof values === "string" ? { [values]: value } : values
+				),
 		},
 		xcall: async () => 0,
 	};
@@ -71,6 +77,7 @@ for (const [start, hours] of [
 			activity_type: "rate",
 			zoho_entry_id: "remote",
 			custom_zoho_sync_uncertain: 1,
+			custom_week_of_month: "Week 5",
 		};
 		frm.doc.time_logs.push(row);
 		rows.set(row.name, row);
@@ -94,6 +101,18 @@ for (const [start, hours] of [
 			assert.equal(entry.description, "Work");
 			assert.equal(entry.zoho_entry_id, undefined);
 			assert.equal(entry.custom_zoho_sync_uncertain, undefined);
+			assert.equal(
+				entry.custom_week_of_month,
+				"Week " +
+					(Math.floor(
+						(moment(entry.from_time).date() -
+							1 +
+							moment(entry.from_time).startOf("month").isoWeekday() -
+							1) /
+							7
+					) +
+						1)
+			);
 		}
 	});
 }
@@ -113,4 +132,27 @@ test("pending syncs can be retried after an interrupted worker", async () => {
 	for (const { doctype, events } of handlers)
 		if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
 	assert.equal(buttons.has("Retry Zoho sync"), true);
+});
+
+test("week updates from From Time and clears when the date is removed", async () => {
+	const { handlers, rows, frm } = loadForm();
+	const row = { doctype: "Timesheet Detail", name: "week-test", custom_week_of_month: "wrong" };
+	rows.set(row.name, row);
+	for (const [date, week] of [
+		["2026-09-06 23:00:00", "Week 1"],
+		["2026-09-07 00:00:00", "Week 2"],
+		["2026-09-08 00:00:00", "Week 2"],
+		["2026-09-14 00:00:00", "Week 3"],
+		["2026-09-22 09:00:00", "Week 4"],
+		["2024-02-29 09:00:00", "Week 5"],
+		["2026-03-30 00:00:00", "Week 6"],
+		[null, ""],
+	]) {
+		row.from_time = date;
+		for (const { doctype, events } of handlers)
+			if (doctype === "Timesheet Detail" && events.from_time) {
+				await events.from_time(frm, row.doctype, row.name);
+			}
+		assert.equal(row.custom_week_of_month, week);
+	}
 });

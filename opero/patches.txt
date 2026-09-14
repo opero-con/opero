@@ -124,3 +124,5 @@ opero.patches.v0_4.swap_personnel_type_and_series
 opero.patches.v0_4.filter_website_enterprises_shortcut
 opero.patches.v0_4.use_alternative_personnel_image
 opero.patches.v0_4.add_timesheet_sync_status
+opero.patches.v0_4.add_timesheet_week_of_month
+opero.patches.v0_4.remove_timesheet_week_column

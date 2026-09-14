@@ -286,7 +286,9 @@ frappe.ui.form.on("Timesheet", {
 					const template = {};
 					for (const field of frappe.get_meta("Timesheet Detail").fields) {
 						if (
-							!["from_time", "to_time", "hours"].includes(field.fieldname) &&
+							!["from_time", "to_time", "hours", "custom_week_of_month"].includes(
+								field.fieldname
+							) &&
 							!field.fieldname.startsWith("zoho_") &&
 							!field.fieldname.startsWith("custom_zoho_")
 						) {
@@ -300,12 +302,13 @@ frappe.ui.form.on("Timesheet", {
 					while (boundary.isBefore(end)) {
 						const segmentStart = boundary.clone();
 						boundary = moment.min(boundary.clone().add(1, "day"), end);
-						frm.add_child("time_logs", {
+						const segment = frm.add_child("time_logs", {
 							...template,
 							from_time: segmentStart.format("YYYY-MM-DD HH:mm:ss"),
 							to_time: boundary.format("YYYY-MM-DD HH:mm:ss"),
 							hours: boundary.diff(segmentStart, "seconds") / 3600,
 						});
+						await update_row_week_of_month(frm, segment.doctype, segment.name);
 					}
 				}
 				frm.refresh_field("time_logs");
@@ -410,7 +413,7 @@ const refresh_allocation_balances = frappe.utils.debounce(async (frm) => {
 		)}</th></tr></thead><tbody>
         ${balances
 			.map(
-				(row) => `<tr><td>${escape(row.task)} / ${escape(row.month)}</td>
+				(row) => `<tr><td>${escape(row.task_name || row.task)} / ${escape(row.month)}</td>
         <td>${row.allocated}</td><td>${row.submitted}</td><td>${row.current}</td>
         <td class="${row.remaining < 0 ? "text-danger" : ""}">${row.remaining}</td></tr>`
 			)
@@ -431,4 +434,20 @@ frappe.ui.form.on("Timesheet Detail", {
 	from_time: refresh_allocation_balances,
 	hours: refresh_allocation_balances,
 	time_logs_remove: refresh_allocation_balances,
+});
+
+function update_row_week_of_month(frm, cdt, cdn) {
+	if (frm.doc.docstatus !== 0) return;
+	const row = frappe.get_doc(cdt, cdn);
+	const date = row.from_time ? moment(row.from_time) : null;
+	const week = date
+		? "Week " +
+		  (Math.floor((date.date() - 1 + date.clone().startOf("month").isoWeekday() - 1) / 7) + 1)
+		: "";
+	return frappe.model.set_value(cdt, cdn, "custom_week_of_month", week);
+}
+
+frappe.ui.form.on("Timesheet Detail", {
+	from_time: update_row_week_of_month,
+	time_logs_add: update_row_week_of_month,
 });
