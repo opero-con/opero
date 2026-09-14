@@ -1,5 +1,7 @@
 """Regression coverage for monthly balances, report dates and accounting retries."""
 
+from datetime import datetime
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import frappe
@@ -284,3 +286,34 @@ class TestTimesheetZoho(FrappeTestCase):
 			with self.assertRaises(frappe.PermissionError):
 				zoho_books.reconcile_timesheet_entry("test", 1, confirmed_absent=True)
 			marker.assert_not_called()
+
+
+class TestTimesheetWeekOfMonth(TestCase):
+	def test_week_boundaries_and_month_end(self):
+		# September starts on Tuesday: its first week ends on Sunday the 6th.
+		for day, week in [
+			(1, 1),
+			(6, 1),
+			(7, 2),
+			(13, 2),
+			(14, 3),
+			(20, 3),
+			(21, 4),
+			(27, 4),
+			(28, 5),
+			(30, 5),
+		]:
+			with self.subTest(day=day):
+				self.assertEqual(timesheet.week_of_month(datetime(2026, 9, day, 23, 59)), f"Week {week}")
+		self.assertEqual(timesheet.week_of_month("2024-02-29 09:00:00"), "Week 5")
+		self.assertEqual(timesheet.week_of_month("2026-10-01 00:00:00"), "Week 1")
+		self.assertEqual(timesheet.week_of_month("2026-03-30 00:00:00"), "Week 6")
+		self.assertEqual(timesheet.week_of_month("2026-06-01 00:00:00"), "Week 1")
+
+	def test_server_overwrites_supplied_week_and_clears_missing_dates(self):
+		rows = [
+			frappe._dict(from_time="2026-09-14 09:00:00", custom_week_of_month="Week 5"),
+			frappe._dict(from_time=None, custom_week_of_month="Week 3"),
+		]
+		timesheet._set_week_of_month(frappe._dict(time_logs=rows))
+		self.assertEqual([row.custom_week_of_month for row in rows], ["Week 3", ""])

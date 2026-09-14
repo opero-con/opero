@@ -32,15 +32,14 @@ def get_allocation_balances(employee, project, time_logs, timesheet_name=None):
 	if not rows:
 		return []
 	tasks = {row.task for row in rows}
-	visible = set(
-		frappe.get_list(
-			"Task",
-			filters={"name": ["in", list(tasks)], "project": project},
-			pluck="name",
-			limit_page_length=0,
-		)
+	visible = frappe.get_list(
+		"Task",
+		filters={"name": ["in", list(tasks)], "project": project},
+		fields=["name", "subject"],
+		limit_page_length=0,
 	)
-	if tasks != visible:
+	task_names = {row.name: row.subject or row.name for row in visible}
+	if tasks != set(task_names):
 		frappe.throw("Every task must be an accessible task in this project.", frappe.PermissionError)
 	allocation, usage = get_monthly_balances(employee, rows, timesheet_name)
 	current = {}
@@ -50,6 +49,7 @@ def get_allocation_balances(employee, project, time_logs, timesheet_name=None):
 	return [
 		dict(
 			task=task,
+			task_name=task_names[task],
 			month=month,
 			allocated=allocation.get((task, month), 0),
 			submitted=usage.get((task, month), 0),
