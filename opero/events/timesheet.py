@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import frappe
-from frappe.utils import add_to_date, escape_html, get_datetime
+from frappe.utils import add_to_date, escape_html, get_datetime, get_first_day, getdate, nowdate
+
+SUBMISSION_CUTOFF_DAY = 3
+SUBMISSION_CUTOFF_BYPASS_ROLES = {"Projects Manager"}
 
 
 def validate_timesheet(doc, _method=None):
@@ -29,6 +34,7 @@ def _set_week_of_month(doc):
 
 def before_submit_timesheet(doc, _method=None):
 	_validate_project_rate_factor(doc)
+	_validate_submission_cutoff(doc)
 
 
 def _safe_html(value) -> str:
@@ -141,6 +147,24 @@ def _validate_project_rate_factor(doc):
 		f"Row(s) {', '.join(missing_rows)}: Project Rate Factor is missing.<br>{detail}",
 		title="Missing Project Rate Factor",
 	)
+
+
+def _validate_submission_cutoff(doc):
+	if SUBMISSION_CUTOFF_BYPASS_ROLES & set(frappe.get_roles()):
+		return
+	months = {get_first_day(row.from_time) for row in (doc.time_logs or []) if row.from_time}
+	if not months:
+		return
+	today = getdate(nowdate())
+	for month_start in sorted(months):
+		cutoff = get_first_day(month_start, d_months=1) + timedelta(days=SUBMISSION_CUTOFF_DAY - 1)
+		if today > cutoff:
+			frappe.throw(
+				f"Timesheet entries for <b>{month_start.strftime('%B %Y')}</b> were due by "
+				f"<b>{cutoff.strftime('%d %b %Y')}</b>. Please contact your project manager to submit "
+				"after the cutoff.",
+				title="Submission cutoff passed",
+			)
 
 
 def get_monthly_balances(employee, rows, name=None, lock=False):
