@@ -23,10 +23,15 @@ def execute():
 	)
 
 	# Derived metadata only: retain parent status and modification timestamps.
+	# The zero-day/zero-month branch guards against corrupt legacy from_time values
+	# (e.g. '2008-00-00'): calendar functions like WEEKDAY() error on those under
+	# strict SQL modes, so they're detected via string matching before any date
+	# arithmetic runs.
 	frappe.db.sql(
 		"""
 		UPDATE `tabTimesheet Detail`
 		SET custom_week_of_month = CASE WHEN from_time IS NULL THEN ''
+		    WHEN CAST(from_time AS CHAR) REGEXP '-00-|-00 ' THEN ''
 		    ELSE CONCAT('Week ', FLOOR((DAY(from_time) - 1 +
 		    WEEKDAY(DATE_SUB(DATE(from_time), INTERVAL (DAY(from_time) - 1) DAY))) / 7) + 1) END
 		"""

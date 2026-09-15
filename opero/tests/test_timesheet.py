@@ -333,3 +333,20 @@ class TestTimesheetWeekOfMonth(TestCase):
 		]
 		timesheet._set_week_of_month(frappe._dict(time_logs=rows))
 		self.assertEqual([row.custom_week_of_month for row in rows], ["Week 3", ""])
+
+
+class TestTimesheetWeekOfMonthPatch(FrappeTestCase):
+	def test_corrupt_from_time_is_blanked_instead_of_erroring(self):
+		from opero.patches.v0_4.add_timesheet_week_of_month import execute
+
+		name = "patch-test-" + frappe.generate_hash(length=12)
+		frappe.db.sql(
+			"""
+			INSERT INTO `tabTimesheet Detail` (name, parent, parentfield, parenttype, from_time)
+			VALUES (%s, %s, 'time_logs', 'Timesheet', '2008-00-00 00:00:00')
+			""",
+			(name, name),
+		)
+		self.addCleanup(frappe.db.sql, "DELETE FROM `tabTimesheet Detail` WHERE name = %s", (name,))
+		execute()
+		self.assertEqual(frappe.db.get_value("Timesheet Detail", name, "custom_week_of_month"), "")
