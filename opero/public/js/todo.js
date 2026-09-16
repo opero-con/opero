@@ -78,6 +78,27 @@ const setDueDateDescription = (frm) => {
 	frm.set_df_property("date", "description", description)
 }
 
+const fitDescriptionEditor = (frm) => {
+	const editor = frm.get_field("description")?.$wrapper.find(".ql-editor").get(0)
+	if (!editor) return
+
+	const lineHeight = Number.parseFloat(window.getComputedStyle(editor).lineHeight) || 22
+	editor.style.minHeight = "0"
+	editor.style.overflowY = "hidden"
+	editor.style.height = "auto"
+	editor.style.height = `${editor.scrollHeight + lineHeight * 2}px`
+}
+
+const enableDescriptionAutosize = (frm) => {
+	const $editor = frm.get_field("description")?.$wrapper.find(".ql-editor")
+	if (!$editor?.length) return
+
+	$editor.off("input.operoTodoAutosize").on("input.operoTodoAutosize", () => {
+		fitDescriptionEditor(frm)
+	})
+	fitDescriptionEditor(frm)
+}
+
 const renderAssigneesSidebar = (frm) => {
 	frm.assign_to.parent.siblings(".opero-assignees-section").remove()
 
@@ -202,6 +223,7 @@ frappe.ui.form.on("ToDo", {
 		frm.add_custom_button(__("Flow Hub"), () => { window.location.href = "/app/flow-hub"; })
 		frm.assign_to.parent.hide()
 		renderAssigneesSidebar(frm)
+		window.requestAnimationFrame(() => enableDescriptionAutosize(frm))
 	},
 
 	custom_title(frm) {
@@ -217,6 +239,7 @@ frappe.ui.form.on("ToDo", {
 		if (description && !extractPlainText(frm.doc.custom_title)) {
 			frm.set_value("custom_title", description)
 		}
+		fitDescriptionEditor(frm)
 	},
 
 	date(frm) {

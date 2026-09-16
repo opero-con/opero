@@ -34,13 +34,18 @@ def execute(filters=None):
 	_validate_granularity_limits(granularity, day_span)
 
 	entity_sql, entity_params = todo_dashboard.get_entity_condition(filters)
+	user_scope_sql, user_scope_params = todo_dashboard.get_user_scope_condition("todo")
 
-	created_counts = _get_created_counts(from_date, to_date, entity_sql, entity_params)
+	created_counts = _get_created_counts(
+		from_date, to_date, entity_sql, entity_params, user_scope_sql, user_scope_params
+	)
 	closed_counts = _get_completion_counts(
-		from_date, to_date, "Closed", "custom_closed_on", entity_sql, entity_params
+		from_date, to_date, "Closed", "custom_closed_on", entity_sql, entity_params,
+		user_scope_sql, user_scope_params,
 	)
 	cancelled_counts = _get_completion_counts(
-		from_date, to_date, "Cancelled", "custom_cancelled_on", entity_sql, entity_params
+		from_date, to_date, "Cancelled", "custom_cancelled_on", entity_sql, entity_params,
+		user_scope_sql, user_scope_params,
 	)
 	created_bucket = _aggregate_by_bucket(created_counts, granularity)
 	closed_bucket = _aggregate_by_bucket(closed_counts, granularity)
@@ -115,23 +120,29 @@ def get_columns(granularity):
 	]
 
 
-def _get_created_counts(from_date, to_date, entity_sql="", entity_params=None):
+def _get_created_counts(
+	from_date, to_date, entity_sql="", entity_params=None, user_scope_sql="1 = 1", user_scope_params=None
+):
 	date_expr = _date_expr("todo.creation")
 	rows = frappe.db.sql(
 		f"""
 			SELECT {date_expr} AS day_key, COUNT(*) AS total
 			FROM `tabToDo` todo
 			WHERE {date_expr} BETWEEN %s AND %s
+				AND {user_scope_sql}
 				{f"AND {entity_sql}" if entity_sql else ""}
 			GROUP BY {date_expr}
 		""",
-		[from_date, to_date, *(entity_params or [])],
+		[from_date, to_date, *(user_scope_params or []), *(entity_params or [])],
 		as_dict=True,
 	)
 	return {getdate(row.day_key): row.total for row in rows}
 
 
-def _get_completion_counts(from_date, to_date, status, fieldname, entity_sql="", entity_params=None):
+def _get_completion_counts(
+	from_date, to_date, status, fieldname, entity_sql="", entity_params=None,
+	user_scope_sql="1 = 1", user_scope_params=None,
+):
 	date_expr = _date_expr(f"todo.{fieldname}")
 	rows = frappe.db.sql(
 		f"""
@@ -140,10 +151,11 @@ def _get_completion_counts(from_date, to_date, status, fieldname, entity_sql="",
 			WHERE todo.status = %s
 				AND todo.{fieldname} IS NOT NULL
 				AND {date_expr} BETWEEN %s AND %s
+				AND {user_scope_sql}
 				{f"AND {entity_sql}" if entity_sql else ""}
 			GROUP BY {date_expr}
 		""",
-		[status, from_date, to_date, *(entity_params or [])],
+		[status, from_date, to_date, *(user_scope_params or []), *(entity_params or [])],
 		as_dict=True,
 	)
 	counts = defaultdict(int)

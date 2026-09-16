@@ -97,8 +97,9 @@ def get_data(filters):
 	# Default window for completed todos: 90 days. Bypass with include_historical=1.
 	history_cutoff = getdate(add_days(today, -89))
 
-	conditions = []
-	params = []
+	user_scope_sql, user_scope_params = todo_dashboard.get_user_scope_condition("todo")
+	conditions = [user_scope_sql]
+	params = list(user_scope_params)
 
 	entity_sql, entity_params = todo_dashboard.get_entity_condition(filters)
 	if entity_sql:
@@ -134,9 +135,6 @@ def get_data(filters):
 			)"""
 		)
 		params.append(history_cutoff)
-
-	if not conditions:
-		conditions.append("1 = 1")
 
 	todo_rows = frappe.db.sql(
 		f"""

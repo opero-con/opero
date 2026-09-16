@@ -981,12 +981,14 @@ def _get_initials(full_name: str) -> str:
 
 
 def _get_unassigned_active_count() -> int:
-	"""Org-wide count of active ToDos with no assignee at all."""
+	"""Count visible active ToDos with no assignee at all."""
+	user_scope_sql, user_scope_params = get_user_scope_condition("todo")
 	count = frappe.db.sql(
-		"""
+		f"""
 			SELECT COUNT(DISTINCT todo.name)
 			FROM `tabToDo` todo
 			WHERE todo.status IN ('Open', 'In Progress')
+				AND {user_scope_sql}
 				AND (todo.allocated_to IS NULL OR todo.allocated_to = '')
 				AND NOT EXISTS (
 					SELECT 1
@@ -994,7 +996,8 @@ def _get_unassigned_active_count() -> int:
 					WHERE assignee_row.parent = todo.name
 						AND assignee_row.parenttype = 'ToDo'
 				)
-		"""
+		""",
+		user_scope_params,
 	)[0][0]
 	return cint(count or 0)
 
@@ -1138,10 +1141,16 @@ def _date_expr(fieldname: str) -> str:
 
 def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 	current_user = frappe.session.user
+	from opero.todo_enhancements import _has_unrestricted_todo_access
+
+	if _has_unrestricted_todo_access(current_user, "read"):
+		return "1 = 1", []
+
 	return (
 		f"""(
 			{alias}.owner = %s
 			OR {alias}.allocated_to = %s
+			OR {alias}.assigned_by = %s
 			OR EXISTS (
 				SELECT 1
 				FROM `tabToDo Assignee` assignee_row
@@ -1151,5 +1160,5 @@ def get_user_scope_condition(alias: str = "todo") -> tuple[str, list[str]]:
 			)
 		)
 		AND ({alias}.custom_is_group_child IS NULL OR {alias}.custom_is_group_child = 0)""",
-		[current_user, current_user, current_user],
+		[current_user, current_user, current_user, current_user],
 	)

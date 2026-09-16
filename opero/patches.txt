@@ -1,7 +1,6 @@
 [pre_model_sync]
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
-opero.patches.v0_0.restore_todo_allocatee_custom_field
 opero.patches.v0_0.restore_todo_assignee_custom_field
 opero.patches.v0_2.rename_wash_doctypes_to_all_caps
 opero.patches.v0_4.rename_opero_site_doctypes
@@ -44,7 +43,6 @@ opero.patches.v0_0.fix_todo_created_vs_closed_workspace_link
 opero.patches.v0_0.trim_todo_hub_workspace_shortcuts
 opero.patches.v0_0.rename_todo_action_queue_report
 opero.patches.v0_0.fix_todo_in_progress_status_casing
-opero.patches.v0_0.rename_todo_assignee_to_allocatee
 opero.patches.v0_0.rename_todo_allocatee_to_assignee
 opero.patches.v0_0.delete_child_todos
 opero.patches.v0_1.add_zoho_entry_id_to_time_log
@@ -88,6 +86,8 @@ opero.patches.v0_4.allow_website_manager_communication
 opero.patches.v0_4.convert_privacy_body_to_html
 opero.patches.v0_4.dedupe_privacy_body_sections
 opero.patches.v0_4.remove_opero_website_single_shortcuts
+opero.patches.v0_4.remove_todo_assignees_description
+opero.patches.v0_4.remove_todo_aging_show_all_filter
 opero.patches.v0_4.move_our_work_workspace_link
 opero.patches.v0_4.remove_pillars_doctype
 opero.patches.v0_4.rename_privacy_to_privacy_policy

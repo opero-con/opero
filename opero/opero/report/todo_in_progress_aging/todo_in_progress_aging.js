@@ -37,12 +37,5 @@ frappe.query_reports["ToDo In Progress Aging"] = {
 			fieldtype: "Check",
 			default: 0,
 		},
-		{
-			fieldname: "show_all",
-			label: __("Show Team Scope"),
-			fieldtype: "Check",
-			default: 0,
-			description: __("Includes all matching ToDos instead of only your scope."),
-		},
 	],
 };
