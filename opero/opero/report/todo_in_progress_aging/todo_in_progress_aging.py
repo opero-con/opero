@@ -65,11 +65,11 @@ def get_data(filters):
 	today = getdate(nowdate())
 	min_days = max(0, cint(filters.get("min_days") or 7))
 	assignee_filter = (filters.get("assignee") or "").strip()
-	show_all = cint(filters.get("show_all"))
 	statuses = todo_dashboard.parse_multi_select(filters.get("status")) or DEFAULT_STATUSES
 
-	conditions = []
-	params = []
+	user_scope_sql, user_scope_params = todo_dashboard.get_user_scope_condition("todo")
+	conditions = [user_scope_sql]
+	params = list(user_scope_params)
 
 	entity_sql, entity_params = todo_dashboard.get_entity_condition(filters)
 	if entity_sql:
@@ -100,13 +100,6 @@ def get_data(filters):
 			)"""
 		)
 		params.extend([assignee_filter, assignee_filter])
-	elif not show_all:
-		user_scope_sql, user_scope_params = todo_dashboard.get_user_scope_condition("todo")
-		conditions.append(user_scope_sql)
-		params.extend(user_scope_params)
-
-	if not conditions:
-		conditions.append("1 = 1")
 
 	rows = frappe.db.sql(
 		f"""

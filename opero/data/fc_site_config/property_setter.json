@@ -2230,7 +2230,7 @@
   "module": "Opero",
   "property": "field_order",
   "property_type": "Data",
-  "value": "[\"description_and_status\", \"custom_title\", \"color\", \"custom_parent_todo\", \"column_break_2\", \"custom_assignees\", \"allocated_to\", \"custom_assignment_group\", \"custom_is_group_child\", \"custom_section_break_ibyjh\", \"status\", \"custom_column_break_th1rd\", \"priority\", \"custom_column_break_mskkr\", \"date\", \"custom_closed_on\", \"custom_cancelled_on\", \"custom_email_sent\", \"description_section\", \"description\", \"section_break_6\", \"assigned_by\", \"custom_created_by\", \"assigned_by_full_name\", \"custom_column_break_bulba\", \"reference_type\", \"column_break_10\", \"reference_name\", \"role\", \"sender\", \"assignment_rule\"]",
+  "value": "[\"description_and_status\", \"custom_title\", \"color\", \"custom_parent_todo\", \"column_break_2\", \"custom_assignees\", \"allocated_to\", \"custom_assignment_group\", \"custom_is_group_child\", \"custom_section_break_ibyjh\", \"status\", \"custom_column_break_th1rd\", \"priority\", \"custom_column_break_mskkr\", \"date\", \"custom_closed_on\", \"custom_cancelled_on\", \"description_section\", \"description\", \"section_break_6\", \"assigned_by\", \"custom_created_by\", \"assigned_by_full_name\", \"custom_column_break_bulba\", \"reference_type\", \"column_break_10\", \"reference_name\", \"role\", \"sender\", \"assignment_rule\"]",
   "default_value": null,
   "doctype": "Property Setter"
  },

@@ -140,7 +140,7 @@ DASHBOARD_CHARTS = [
 		"use_report_chart": 1,
 		"type": "Bar",
 		"is_public": 1,
-		"filters_json": json.dumps({"min_days": 0, "show_all": 1}),
+		"filters_json": json.dumps({"min_days": 0}),
 		"dynamic_filters_json": json.dumps({}),
 		"timeseries": 0,
 	},

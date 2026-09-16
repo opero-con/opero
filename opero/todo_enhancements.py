@@ -31,15 +31,13 @@ def get_permission_query_conditions(user=None):
 	if not user:
 		user = frappe.session.user
 
-	todo_roles = frappe.permissions.get_doctype_roles("ToDo")
-	todo_roles = set(todo_roles) - set(AUTOMATIC_ROLES)
-
-	if any(role in todo_roles for role in frappe.get_roles(user)):
+	if _has_unrestricted_todo_access(user, "read"):
 		return None
 
 	escaped = frappe.db.escape(user)
 	return (
-		f"(`tabToDo`.allocated_to = {escaped}"
+		f"(`tabToDo`.owner = {escaped}"
+		f" OR `tabToDo`.allocated_to = {escaped}"
 		f" OR `tabToDo`.assigned_by = {escaped}"
 		f" OR EXISTS ("
 		f"SELECT 1 FROM `tabToDo Assignee`"
@@ -52,17 +50,19 @@ def get_permission_query_conditions(user=None):
 def has_permission(doc: Document, ptype: str = "read", user: str | None = None) -> bool:
 	user = user or frappe.session.user
 
-	todo_roles = frappe.permissions.get_doctype_roles("ToDo", ptype)
-	todo_roles = set(todo_roles) - set(AUTOMATIC_ROLES)
-
-	if any(role in todo_roles for role in frappe.get_roles(user)):
+	if _has_unrestricted_todo_access(user, ptype):
 		return True
 
-	if doc.allocated_to == user or doc.assigned_by == user:
+	if doc.owner == user or doc.allocated_to == user or doc.assigned_by == user:
 		return True
 
 	assignees = [row.user for row in (getattr(doc, "custom_assignees", None) or []) if getattr(row, "user", None)]
 	return user in assignees
+
+
+def _has_unrestricted_todo_access(user: str, ptype: str = "read") -> bool:
+	todo_roles = set(frappe.permissions.get_doctype_roles("ToDo", ptype)) - set(AUTOMATIC_ROLES)
+	return any(role in todo_roles for role in frappe.get_roles(user))
 
 
 def _autofill_title_from_reference(doc: Document):
@@ -103,13 +103,21 @@ def _sync_title_and_description(doc: Document):
 
 def _send_assignment_email(doc: Document):
 	"""Ported from FC Server Script ToDo Email Notification."""
-	if getattr(doc, "custom_email_sent", None):
-		return
-	if not getattr(doc, "allocated_to", None) or getattr(doc, "status", None) != "Open":
+	if getattr(doc, "status", None) != "Open":
 		return
 
-	email = frappe.db.get_value("User", doc.allocated_to, "email")
-	if not email:
+	previous = doc.get_doc_before_save()
+	previous_assignees = set(_get_doc_assignees(previous)) if previous else set()
+	new_assignees = [user for user in _get_doc_assignees(doc) if user not in previous_assignees]
+	if not new_assignees:
+		return
+
+	emails = frappe.get_all(
+		"User",
+		filters={"name": ("in", new_assignees), "enabled": 1, "email": ("is", "set")},
+		pluck="email",
+	)
+	if not emails:
 		return
 
 	todo_link = frappe.utils.get_url_to_form("ToDo", doc.name)
@@ -118,13 +126,12 @@ def _send_assignment_email(doc: Document):
 		f'<a href="{todo_link}">Open the ToDo</a>'
 	)
 	frappe.sendmail(
-		recipients=email,
+		recipients=emails,
 		subject="New ToDo Assigned",
 		message=message,
 		reference_doctype="ToDo",
 		reference_name=doc.name,
 	)
-	frappe.db.set_value("ToDo", doc.name, "custom_email_sent", 1, update_modified=False)
 
 
 def _extract_plain_text(value: str | None) -> str:
@@ -208,7 +215,9 @@ def _parse_assignees(raw_values) -> list[str]:
 	return []
 
 
-def _get_doc_assignees(doc: Document) -> list[str]:
+def _get_doc_assignees(doc: Document | None) -> list[str]:
+	if not doc:
+		return []
 	return _parse_assignees(getattr(doc, "custom_assignees", None))
 
 

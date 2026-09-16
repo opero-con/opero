@@ -61,7 +61,6 @@ def get_columns():
 def get_data(filters):
 	statuses = todo_dashboard.get_default_action_queue_statuses(filters)
 	today = getdate(nowdate())
-	current_user = frappe.session.user
 	assignee_filter = (filters.get("assignee") or "").strip()
 
 	# show_only_overdue requires active statuses - override whatever the status filter says
@@ -70,8 +69,9 @@ def get_data(filters):
 			todo_dashboard.ACTIVE_STATUSES
 		)
 
-	conditions = []
-	params = []
+	user_scope_sql, user_scope_params = todo_dashboard.get_user_scope_condition("todo")
+	conditions = [user_scope_sql]
+	params = list(user_scope_params)
 
 	entity_sql, entity_params = todo_dashboard.get_entity_condition(filters)
 	if entity_sql:
@@ -103,7 +103,6 @@ def get_data(filters):
 		params.append(today)
 
 	if filters.get("unassigned_only"):
-		# Org-wide: active todos with no assignee on either field
 		conditions.append(
 			"""(
 				todo.allocated_to IS NULL OR todo.allocated_to = ''
@@ -131,24 +130,6 @@ def get_data(filters):
 			)"""
 		)
 		params.extend([assignee_filter, assignee_filter])
-	else:
-		conditions.append(
-			"""(
-				todo.owner = %s
-				OR todo.allocated_to = %s
-				OR EXISTS (
-					SELECT 1
-					FROM `tabToDo Assignee` assignee_row
-					WHERE assignee_row.parent = todo.name
-						AND assignee_row.parenttype = 'ToDo'
-						AND assignee_row.user = %s
-				)
-			)"""
-		)
-		params.extend([current_user, current_user, current_user])
-
-	if not conditions:
-		conditions.append("1 = 1")
 
 	query = f"""
 		SELECT
