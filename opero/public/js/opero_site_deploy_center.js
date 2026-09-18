@@ -24,11 +24,11 @@ function renderHistory(frm) {
 	}
 	const items = rows
 		.map((row) => {
-			const when = frappe.datetime.str_to_user(row.deployed_on);
+			const when = frappe.datetime.comment_when(row.deployed_on);
 			const who = deployedByLabel(row.deployed_by);
 			const count = Number(row.file_count || 0);
 			const files = count === 1 ? __("1 file") : __("{0} files", [count]);
-			const parts = [frappe.utils.escape_html(when)];
+			const parts = [when];
 			if (who) {
 				parts.push(frappe.utils.escape_html(who));
 			}
