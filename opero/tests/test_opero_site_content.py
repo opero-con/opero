@@ -120,7 +120,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		about.about_body = "<p>Opero is a Kenyan WASH firm.</p>"
 		about.save(ignore_permissions=True)
 
-		impacts = frappe.get_single("Impacts")
+		impacts = frappe.get_single("Impact")
 		impacts.set("impacts", [])
 		impacts.append("impacts", {"value": "6", "metric_label": "WASH technologies designed"})
 		impacts.save(ignore_permissions=True)

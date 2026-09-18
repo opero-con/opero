@@ -15,7 +15,7 @@ RENAMES = [
 	("Opero Site Topic", "Topic"),
 	("Opero Site Paragraph", "Paragraph"),
 	("Opero Site Pillar", "Pillar"),
-	("Opero Site Impact", "Impact"),
+	("Opero Site Impact", "Impact Metric"),
 	("Opero Site Home Project", "Home Project"),
 	("Opero Site Partner", "Partner"),
 	("Opero Site Office", "Office"),

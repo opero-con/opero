@@ -348,7 +348,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 		)
 		self.assertEqual(frappe.get_single("About").about_body, "<p>Opero is a Kenyan WASH firm.</p>")
 		self.assertEqual(
-			frappe.get_single("Impacts").impacts[0].metric_label, "WASH technologies designed"
+			frappe.get_single("Impact").impacts[0].metric_label, "WASH technologies designed"
 		)
 		self.assertEqual(
 			frappe.get_single("Our Work").homepage_summary,

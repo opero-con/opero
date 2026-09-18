@@ -1,4 +1,4 @@
-"""Split Home Page into focused Hero/About/Pillars/Impacts/Projects/Partners singles."""
+"""Split Home Page into focused Hero/About/Pillars/Impact/Projects/Partners singles."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ SCALAR_FIELDS = {
 CHILD_TABLES = {
 	"Hero Image": ("hero_images", "Home Hero"),
 	"Pillar": ("pillars", "Home Pillars"),
-	"Impact": ("impacts", "Home Impacts"),
+	"Impact Metric": ("impacts", "Home Impacts"),
 	"Home Project": ("projects", "Home Projects"),
 	"Partner": ("partners", "Home Partners"),
 }

@@ -291,7 +291,7 @@ doc_events = {
 	"About": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
-	"Impacts": {
+	"Impact": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
 	"Our Work": {

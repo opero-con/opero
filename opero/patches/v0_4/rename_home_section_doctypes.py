@@ -9,7 +9,7 @@ RENAMES = (
 	("Home Hero", "Hero"),
 	("Home About", "About"),
 	("Home Pillars", "Pillars"),
-	("Home Impacts", "Impacts"),
+	("Home Impacts", "Impact"),
 	("Home Projects", "Projects"),
 	("Home Partners", "Partners"),
 )

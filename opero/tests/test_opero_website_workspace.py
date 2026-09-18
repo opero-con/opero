@@ -45,7 +45,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			{
 				"Hero": "Hero",
 				"About": "About",
-				"Impacts": "Impacts",
+				"Impact": "Impact",
 				"Our Work": "Our Work",
 				"Partners": "Partners",
 				"Team": "Employee",
@@ -99,7 +99,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			"Home Page",
 			"Hero",
 			"About",
-			"Impacts",
+			"Impact",
 			"Our Work",
 			"Partners",
 			"Enterprise",
