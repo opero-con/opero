@@ -1,5 +1,6 @@
 const OPTIONAL_SITE_DOCTYPES = ["Publication", "Employee", "Enterprise"];
 const ALWAYS_ON_SITE_DOCTYPES = ["Home Page", "Privacy policy", "Site Settings"];
+const HOME_PAGE_SECTION_DOCTYPES = ["Hero", "About", "Our Work", "Impact", "Partners"];
 const SITE_CONTENT_DOCTYPES = OPTIONAL_SITE_DOCTYPES.concat(ALWAYS_ON_SITE_DOCTYPES);
 // Enterprise CRM Status stays on the Details tab; do not drive the form/list indicator.
 const INDICATOR_SITE_DOCTYPES = SITE_CONTENT_DOCTYPES.filter((name) => name !== "Enterprise");
@@ -11,6 +12,7 @@ const PUBLISH_STATUS_FIELD = {
 if (!window._opero_publish_status_bound) {
 	window._opero_publish_status_bound = true;
 	SITE_CONTENT_DOCTYPES.forEach(bindPublishStatus);
+	HOME_PAGE_SECTION_DOCTYPES.forEach(bindHomePageStatus);
 }
 
 function setupStatusPills() {
@@ -79,6 +81,15 @@ function bindPublishStatus(doctype) {
 	frappe.ui.form.on(doctype, handlers);
 }
 
+function bindHomePageStatus(doctype) {
+	frappe.ui.form.on(doctype, {
+		async refresh(frm) {
+			const status = await frappe.db.get_single_value("Home Page", "status");
+			setDeployRibbon(frm, status, "Home Page");
+		},
+	});
+}
+
 function statusFromCheckbox(show, status) {
 	if (cint(show)) {
 		return "To deploy";
@@ -102,12 +113,11 @@ function setPublishStatusPill(frm) {
 	}
 }
 
-function setDeployRibbon(frm) {
+function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)], label = frm.doctype) {
 	if (!frm.layout) {
 		return;
 	}
 	frm.layout.show_message();
-	const status = frm.doc[publishStatusField(frm.doctype)];
 	if (status !== "To deploy" && status !== "To unpublish") {
 		return;
 	}
@@ -119,8 +129,8 @@ function setDeployRibbon(frm) {
 	);
 	const queued_off = status === "To unpublish";
 	const text = queued_off
-		? __("This {0} is queued to come off the website. {1}", [__(frm.doctype), link])
-		: __("This {0} is queued for the next website deploy. {1}", [__(frm.doctype), link]);
+		? __("This {0} is queued to come off the website. {1}", [__(label), link])
+		: __("This {0} is queued for the next website deploy. {1}", [__(label), link]);
 	frm.layout.show_message(`<span>${text}</span>`, queued_off ? "red" : "blue", true);
 }
 
