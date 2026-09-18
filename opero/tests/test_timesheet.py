@@ -14,6 +14,9 @@ from opero.opero.report.used_hrs_summary.used_hrs_summary import execute as used
 
 
 class TestTimesheetBalances(FrappeTestCase):
+	def test_allocated_hours_is_not_a_grid_column(self):
+		self.assertFalse(frappe.get_meta("Timesheet Detail").get_field("custom_a_hrs").in_list_view)
+
 	def setUp(self):
 		self.previous_user = frappe.session.user
 		frappe.set_user("Administrator")

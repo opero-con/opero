@@ -410,9 +410,7 @@ const refresh_allocation_balances = frappe.utils.debounce(async (frm) => {
 	frm.dashboard.add_section(
 		`<table class="table table-bordered"><thead><tr>
         <th>${__("Task / Month")}</th><th>${__("Allocated")}</th><th>${__("Submitted")}</th>
-        <th>${__("This timesheet")}</th><th>${__(
-			"Remaining after this timesheet"
-		)}</th></tr></thead><tbody>
+        <th>${__("This sheet")}</th><th>${__("Remaining")}</th></tr></thead><tbody>
         ${balances
 			.map(
 				(row) => `<tr><td>${escape(row.task_name || row.task)} / ${escape(row.month)}</td>
@@ -421,7 +419,7 @@ const refresh_allocation_balances = frappe.utils.debounce(async (frm) => {
 			)
 			.join("")}
         </tbody></table>`,
-		__("Monthly allocation"),
+		__("Allocations"),
 		"custom opero-allocation"
 	);
 }, 300);

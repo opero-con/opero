@@ -6,12 +6,13 @@ const vm = require("node:vm");
 const test = require("node:test");
 const moment = require("../../../frappe/node_modules/moment");
 
-function loadForm() {
+function loadForm(allocationBalances = []) {
 	const handlers = [];
 	const rows = new Map();
+	const dashboardSections = [];
 	const frappe = {
 		ui: { form: { on: (doctype, events) => handlers.push({ doctype, events }) } },
-		utils: { debounce: (fn) => fn },
+		utils: { debounce: (fn) => fn, escape_html: (value) => String(value || "") },
 		get_meta: () => ({
 			fields: [
 				"task",
@@ -32,7 +33,8 @@ function loadForm() {
 					typeof values === "string" ? { [values]: value } : values
 				),
 		},
-		xcall: async () => 0,
+		xcall: async (method) =>
+			method === "opero.api.timesheet.get_allocation_balances" ? allocationBalances : 0,
 	};
 	const context = { frappe, moment, __: (value) => value, document: {}, setTimeout };
 	vm.createContext(context);
@@ -44,7 +46,11 @@ function loadForm() {
 	const hiddenFields = new Set();
 	const frm = {
 		doc: { docstatus: 0, time_logs: [] },
-		dashboard: { parent: { find: () => ({ remove() {} }) } },
+		dashboard: {
+			parent: { find: () => ({ remove() {} }) },
+			show() {},
+			add_section: (...args) => dashboardSections.push(args),
+		},
 		add_custom_button: (label, action) => buttons.set(label, action),
 		add_child: (table, values) => {
 			const row = { ...values, doctype: "Timesheet Detail", name: "new-" + rows.size };
@@ -58,8 +64,9 @@ function loadForm() {
 		refresh_field() {},
 		dirty() {},
 		set_value: async () => {},
+		is_new: () => true,
 	};
-	return { handlers, rows, frm, buttons, hiddenFields };
+	return { handlers, rows, frm, buttons, hiddenFields, dashboardSections };
 }
 
 test("Timesheet hides the unused Connections section", async () => {
@@ -67,6 +74,27 @@ test("Timesheet hides the unused Connections section", async () => {
 	for (const { doctype, events } of handlers)
 		if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
 	assert.equal(hiddenFields.has("connections_tab"), true);
+});
+
+test("allocation summary uses concise labels", async () => {
+	const { handlers, frm, dashboardSections } = loadForm([
+		{ task: "TASK-1", task_name: "Design", month: "Sep 2026", allocated: 10, submitted: 3, current: 2, remaining: 5 },
+	]);
+	Object.assign(frm.doc, { employee: "EMP-1", parent_project: "PROJ-1" });
+	const handler = handlers.find(
+		({ doctype, events }) =>
+			doctype === "Timesheet" && String(events.refresh).includes("get_allocation_balances")
+	);
+
+	await handler.events.refresh(frm);
+
+	assert.equal(dashboardSections.length, 1);
+	const [html, title] = dashboardSections[0];
+	assert.equal(title, "Allocations");
+	for (const heading of ["Task / Month", "Allocated", "Submitted", "This sheet", "Remaining"]) {
+		assert.match(html, new RegExp(`<th>${heading}</th>`));
+	}
+	assert.doesNotMatch(html, /Remaining after this timesheet|This timesheet/);
 });
 
 for (const [start, hours] of [
