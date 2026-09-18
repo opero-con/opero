@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import frappe
+from frappe.utils import now_datetime
+
+ALLOCATION_TOLERANCE = 0.000001
 
 
 def before_insert_task(doc, _method=None):
@@ -73,12 +76,7 @@ def _sync_task_time_distributions(doc):
 		for person in personnel_rows:
 			match = by_personnel.get(person["personnel"])
 			if match:
-				frappe.db.set_value(
-					"Task Time Distribution",
-					match.name,
-					{"days_allocated": person["days"], "hours_allocated": person["hours"]},
-					update_modified=False,
-				)
+				_grow_distribution_spread(match, person)
 			elif doc.status not in ("Completed", "Cancelled"):
 				frappe.get_doc(
 					{
@@ -91,6 +89,42 @@ def _sync_task_time_distributions(doc):
 				).insert(ignore_permissions=True)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Task Time Distribution Update Error")
+
+
+def _grow_distribution_spread(match, person):
+	"""Raise a Task Time Distribution's allocated total without rewriting history.
+
+	An allocation increase lands on the current month's spread row so past months keep the
+	hours actually allocated/worked at the time, instead of forcing a PM to shrink them to
+	rebalance the total against the new allocated figure.
+	"""
+	delta_days = float(person["days"] or 0) - float(match.days_allocated or 0)
+	delta_hours = float(person["hours"] or 0) - float(match.hours_allocated or 0)
+
+	if delta_days <= ALLOCATION_TOLERANCE and delta_hours <= ALLOCATION_TOLERANCE:
+		frappe.db.set_value(
+			"Task Time Distribution",
+			match.name,
+			{"days_allocated": person["days"], "hours_allocated": person["hours"]},
+			update_modified=False,
+		)
+		return
+
+	ttd = frappe.get_doc("Task Time Distribution", match.name)
+	ttd.days_allocated = person["days"]
+	ttd.hours_allocated = person["hours"]
+
+	current_month = now_datetime().strftime("%b %Y")
+	row = next(
+		(r for r in ttd.task_time_distribution_spread if r.month == current_month),
+		None,
+	)
+	if not row:
+		row = ttd.append("task_time_distribution_spread", {"month": current_month})
+	row.days_spread = float(row.days_spread or 0) + max(delta_days, 0)
+	row.time_spread = float(row.time_spread or 0) + max(delta_hours, 0)
+
+	ttd.save(ignore_permissions=True)
 
 
 def _push_task_dates_to_ttd(doc):
