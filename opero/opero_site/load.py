@@ -404,7 +404,7 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 				for section_doctype, apply_section in (
 					("Hero", apply_home_hero),
 					("About", apply_home_about),
-					("Impacts", apply_home_impacts),
+					("Impact", apply_home_impacts),
 					("Our Work", apply_home_our_work),
 					("Partners", apply_home_partners),
 				):

@@ -5,7 +5,7 @@ from frappe.model.document import Document
 
 from opero.opero_site.publish_status import TO_DEPLOY, apply_publish_status
 
-HOME_SECTIONS = ("Hero", "About", "Our Work", "Impacts", "Partners")
+HOME_SECTIONS = ("Hero", "About", "Our Work", "Impact", "Partners")
 
 
 class HomePage(Document):
