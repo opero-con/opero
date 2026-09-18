@@ -12,6 +12,15 @@ def execute():
 
 	if frappe.db.exists("DocType", "Impacts"):
 		frappe.rename_doc("DocType", "Impacts", "Impact", force=True)
+		# frappe.rename_doc fixes parenttype for the Single's child rows but not
+		# parent, since a Single's document name equals its doctype name.
+		frappe.db.sql(
+			"""
+			UPDATE `tabImpact Metric`
+			SET parent = 'Impact'
+			WHERE parent = 'Impacts' AND parenttype = 'Impact'
+			"""
+		)
 
 	frappe.db.sql(
 		"""
