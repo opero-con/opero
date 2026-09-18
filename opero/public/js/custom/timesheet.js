@@ -1,11 +1,13 @@
 // Opero: client scripts for Timesheet
 // Migrated from Frappe Cloud Client Scripts (enabled Form scripts).
 
-// Hide Personnel (employee_name) on the form only. Keep the field unhidden in
-// meta so Report/List export can still include it (export pickers skip df.hidden).
+// Hide unused form-only fields without changing ERPNext-owned DocType metadata.
+// Keep Personnel unhidden in meta so Report/List export can still include it
+// (export pickers skip df.hidden).
 frappe.ui.form.on("Timesheet", {
 	refresh: function (frm) {
 		frm.toggle_display("employee_name", false);
+		frm.toggle_display("connections_tab", false);
 	},
 });
 

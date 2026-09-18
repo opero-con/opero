@@ -41,6 +41,7 @@ function loadForm() {
 		context
 	);
 	const buttons = new Map();
+	const hiddenFields = new Set();
 	const frm = {
 		doc: { docstatus: 0, time_logs: [] },
 		dashboard: { parent: { find: () => ({ remove() {} }) } },
@@ -51,13 +52,22 @@ function loadForm() {
 			rows.set(row.name, row);
 			return row;
 		},
-		toggle_display() {},
+		toggle_display: (fieldname, show) => {
+			if (!show) hiddenFields.add(fieldname);
+		},
 		refresh_field() {},
 		dirty() {},
 		set_value: async () => {},
 	};
-	return { handlers, rows, frm, buttons };
+	return { handlers, rows, frm, buttons, hiddenFields };
 }
+
+test("Timesheet hides the unused Connections section", async () => {
+	const { handlers, frm, hiddenFields } = loadForm();
+	for (const { doctype, events } of handlers)
+		if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
+	assert.equal(hiddenFields.has("connections_tab"), true);
+});
 
 for (const [start, hours] of [
 	["2026-01-31 23:00:00", 3],
