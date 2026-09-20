@@ -32,6 +32,10 @@ class Publication(Document):
 
 	def validate(self):
 		apply_publish_status(self)
+		# The site bumps `views` with a bare UPDATE, so a form opened before a
+		# visit would write its stale copy back and reset the count.
+		if not self.is_new():
+			self.views = cint(frappe.db.get_value("Publication", self.name, "views"))
 		self.title = cstr(self.title).strip()
 		self.slug = slugify(self.slug or self.title)
 		if not self.slug:
