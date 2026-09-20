@@ -52,7 +52,7 @@ function makeForm(doctype, doc = {}) {
 
 test("every homepage section displays the shared Home Page deploy ribbon", async () => {
 	const { handlers, singleValueCalls } = loadPublishStatus("To deploy");
-	const sections = ["Hero", "About", "Our Work", "Impact", "Partners"];
+	const sections = ["Hero", "About", "Our Work", "Impact"];
 
 	for (const doctype of sections) {
 		const { frm, messages } = makeForm(doctype);

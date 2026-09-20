@@ -1,5 +1,7 @@
 """Opero Site content DocTypes: slug, URL, and opero-content frontmatter contract."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
@@ -19,10 +21,22 @@ from opero.opero_site.utils import normalize_publication_type, parse_links, slug
 class TestOperoSiteContent(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
+		frappe.db.delete("Partner")
 
 	def test_slugify_matches_content_filenames(self):
 		self.assertEqual(slugify("January 2025 Update"), "january-2025-update")
 		self.assertEqual(slugify("PuPu Pump Digest: Tackling Trash"), "pupu-pump-digest-tackling-trash")
+
+	def test_partner_uses_random_five_digit_id(self):
+		with patch(
+			"opero.opero_site.doctype.partner.partner.randbelow",
+			side_effect=[123, 123, 456],
+		):
+			first = frappe.get_doc({"doctype": "Partner", "partner_name": "First naming test"}).insert()
+			second = frappe.get_doc({"doctype": "Partner", "partner_name": "Second naming test"}).insert()
+
+		self.assertEqual(first.name, "P00123")
+		self.assertEqual(second.name, "P00456")
 
 	def test_expertise_fields_are_visible_in_the_child_table(self):
 		meta = frappe.get_meta("Pillar")
@@ -107,7 +121,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		with self.assertRaises(ValidationError):
 			doc.save(ignore_permissions=True)
 
-	def test_home_frontmatter_omits_team_and_hides_inactive_partners(self):
+	def test_home_frontmatter_omits_collection_content(self):
 		hero = frappe.get_single("Hero")
 		hero.hero_eyebrow = "Scaling WASH"
 		hero.hero_title = "From idea to lasting WASH impact."
@@ -135,29 +149,9 @@ class TestOperoSiteContent(FrappeTestCase):
 		our_work.page_conclusion = "Our work is grounded in real operating conditions."
 		our_work.save(ignore_permissions=True)
 
-		partners = frappe.get_single("Partners")
-		partners.set("partners", [])
-		partners.append(
-			"partners",
-			{
-				"partner_name": "Hidden Partner",
-				"show_on_website": 0,
-				"sort_order": 1,
-			},
-		)
-		partners.append(
-			"partners",
-			{
-				"partner_name": "Practica Foundation",
-				"url": "https://www.practica.org",
-				"show_on_website": 1,
-				"sort_order": 20,
-			},
-		)
-		partners.save(ignore_permissions=True)
-
 		payload = frappe.get_single("Home Page").to_site_frontmatter()
 		self.assertNotIn("team", payload)
+		self.assertNotIn("partners", payload)
 		self.assertNotIn("image", payload["hero"])
 		self.assertNotIn("carousel", payload["hero"])
 		self.assertNotIn("note", payload["hero"])
@@ -166,7 +160,19 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(payload["ourWork"]["expertise"][0]["title"], "Market research")
 		self.assertEqual(payload["impacts"][0], {"value": "6", "label": "WASH technologies designed"})
 		self.assertEqual(payload["ourWork"], {"homepageSummary": "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research.", "pageIntroduction": "To solve WASH challenges, we bring together core expertise in:", "expertise": [{"title": "Market research", "description": "Local market realities."}], "image": "/media/homepage/our-work.jpg", "imageAlt": "Opero WASH work in practice", "pageConclusion": "Our work is grounded in real operating conditions."})
-		self.assertEqual(payload["partners"], [{"name": "Practica Foundation", "url": "https://www.practica.org"}])
+
+	def test_partner_frontmatter_is_independent_from_homepage(self):
+		doc = frappe.get_doc({
+			"doctype": "Partner",
+			"partner_name": "Practica Foundation",
+			"url": "https://www.practica.org",
+			"show_on_website": 1,
+			"sort_order": 20,
+		}).insert(ignore_permissions=True)
+		self.assertEqual(
+			doc.to_site_frontmatter(),
+			{"name": "Practica Foundation", "url": "https://www.practica.org", "order": 20, "active": True},
+		)
 
 	def test_home_frontmatter_includes_hero_carousel(self):
 		doc = frappe.get_single("Hero")

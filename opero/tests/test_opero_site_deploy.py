@@ -87,6 +87,7 @@ body:
 class TestOperoSitePublish(FrappeTestCase):
 	def setUp(self):
 		frappe.db.delete("Publication")
+		frappe.db.delete("Partner")
 		clear_website_test_employees()
 		frappe.db.set_value(
 			"Employee", {"slug": ["is", "set"]}, {"show_on_website": 0, "website_status": "Draft"}
@@ -245,7 +246,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		)
 		self.assertTrue(any(path == "content/homepage/home.md" for path, _content in changed))
 
-	def test_preserve_unmanaged_keeps_homepage_team_on_real_edit(self):
+	def test_preserve_unmanaged_keeps_homepage_team_and_drops_legacy_partners(self):
 		load_files({"content/homepage/home.md": HOME_MD})
 		hero = frappe.get_single("Hero")
 		hero.hero_title = "Edited hero title"
@@ -255,6 +256,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		data = parse_frontmatter(merged)
 		self.assertEqual(data["hero"]["title"], "Edited hero title")
 		self.assertEqual(data["team"][0]["name"], "Ignored Homepage Team")
+		self.assertNotIn("partners", data)
 
 	def test_collect_includes_team_and_settings_paths(self):
 		settings = frappe.get_single("Site Settings")
@@ -638,6 +640,30 @@ class TestOperoSitePublish(FrappeTestCase):
 			[{"path": "content/enterprises/gasia-poa-test.md", "action": "update"}],
 		)
 		self.assertFalse(doc.to_site_frontmatter()["active"])
+
+	def test_partner_show_on_website_queues_independent_content_path(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Partner",
+				"partner_name": "Practica Foundation",
+				"url": "https://www.practica.org",
+				"sort_order": 20,
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(doc.website_status, "To deploy")
+		self.assertEqual(
+			pending_push_for_doc(doc),
+			[{"path": "content/partners/practica-foundation.md", "action": "update"}],
+		)
+		files, _keep = collect_content_plan()
+		frontmatter = parse_frontmatter(dict(files)["content/partners/practica-foundation.md"])
+		self.assertEqual(frontmatter["name"], "Practica Foundation")
+		self.assertEqual(frontmatter["url"], "https://www.practica.org")
+		self.assertTrue(frontmatter["active"])
+		settle_publish_statuses()
+		doc.reload()
+		self.assertEqual(doc.website_status, "Published")
 
 	def test_show_on_website_sets_status(self):
 		doc = frappe.get_doc(

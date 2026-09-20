@@ -68,6 +68,8 @@ def preserve_unmanaged_frontmatter(existing: str, planned: str) -> str:
 		return planned
 	merged = {}
 	for key, value in old.items():
+		if key == "partners" and "hero" in new and "partners" not in new:
+			continue
 		if key in new:
 			merged[key] = new.pop(key)
 		else:
@@ -90,6 +92,8 @@ def canonical_frontmatter(path: str, data: dict) -> dict:
 		shaped = _canonical_team(data)
 	elif path.startswith("content/enterprises/"):
 		shaped = _canonical_enterprise(data)
+	elif path.startswith("content/partners/"):
+		shaped = _canonical_partner(data)
 	else:
 		shaped = dict(data)
 	return _compact(shaped)
@@ -191,18 +195,6 @@ def _canonical_home(data: dict) -> dict:
 
 	about_in = data.get("about") or {}
 	our_work_in = data.get("ourWork") or {}
-	partners = []
-	raw_partners = [row for row in (data.get("partners") or []) if isinstance(row, dict)]
-	for row in sorted(raw_partners, key=lambda item: cint(item.get("order"))):
-		if row.get("active") is False:
-			continue
-		partner = {"name": _text(row.get("name"))}
-		if row.get("url"):
-			partner["url"] = _text(row.get("url"))
-		if row.get("logo"):
-			partner["logo"] = cstr(row.get("logo"))
-		partners.append(partner)
-
 	return {
 		"hero": hero,
 		"about": {
@@ -226,8 +218,20 @@ def _canonical_home(data: dict) -> dict:
 			for row in (data.get("impacts") or [])
 			if isinstance(row, dict)
 		],
-		"partners": partners,
 	}
+
+
+def _canonical_partner(data: dict) -> dict:
+	payload = {
+		"name": _text(data.get("name")),
+		"order": cint(data.get("order")),
+		"active": data.get("active") is not False,
+	}
+	if data.get("url"):
+		payload["url"] = _text(data.get("url"))
+	if data.get("logo"):
+		payload["logo"] = cstr(data.get("logo"))
+	return payload
 
 
 def _canonical_settings(data: dict) -> dict:

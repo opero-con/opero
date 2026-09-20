@@ -128,3 +128,5 @@ opero.patches.v0_4.add_timesheet_sync_status
 opero.patches.v0_4.add_timesheet_week_of_month
 opero.patches.v0_4.remove_timesheet_week_column
 opero.patches.v0_4.remove_timesheet_allocated_hours_column
+opero.patches.v0_4.make_partners_standalone
+opero.patches.v0_4.normalize_partner_names

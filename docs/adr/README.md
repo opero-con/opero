@@ -13,3 +13,4 @@ that the commit message already explains.
 |-----|----------|--------|
 | [0001](0001-always-on-site-singles.md) | Home Page, Privacy policy, and Site Settings are always on-site | Accepted |
 | [0002](0002-employee-website-profiles.md) | Publish website team profiles from Employee | Accepted |
+| [0003](0003-standalone-website-partners.md) | Publish website partners as standalone records | Accepted |
