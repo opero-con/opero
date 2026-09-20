@@ -22,6 +22,7 @@
   "publication_type",
   "column_break_service",
   "service_area",
+  "views",
   "section_summary",
   "summary",
   "section_media",
@@ -125,6 +126,15 @@
    "options": "\nWASH enterprise\nWASH innovation\nMarket research"
   },
   {
+   "default": "0",
+   "description": "Times the article has been opened on the website. Counted by the site, not editable.",
+   "fieldname": "views",
+   "fieldtype": "Int",
+   "label": "Views",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "section_summary",
    "fieldtype": "Section Break",
    "label": ""
@@ -220,7 +230,7 @@
  "module": "Opero Site",
  "name": "Publication",
  "owner": "Administrator",
- "modified": "2026-08-31 23:57:00.000000",
+ "modified": "2026-09-21 12:00:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
