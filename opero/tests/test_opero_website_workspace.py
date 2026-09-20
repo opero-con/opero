@@ -36,7 +36,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(card_breaks, ["Home Page", "Other Content", "Setup"])
 		self.assertEqual(
 			[row.link_count for row in doc.links if row.type == "Card Break"],
-			[4, 5, 2],
+			[3, 6, 2],
 		)
 		cards = [block["data"]["card_name"] for block in json.loads(doc.content) if block["type"] == "card"]
 		self.assertEqual(cards, ["Home Page", "Other Content", "Setup"])
@@ -47,7 +47,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"About": "About",
 				"Impact": "Impact",
 				"Our Work": "Our Work",
-				"Partners": "Partners",
+				"Partners": "Partner",
 				"Team": "Employee",
 				"Enterprises": "Enterprise",
 				"Publications": "Publication",
@@ -65,6 +65,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			{
 				"Team",
 				"Enterprises",
+				"Partners",
 				"Publications",
 				"Website Enquiries",
 			},
@@ -79,6 +80,11 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(enterprise_shortcut.link_to, "Enterprise")
 		self.assertEqual(enterprise_shortcut.doc_view, "List")
 		self.assertEqual(json.loads(enterprise_shortcut.stats_filter), {"show_on_website": 1})
+		partner_shortcut = next(row for row in doc.shortcuts if row.label == "Partners")
+		self.assertEqual(partner_shortcut.type, "DocType")
+		self.assertEqual(partner_shortcut.link_to, "Partner")
+		self.assertEqual(partner_shortcut.doc_view, "List")
+		self.assertEqual(json.loads(partner_shortcut.stats_filter), {"show_on_website": 1})
 		self.assertEqual(enquiries.link_to, "Communication")
 		self.assertEqual(enquiries.doc_view, "List")
 		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
@@ -101,7 +107,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			"About",
 			"Impact",
 			"Our Work",
-			"Partners",
+			"Partner",
 			"Enterprise",
 			"Publication",
 			"Privacy policy",
@@ -129,6 +135,8 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertTrue(frappe.get_meta("Employee").has_field("website_status"))
 		self.assertTrue(frappe.get_meta("Enterprise").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Partner").has_field("show_on_website"))
+		self.assertTrue(frappe.get_meta("Partner").has_field("website_status"))
+		self.assertFalse(frappe.get_meta("Partner").istable)
 		self.assertTrue(frappe.get_meta("Enterprise").has_field("website_status"))
 		self.assertEqual(
 			frappe.get_meta("Enterprise").get_field("status").options.split("\n"),

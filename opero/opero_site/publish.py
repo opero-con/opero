@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import now_datetime
 
 from opero.opero.doctype.enterprise.enterprise import enterprise_content_slug
+from opero.opero_site.doctype.partner.partner import partner_content_slug
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
 from opero.opero_site.media import export_planned_media, git_blob_sha
@@ -26,10 +27,10 @@ from opero.opero_site.publish_status import (
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
-MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/", "content/enterprises/")
-MEDIA_DELETE_PREFIXES = ("media/publications/", "media/team/", "media/enterprises/")
+MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/", "content/enterprises/", "content/partners/")
+MEDIA_DELETE_PREFIXES = ("media/publications/", "media/team/", "media/enterprises/", "media/partners/")
 DEPLOY_LOG_LIMIT = 10
-CONTENT_DOCTYPES = ("Publication", "Employee", "Enterprise")
+CONTENT_DOCTYPES = ("Publication", "Employee", "Enterprise", "Partner")
 CONTENT_SINGLES = ("Home Page", "Privacy policy", "Site Settings")
 SITE_CONTENT_DOCTYPES = CONTENT_DOCTYPES + CONTENT_SINGLES
 PENDING_EVENT = "opero_site_pending"
@@ -49,6 +50,9 @@ def content_path_for(doc) -> str | None:
 	if doc.doctype == "Enterprise":
 		slug = enterprise_content_slug(getattr(doc, "enterprise_name", None) or "")
 		return f"content/enterprises/{slug}.md" if slug else None
+	if doc.doctype == "Partner":
+		slug = partner_content_slug(getattr(doc, "partner_name", None) or "")
+		return f"content/partners/{slug}.md" if slug else None
 	slug = getattr(doc, "slug", None)
 	if not slug:
 		return None
@@ -64,6 +68,7 @@ _CONTENT_PATH_GROUPS = (
 	("content/publications/", "Publication", "Publications", "title"),
 	("content/team/", "Employee", "Team", "employee_name"),
 	("content/enterprises/", "Enterprise", "Enterprises", None),
+	("content/partners/", "Partner", "Partners", None),
 )
 
 
@@ -79,6 +84,13 @@ def _live_enterprise(slug: str) -> tuple[str, str] | None:
 	for row in frappe.get_all("Enterprise", fields=["name", "enterprise_name"]):
 		if enterprise_content_slug(row.enterprise_name) == slug:
 			return row.enterprise_name, row.name
+	return None
+
+
+def _live_partner(slug: str) -> tuple[str, str] | None:
+	for row in frappe.get_all("Partner", fields=["name", "partner_name"]):
+		if partner_content_slug(row.partner_name) == slug:
+			return row.partner_name, row.name
 	return None
 
 
@@ -103,6 +115,9 @@ def content_label_for(path: str) -> dict:
 			title, docname = found if found else (None, None)
 		elif doctype == "Employee":
 			found = _live_employee(slug)
+			title, docname = found if found else (None, None)
+		elif doctype == "Partner":
+			found = _live_partner(slug)
 			title, docname = found if found else (None, None)
 		else:
 			title = frappe.db.get_value(doctype, slug, title_field)
@@ -150,7 +165,7 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 			is_on_site(previous) or is_off_site(previous) or is_on_site(doc) or is_off_site(doc)
 		):
 			entries.append({"path": old_path, "action": "delete"})
-		elif renamed and doc.doctype in ("Employee", "Enterprise") and (
+		elif renamed and doc.doctype in ("Employee", "Enterprise", "Partner") and (
 			is_on_site(previous) or is_off_site(previous)
 		):
 			entries.append({"path": old_path, "action": "delete"})
@@ -176,7 +191,7 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 			entries.append({"path": path, "action": "delete"})
 		return _unique_pending(entries)
 
-	if doc.doctype in ("Employee", "Enterprise"):
+	if doc.doctype in ("Employee", "Enterprise", "Partner"):
 		if is_on_site(doc) or is_off_site(doc):
 			entries.append({"path": path, "action": "update"})
 		return _unique_pending(entries)
@@ -220,7 +235,12 @@ def pending_from_status() -> list[dict]:
 	entries: list[dict] = []
 	for doctype in CONTENT_DOCTYPES:
 		status_field = publish_status_field(doctype)
-		fields = [status_field, "enterprise_name"] if doctype == "Enterprise" else [status_field, "slug"]
+		if doctype == "Enterprise":
+			fields = [status_field, "enterprise_name"]
+		elif doctype == "Partner":
+			fields = [status_field, "partner_name"]
+		else:
+			fields = [status_field, "slug"]
 		for row in frappe.get_all(
 			doctype,
 			filters={status_field: ["in", [TO_DEPLOY, TO_UNPUBLISH]]},
@@ -316,6 +336,11 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 		if not path:
 			continue
 		consider(path, doc, True, hide_when_unpublished=True)
+	for name in frappe.get_all("Partner", pluck="name"):
+		doc = frappe.get_doc("Partner", name)
+		path = content_path_for(doc)
+		if path:
+			consider(path, doc, True, hide_when_unpublished=True)
 	return files, keep
 
 

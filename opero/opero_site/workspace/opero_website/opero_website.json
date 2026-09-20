@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-enterprises\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Enterprises\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-enquiries\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Website Enquiries\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Content &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-home-page\",\"type\":\"card\",\"data\":{\"card_name\":\"Home Page\",\"col\":4}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Other Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-enterprises\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Enterprises\",\"col\":3}},{\"id\":\"ow-s-partners\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Partners\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-enquiries\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Website Enquiries\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Content &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-home-page\",\"type\":\"card\",\"data\":{\"card_name\":\"Home Page\",\"col\":4}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Other Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
  "creation": "2026-09-09 22:14:46.622196",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,7 +16,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Home Page",
-   "link_count": 4,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -53,18 +53,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Partners",
-   "link_count": 0,
-   "link_to": "Partners",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Other Content",
-   "link_count": 5,
+   "link_count": 6,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -94,6 +84,16 @@
    "label": "Enterprises",
    "link_count": 0,
    "link_to": "Enterprise",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Partners",
+   "link_count": 0,
+   "link_to": "Partner",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -178,6 +178,13 @@
    "doc_view": "List",
    "label": "Enterprises",
    "link_to": "Enterprise",
+   "stats_filter": "{\"show_on_website\":1}",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "List",
+   "label": "Partners",
+   "link_to": "Partner",
    "stats_filter": "{\"show_on_website\":1}",
    "type": "DocType"
   },

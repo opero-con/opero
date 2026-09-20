@@ -5,7 +5,7 @@ from frappe.model.document import Document
 
 from opero.opero_site.publish_status import TO_DEPLOY, apply_publish_status
 
-HOME_SECTIONS = ("Hero", "About", "Our Work", "Impact", "Partners")
+HOME_SECTIONS = ("Hero", "About", "Our Work", "Impact")
 
 
 class HomePage(Document):
@@ -14,7 +14,7 @@ class HomePage(Document):
 
 	def to_site_frontmatter(self) -> dict:
 		"""YAML for opero-content `content/homepage/home.md`, assembled from the section singles."""
-		hero, about, our_work, impacts, partners = (
+		hero, about, our_work, impacts = (
 			frappe.get_single(name) for name in HOME_SECTIONS
 		)
 		return {
@@ -22,5 +22,4 @@ class HomePage(Document):
 			"about": about.to_site_frontmatter(),
 			"impacts": impacts.to_site_frontmatter(),
 			"ourWork": our_work.to_site_frontmatter(),
-			"partners": partners.to_site_frontmatter(),
 		}

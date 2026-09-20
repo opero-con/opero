@@ -120,22 +120,6 @@ def apply_home_our_work(doc, data: dict):
 	doc.page_conclusion = _text(our_work.get("pageConclusion"))
 
 
-def apply_home_partners(doc, data: dict):
-	doc.set("partners", [])
-	for row in data.get("partners") or []:
-		active = row.get("active")
-		doc.append(
-			"partners",
-			{
-				"partner_name": _text(row.get("name")),
-				"url": _text(row.get("url")),
-				"logo": _text(row.get("logo")),
-				"show_on_website": 0 if active is False else 1,
-				"sort_order": cint(row.get("order")),
-			},
-		)
-
-
 def apply_privacy(doc, data: dict):
 	reviewed = data.get("lastReviewed")
 	doc.last_reviewed = getdate(reviewed) if reviewed else None
@@ -236,6 +220,28 @@ def find_enterprise(slug: str, display_name: str = "") -> str | None:
 		if enterprise_content_slug(ename) == slug:
 			return row.name
 		if display and ename.casefold() == display.casefold():
+			return row.name
+	return None
+
+
+def apply_partner(doc, data: dict):
+	active = data.get("active")
+	incoming = _text(data.get("name"))
+	if not _text(doc.partner_name):
+		doc.partner_name = incoming
+	doc.url = _text(data.get("url"))
+	doc.sort_order = cint(data.get("order"))
+	doc.website_status = UNPUBLISHED if active is False else PUBLISHED
+	doc.show_on_website = 0 if active is False else 1
+
+
+def find_partner(slug: str, display_name: str = "") -> str | None:
+	from opero.opero_site.doctype.partner.partner import partner_content_slug
+
+	display = _text(display_name)
+	for row in frappe.get_all("Partner", fields=["name", "partner_name"]):
+		name = _text(row.partner_name)
+		if partner_content_slug(name) == slug or (display and name.casefold() == display.casefold()):
 			return row.name
 	return None
 
@@ -356,7 +362,7 @@ def matches_website(doc, path: str, text: str) -> bool:
 	if doc.is_new():
 		return False
 	planned = doc.to_site_frontmatter()
-	if doc.doctype == "Enterprise":
+	if doc.doctype in ("Enterprise", "Partner"):
 		incoming_logo = _text(parse_frontmatter(text).get("logo"))
 		if incoming_logo.lstrip("/").startswith("media/") and planned.get("logo"):
 			if local_portrait_attachment(doc, os.path.basename(incoming_logo)) == planned["logo"]:
@@ -384,7 +390,7 @@ def _content_snapshot(value):
 
 
 def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[str, int]:
-	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0, "enterprises": 0}
+	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0, "enterprises": 0, "partners": 0}
 	previous_syncing = frappe.flags.opero_site_syncing
 	frappe.flags.opero_site_syncing = True
 	try:
@@ -406,7 +412,6 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 					("About", apply_home_about),
 					("Impact", apply_home_impacts),
 					("Our Work", apply_home_our_work),
-					("Partners", apply_home_partners),
 				):
 					section_doc = frappe.get_single(section_doctype)
 					before = _content_snapshot(section_doc.as_dict())
@@ -479,6 +484,21 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 				if attach_content_logo(doc, _text(data.get("logo")), repo):
 					doc.save(ignore_permissions=True)
 				counts["enterprises"] += 1
+			elif path.startswith("content/partners/") and path.endswith(".md"):
+				slug = slug_from_path(path)
+				data = parse_frontmatter(text)
+				name = find_partner(slug, _text(data.get("name")))
+				doc = frappe.get_doc("Partner", name) if name else frappe.new_doc("Partner")
+				if matches_website(doc, path, text):
+					continue
+				apply_partner(doc, data)
+				if doc.is_new():
+					doc.insert(ignore_permissions=True)
+				else:
+					doc.save(ignore_permissions=True)
+				if attach_content_logo(doc, _text(data.get("logo")), repo):
+					doc.save(ignore_permissions=True)
+				counts["partners"] += 1
 	finally:
 		frappe.flags.opero_site_syncing = previous_syncing
 		if sum(counts.values()):

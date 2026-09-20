@@ -285,6 +285,11 @@ doc_events = {
 		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
 		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
 	},
+	"Partner": {
+		"after_insert": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_update": "opero.opero_site.publish.notify_pending_website_changes",
+		"on_trash": "opero.opero_site.publish.notify_pending_website_changes",
+	},
 	"Hero": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
@@ -295,9 +300,6 @@ doc_events = {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
 	"Our Work": {
-		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
-	},
-	"Partners": {
 		"on_update": "opero.opero_site.publish.queue_home_page_deploy",
 	},
 	"Home Page": {

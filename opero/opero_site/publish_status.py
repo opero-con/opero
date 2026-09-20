@@ -17,6 +17,7 @@ ALWAYS_ON_SITE = frozenset({"Home Page", "Our Work", "Privacy policy", "Site Set
 PUBLISH_STATUS_FIELD = {
 	"Enterprise": "website_status",
 	"Employee": "website_status",
+	"Partner": "website_status",
 }
 
 

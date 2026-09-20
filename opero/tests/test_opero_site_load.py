@@ -300,12 +300,29 @@ class TestOperoSiteLoad(FrappeTestCase):
 		frappe.db.delete("Publication")
 		clear_website_test_employees()
 		frappe.db.delete("Enterprise")
+		frappe.db.delete("Partner")
 
 	def test_parse_frontmatter_and_slug_from_path(self):
 		self.assertEqual(parse_frontmatter(TEAM_MD)["name"], "Anita Onyango")
 		self.assertEqual(slug_from_path("content/team/anita-onyango.md"), "anita-onyango")
 		with self.assertRaises(ValueError):
 			parse_frontmatter("no frontmatter here")
+
+	def test_load_creates_standalone_partner(self):
+		counts = load_files({
+			"content/partners/practica-foundation.md": """---
+name: Practica Foundation
+url: https://www.practica.org
+order: 20
+active: true
+---
+"""
+		})
+		self.assertEqual(counts["partners"], 1)
+		doc = frappe.get_last_doc("Partner", filters={"partner_name": "Practica Foundation"})
+		self.assertEqual(doc.website_status, "Published")
+		self.assertTrue(doc.show_on_website)
+		self.assertEqual(doc.sort_order, 20)
 
 	def test_load_maps_content_files_and_ignores_home_team(self):
 		member = make_website_employee("Anita Onyango", show_on_website=0)
@@ -319,7 +336,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 				"docs/editor-guide.md": "---\ntitle: ignored\n---\n",
 			}
 		)
-		self.assertEqual(counts, {"settings": 1, "home": 1, "privacy": 1, "publications": 1, "team": 1, "enterprises": 0})
+		self.assertEqual(counts, {"settings": 1, "home": 1, "privacy": 1, "publications": 1, "team": 1, "enterprises": 0, "partners": 0})
 
 		settings = frappe.get_single("Site Settings")
 		self.assertEqual(settings.organization_name, "Opero Services Ltd")
