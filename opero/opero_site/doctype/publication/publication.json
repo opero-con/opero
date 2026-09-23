@@ -28,6 +28,7 @@
   "section_media",
   "cover",
   "cover_alt",
+  "cover_position",
   "file_url",
   "page_url",
   "external_url",
@@ -159,6 +160,15 @@
    "fieldname": "cover_alt",
    "fieldtype": "Data",
    "label": "Cover alt text"
+  },
+  {
+   "description": "Crop focus computed from the cover image. Not edited by hand.",
+   "fieldname": "cover_position",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Cover position",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "description": "Upload a PDF, or paste a web link if the file already lives elsewhere.",

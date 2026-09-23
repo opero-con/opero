@@ -6,6 +6,8 @@ from frappe.model.document import Document
 from frappe.utils import cint, cstr, getdate
 
 from opero.opero_site.body_html import html_to_body_sections
+from opero.opero_site.cover_focal_point import compute_cover_focal_point
+from opero.opero_site.media import desk_file_url, read_desk_file
 from opero.opero_site.publish_status import apply_publish_status
 from opero.opero_site.utils import (
 	PUBLICATION_TYPES,
@@ -52,6 +54,20 @@ class Publication(Document):
 		if self.published_on:
 			self.year = getdate(self.published_on).year
 		html_to_body_sections(self.body)
+		self._set_cover_position()
+
+	def _set_cover_position(self):
+		if not self.has_value_changed("cover"):
+			return
+		file_url = desk_file_url(self.cover) if self.cover else None
+		if not file_url:
+			self.cover_position = ""
+			return
+		try:
+			self.cover_position = compute_cover_focal_point(read_desk_file(file_url))
+		except (OSError, ValueError):
+			frappe.log_error(title="Cover focal point")
+			self.cover_position = ""
 
 	def to_site_frontmatter(self) -> dict:
 		payload = {
@@ -71,6 +87,8 @@ class Publication(Document):
 			payload["cover"] = cstr(self.cover)
 		if self.cover_alt:
 			payload["coverAlt"] = cstr(self.cover_alt).strip()
+		if self.cover_position:
+			payload["coverPosition"] = cstr(self.cover_position)
 		if self.file_url:
 			payload["fileUrl"] = self.file_url
 		if self.page_url:

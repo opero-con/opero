@@ -1,10 +1,12 @@
 """Opero Site content DocTypes: slug, URL, and opero-content frontmatter contract."""
 
+import io
 from unittest.mock import patch
 
 import frappe
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
+from PIL import Image, ImageDraw
 
 from opero.opero_site.body_html import (
 	body_sections_to_html,
@@ -15,7 +17,14 @@ from opero.opero_site.body_html import (
 	normalize_paragraphs_html,
 	paragraphs_to_html,
 )
+from opero.opero_site.cover_focal_point import compute_cover_focal_point
 from opero.opero_site.utils import normalize_publication_type, parse_links, slugify
+
+
+def _png_bytes(image: Image.Image) -> bytes:
+	buffer = io.BytesIO()
+	image.save(buffer, format="PNG")
+	return buffer.getvalue()
 
 
 class TestOperoSiteContent(FrappeTestCase):
@@ -409,6 +418,37 @@ class TestOperoSiteContent(FrappeTestCase):
 			],
 		)
 
+	def test_publication_cover_position_is_computed_from_the_image(self):
+		from frappe.utils.file_manager import save_file
+
+		canvas = Image.new("L", (400, 160), 255)
+		draw = ImageDraw.Draw(canvas)
+		for x in range(350, 400, 4):
+			draw.line([(x, 0), (x, 160)], fill=0, width=2)
+
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Wide Cover",
+				"published_on": "2025-03-01",
+				"publication_type": "Digest",
+				"summary": "Cover wider than the card's aspect ratio.",
+			}
+		).insert(ignore_permissions=True)
+		file_doc = save_file("wide-cover.png", _png_bytes(canvas), "Publication", doc.name, is_private=0)
+		doc.cover = file_doc.file_url
+		doc.save(ignore_permissions=True)
+
+		x_position, y_position = doc.cover_position.split(" ")
+		self.assertEqual(y_position, "center")
+		self.assertGreaterEqual(int(x_position.rstrip("%")), 80)
+		self.assertEqual(doc.to_site_frontmatter()["coverPosition"], doc.cover_position)
+
+		doc.cover = ""
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.cover_position, "")
+		self.assertNotIn("coverPosition", doc.to_site_frontmatter())
+
 	def test_privacy_frontmatter_matches_privacy_collection(self):
 		doc = frappe.get_single("Privacy policy")
 		doc.body = body_sections_to_html(
@@ -458,6 +498,21 @@ class TestOperoSiteContent(FrappeTestCase):
 		finally:
 			frappe.flags.opero_site_syncing = False
 		self.assertEqual(str(doc.last_reviewed), "2026-07-23")
+
+
+class TestCoverFocalPoint(FrappeTestCase):
+	def test_returns_center_when_the_image_already_matches_the_card_ratio(self):
+		canvas = Image.new("L", (320, 200), 128)
+		self.assertEqual(compute_cover_focal_point(_png_bytes(canvas)), "center center")
+
+	def test_picks_the_edgy_side_when_cropping_vertically(self):
+		canvas = Image.new("L", (200, 400), 255)
+		draw = ImageDraw.Draw(canvas)
+		for y in range(350, 400, 4):
+			draw.line([(0, y), (200, y)], fill=0, width=2)
+		x_position, y_position = compute_cover_focal_point(_png_bytes(canvas)).split(" ")
+		self.assertEqual(x_position, "center")
+		self.assertGreaterEqual(int(y_position.rstrip("%")), 80)
 
 
 class TestPublicationBodyHtml(FrappeTestCase):
