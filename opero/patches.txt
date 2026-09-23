@@ -130,3 +130,4 @@ opero.patches.v0_4.remove_timesheet_week_column
 opero.patches.v0_4.remove_timesheet_allocated_hours_column
 opero.patches.v0_4.make_partners_standalone
 opero.patches.v0_4.normalize_partner_names
+opero.patches.v0_4.backfill_publication_cover_position
