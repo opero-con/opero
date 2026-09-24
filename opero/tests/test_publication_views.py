@@ -43,6 +43,12 @@ class TestPublicationViews(FrappeTestCase):
 		self.assertTrue(field.no_copy)
 		self.assertEqual(frappe.db.get_value("Publication", self.live, "views"), 0)
 
+	def test_web_views_sits_in_its_own_column(self):
+		meta = frappe.get_meta("Publication")
+		self.assertEqual(meta.get_field("views").label, "Web Views")
+		order = [field.fieldname for field in meta.fields]
+		self.assertEqual(meta.get_field(order[order.index("views") - 1]).fieldtype, "Column Break")
+
 	def test_record_view_adds_one_and_returns_the_total(self):
 		self.assertEqual(record_view(LIVE), {"views": 1})
 		self.assertEqual(record_view(LIVE), {"views": 2})
