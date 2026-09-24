@@ -921,6 +921,18 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		self.assertTrue(result["is_new"])
 		self.assertTrue(any("Brand New" in line for line in result["diff"]))
 
+	def test_content_diff_reports_a_file_with_nothing_pending(self):
+		repo = _FakeContentRepo(
+			existing={
+				"content/settings/general.md": SETTINGS_MD,
+				"content/homepage/home.md": HOME_MD,
+				"content/privacy/privacy.md": PRIVACY_MD,
+			}
+		)
+		result = content_diff(repo, "content/publications/not-pending.md")
+		self.assertEqual(result["diff"], [])
+		self.assertIn("Nothing pending", result["message"])
+
 	def test_planned_changes_skips_identical_media_blob(self):
 		file_doc = _attach_png("Opero_Logo_HR_Transparent.png", b"fake-png-bytes")
 		hero = frappe.get_single("Hero")
