@@ -29,11 +29,11 @@ Changing a primary email carries memberships to the new address; any
 unsubscribe is preserved. Other Contacts still using the old address keep
 their subscriptions.
 
-The Contact list's **Mailing List filters** support Any or All selected lists
-and membership status. **Export with Mailing List status** exports matching
-Contacts, with one row per relevant membership. **Manage Mailing Lists** under
-Actions adds or removes memberships for selected Contacts. Standard Contact
-data imports can include the Mailing Lists child records.
+Use Frappe's standard Contact filters to filter by Mailing List. **Export with
+Mailing List status** exports matching Contacts, with one row per relevant
+membership. **Manage Mailing Lists** under Actions adds or removes memberships
+for selected Contacts. Standard Contact data imports can include the Mailing
+Lists child records.
 
 ## Delivery and unsubscribe
 
