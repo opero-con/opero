@@ -2035,7 +2035,7 @@
   "module": "Opero",
   "property": "default",
   "property_type": "Text",
-  "value": "TS-.YY.WW.-.##",
+  "value": "TS.YY.WW.##",
   "default_value": null,
   "doctype": "Property Setter"
  },
@@ -2065,7 +2065,7 @@
   "module": "Opero",
   "property": "options",
   "property_type": "Text",
-  "value": "TS-.YY.WW.-.##",
+  "value": "TS.YY.WW.##",
   "default_value": null,
   "doctype": "Property Setter"
  },

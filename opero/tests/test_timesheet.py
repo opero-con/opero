@@ -20,6 +20,11 @@ class TestTimesheetBalances(FrappeTestCase):
 		self.assertTrue(field.in_list_view)
 		self.assertTrue(field.in_standard_filter)
 
+	def test_naming_series_is_compact(self):
+		field = frappe.get_meta("Timesheet").get_field("naming_series")
+		self.assertEqual(field.default, "TS.YY.WW.##")
+		self.assertEqual(field.options, "TS.YY.WW.##")
+
 	def test_allocated_hours_is_not_a_grid_column(self):
 		self.assertFalse(frappe.get_meta("Timesheet Detail").get_field("custom_a_hrs").in_list_view)
 
