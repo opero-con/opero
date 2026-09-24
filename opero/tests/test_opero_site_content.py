@@ -47,6 +47,11 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(first.name, "P00123")
 		self.assertEqual(second.name, "P00456")
 
+	def test_partner_uses_partner_name_as_its_title(self):
+		meta = frappe.get_meta("Partner")
+		self.assertEqual(meta.title_field, "partner_name")
+		self.assertTrue(meta.show_title_field_in_link)
+
 	def test_expertise_fields_are_visible_in_the_child_table(self):
 		meta = frappe.get_meta("Pillar")
 		self.assertTrue(meta.get_field("title").in_list_view)
