@@ -11,6 +11,7 @@ that the commit message already explains.
 
 | ADR | Decision | Status |
 |-----|----------|--------|
-| [0001](0001-always-on-site-singles.md) | Home Page, Privacy policy, and Site Settings are always on-site | Accepted |
+| [0001](0001-always-on-site-singles.md) | Home Page, Privacy policy, and Site Settings are always on-site | Accepted; status names superseded by ADR-0004 |
 | [0002](0002-employee-website-profiles.md) | Publish website team profiles from Employee | Accepted |
 | [0003](0003-standalone-website-partners.md) | Publish website partners as standalone records | Accepted |
+| [0004](0004-publish-checkbox-and-statuses.md) | Publish checkbox and five website statuses | Accepted |

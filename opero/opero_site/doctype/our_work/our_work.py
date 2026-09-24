@@ -3,12 +3,12 @@ from __future__ import annotations
 from frappe.model.document import Document
 from frappe.utils import cstr
 
-from opero.opero_site.publish_status import TO_DEPLOY, apply_publish_status
+from opero.opero_site.publish_status import TO_UPDATE, apply_publish_status
 
 
 class OurWork(Document):
 	def validate(self):
-		apply_publish_status(self, default=TO_DEPLOY)
+		apply_publish_status(self, default=TO_UPDATE)
 
 	def to_site_frontmatter(self) -> dict:
 		data = {"homepageSummary": cstr(self.homepage_summary).strip()} if self.homepage_summary else {}

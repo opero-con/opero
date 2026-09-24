@@ -4,14 +4,14 @@ import frappe
 from frappe.utils import cint, cstr
 
 DRAFT = "Draft"
-TO_DEPLOY = "To deploy"
-TO_PUBLISH = TO_DEPLOY  # historical patches; prefer TO_DEPLOY in new code
+TO_PUBLISH = "To publish"
+TO_UPDATE = "To update"
 PUBLISHED = "Published"
 TO_UNPUBLISH = "To unpublish"
-UNPUBLISHED = "Unpublished"
-STATUSES = (DRAFT, TO_DEPLOY, PUBLISHED, TO_UNPUBLISH, UNPUBLISHED)
-ON_SITE = (TO_DEPLOY, PUBLISHED)
-OFF_SITE = (TO_UNPUBLISH, UNPUBLISHED)
+STATUSES = (DRAFT, TO_PUBLISH, TO_UPDATE, PUBLISHED, TO_UNPUBLISH)
+QUEUED = (TO_PUBLISH, TO_UPDATE, TO_UNPUBLISH)
+ON_SITE = (TO_PUBLISH, TO_UPDATE, PUBLISHED)
+LIVE = (TO_UPDATE, PUBLISHED, TO_UNPUBLISH)
 ALWAYS_ON_SITE = frozenset({"Home Page", "Our Work", "Privacy policy", "Site Settings"})
 # CRM Enterprise keeps `status` for Identified/Onboarded/...; publish sync uses website_status.
 PUBLISH_STATUS_FIELD = {
@@ -53,15 +53,16 @@ def apply_publish_status(doc, *, default: str = DRAFT) -> None:
 	if frappe.flags.get("opero_site_syncing"):
 		doc.show_on_website = 1 if is_on_site(doc) else 0
 		return
-	if cint(doc.show_on_website):
-		doc.set(field, TO_DEPLOY)
-	elif UNPUBLISHED in (current, prev_status):
-		doc.set(field, UNPUBLISHED)
-	elif PUBLISHED in (current, prev_status) or TO_UNPUBLISH in (current, prev_status):
-		doc.set(field, TO_UNPUBLISH)
-	else:
-		doc.set(field, DRAFT)
+	doc.set(field, status_for_publish(doc.show_on_website, prev_status or current))
 	doc.show_on_website = 1 if is_on_site(doc) else 0
+
+
+def status_for_publish(publish, saved_status: str) -> str:
+	"""Status after the Publish box is set, given the last saved status."""
+	is_live = saved_status in LIVE
+	if cint(publish):
+		return TO_UPDATE if is_live else TO_PUBLISH
+	return TO_UNPUBLISH if is_live else DRAFT
 
 
 def _apply_always_on_site(doc, *, default: str) -> None:
@@ -74,15 +75,12 @@ def _apply_always_on_site(doc, *, default: str) -> None:
 	# Load from GitHub sets Published and must not re-queue.
 	if frappe.flags.get("opero_site_syncing"):
 		return
-	# Desk save queues a deploy; Status is sync state, not "ever live".
-	doc.status = TO_DEPLOY
+	# Always-on pages are live, so a Desk save queues an update.
+	doc.status = TO_UPDATE
 
 
-def is_to_deploy(doc) -> bool:
-	return get_publish_status(doc) == TO_DEPLOY
-
-
-is_to_publish = is_to_deploy  # historical name
+def is_queued(doc) -> bool:
+	return get_publish_status(doc) in QUEUED
 
 
 def is_to_unpublish(doc) -> bool:
@@ -91,9 +89,3 @@ def is_to_unpublish(doc) -> bool:
 
 def is_on_site(doc) -> bool:
 	return doc.doctype in ALWAYS_ON_SITE or get_publish_status(doc) in ON_SITE
-
-
-def is_off_site(doc) -> bool:
-	if doc.doctype in ALWAYS_ON_SITE:
-		return False
-	return get_publish_status(doc) in OFF_SITE

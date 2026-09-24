@@ -1,6 +1,6 @@
 # ADR-0001: Home Page, Privacy policy, and Site Settings are always on-site
 
-- **Status:** Accepted
+- **Status:** Accepted; status names superseded by [ADR-0004](0004-publish-checkbox-and-statuses.md)
 - **Date:** 2026-08-30
 - **Affects:** Cubenet Opero Site DocTypes (`opero`), publish status, Deploy Center
 

@@ -1,4 +1,4 @@
-const OPTIONAL_SITE_DOCTYPES = ["Publication", "Employee", "Enterprise"];
+const OPTIONAL_SITE_DOCTYPES = ["Publication", "Employee", "Enterprise", "Partner"];
 const ALWAYS_ON_SITE_DOCTYPES = ["Home Page", "Privacy policy", "Site Settings"];
 const HOME_PAGE_SECTION_DOCTYPES = ["Hero", "About", "Our Work", "Impact"];
 const SITE_CONTENT_DOCTYPES = OPTIONAL_SITE_DOCTYPES.concat(ALWAYS_ON_SITE_DOCTYPES);
@@ -7,6 +7,16 @@ const INDICATOR_SITE_DOCTYPES = SITE_CONTENT_DOCTYPES.filter((name) => name !== 
 const PUBLISH_STATUS_FIELD = {
 	Enterprise: "website_status",
 	Employee: "website_status",
+	Partner: "website_status",
+};
+const LIVE_STATUSES = ["To update", "Published", "To unpublish"];
+const QUEUED_STATUSES = ["To publish", "To update", "To unpublish"];
+const STATUS_COLORS = {
+	Draft: "gray",
+	"To publish": "blue",
+	"To update": "blue",
+	Published: "green",
+	"To unpublish": "orange",
 };
 
 if (!window._opero_publish_status_bound) {
@@ -85,22 +95,17 @@ function bindHomePageStatus(doctype) {
 	frappe.ui.form.on(doctype, {
 		async refresh(frm) {
 			const status = await frappe.db.get_single_value("Home Page", "status");
-			setDeployRibbon(frm, status, "Home Page");
+			setDeployRibbon(frm, status);
 		},
 	});
 }
 
-function statusFromCheckbox(show, status) {
-	if (cint(show)) {
-		return "To deploy";
+function statusFromCheckbox(publish, status) {
+	const is_live = LIVE_STATUSES.includes(status);
+	if (cint(publish)) {
+		return is_live ? "To update" : "To publish";
 	}
-	if (status === "Unpublished") {
-		return "Unpublished";
-	}
-	if (status === "Published" || status === "To unpublish") {
-		return "To unpublish";
-	}
-	return "Draft";
+	return is_live ? "To unpublish" : "Draft";
 }
 
 function setPublishStatusPill(frm) {
@@ -113,12 +118,12 @@ function setPublishStatusPill(frm) {
 	}
 }
 
-function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)], label = frm.doctype) {
+function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)]) {
 	if (!frm.layout) {
 		return;
 	}
 	frm.layout.show_message();
-	if (status !== "To deploy" && status !== "To unpublish") {
+	if (!QUEUED_STATUSES.includes(status)) {
 		return;
 	}
 	const link = frappe.utils.get_form_link(
@@ -127,11 +132,11 @@ function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)],
 		true,
 		__("Deploy Center")
 	);
-	const queued_off = status === "To unpublish";
-	const text = queued_off
-		? __("This {0} is queued to come off the website. {1}", [__(label), link])
-		: __("This {0} is queued for the next website deploy. {1}", [__(label), link]);
-	frm.layout.show_message(`<span>${text}</span>`, queued_off ? "red" : "blue", true);
+	const text =
+		status === "To unpublish"
+			? __("Will be removed on the next deploy. {0}", [link])
+			: __("Will be published on the next deploy. {0}", [link]);
+	frm.layout.show_message(`<span>${text}</span>`, STATUS_COLORS[status], true);
 }
 
 function bindStatusPill(doctype) {
@@ -144,19 +149,7 @@ function bindStatusPill(doctype) {
 function getPublishStatusIndicator(doc, doctype) {
 	const field = publishStatusField(doctype || doc.doctype);
 	const status = doc[field];
-	if (status === "Published") {
-		return [__("Published"), "green", `${field},=,Published`];
-	}
-	if (status === "To deploy") {
-		return [__("To deploy"), "blue", `${field},=,To deploy`];
-	}
-	if (status === "To unpublish") {
-		return [__("To unpublish"), "red", `${field},=,To unpublish`];
-	}
-	if (status === "Unpublished") {
-		return [__("Unpublished"), "gray", `${field},=,Unpublished`];
-	}
-	if (status === "Draft") {
-		return [__("Draft"), "orange", `${field},=,Draft`];
+	if (STATUS_COLORS[status]) {
+		return [__(status), STATUS_COLORS[status], `${field},=,${status}`];
 	}
 }

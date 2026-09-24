@@ -487,7 +487,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		doc.save(ignore_permissions=True)
 		first_reviewed = str(doc.last_reviewed)
 		doc.reload()
-		doc.status = "To deploy"
+		doc.status = "To update"
 		doc.save(ignore_permissions=True)
 		self.assertEqual(str(doc.last_reviewed), first_reviewed)
 

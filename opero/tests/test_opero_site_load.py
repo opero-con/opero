@@ -516,7 +516,7 @@ active: false
 		)
 		doc.reload()
 		self.assertEqual(doc.status, "Active")
-		self.assertEqual(doc.website_status, "Unpublished")
+		self.assertEqual(doc.website_status, "Draft")
 		self.assertFalse(doc.show_on_website)
 
 	def test_load_enterprise_matches_existing_by_name_and_attaches_logo(self):

@@ -34,7 +34,7 @@ function loadPublishStatus(status) {
 		fs.readFileSync(path.join(__dirname, "../public/js/opero_site_publish_status.js"), "utf8"),
 		context
 	);
-	return { handlers, singleValueCalls };
+	return { context, handlers, singleValueCalls };
 }
 
 function makeForm(doctype, doc = {}) {
@@ -51,7 +51,7 @@ function makeForm(doctype, doc = {}) {
 }
 
 test("every homepage section displays the shared Home Page deploy ribbon", async () => {
-	const { handlers, singleValueCalls } = loadPublishStatus("To deploy");
+	const { handlers, singleValueCalls } = loadPublishStatus("To update");
 	const sections = ["Hero", "About", "Our Work", "Impact"];
 
 	for (const doctype of sections) {
@@ -59,29 +59,74 @@ test("every homepage section displays the shared Home Page deploy ribbon", async
 		await handlers.get(doctype).refresh(frm);
 
 		assert.equal(messages.length, 2);
-		assert.match(messages[1][0], /This Home Page is queued for the next website deploy/);
+		assert.match(messages[1][0], /Will be published on the next deploy/);
 		assert.equal(messages[1][1], "blue");
 	}
 	assert.deepEqual(singleValueCalls, sections.map(() => ["Home Page", "status"]));
 });
 
-test("every directly deployable DocType displays its own pending ribbon", async () => {
+test("every site DocType displays its own pending ribbon", async () => {
 	const { handlers } = loadPublishStatus("Published");
 	const doctypes = [
-		["Publication", { status: "To deploy" }],
-		["Employee", { website_status: "To deploy" }],
-		["Enterprise", { website_status: "To deploy" }],
-		["Home Page", { status: "To deploy" }],
-		["Privacy policy", { status: "To deploy" }],
-		["Site Settings", { status: "To deploy" }],
+		["Publication", { status: "To publish" }, /Will be published/, "blue"],
+		["Employee", { website_status: "To update" }, /Will be published/, "blue"],
+		["Enterprise", { website_status: "To publish" }, /Will be published/, "blue"],
+		["Partner", { website_status: "To unpublish" }, /Will be removed/, "orange"],
+		["Home Page", { status: "To update" }, /Will be published/, "blue"],
+		["Privacy policy", { status: "To update" }, /Will be published/, "blue"],
+		["Site Settings", { status: "To update" }, /Will be published/, "blue"],
 	];
 
-	for (const [doctype, doc] of doctypes) {
+	for (const [doctype, doc, text, color] of doctypes) {
 		const { frm, messages } = makeForm(doctype, doc);
 		await handlers.get(doctype).refresh(frm);
 
 		assert.equal(messages.length, 2);
-		assert.match(messages[1][0], new RegExp(`This ${doctype} is queued for the next website deploy`));
-		assert.equal(messages[1][1], "blue");
+		assert.match(messages[1][0], text);
+		assert.equal(messages[1][1], color);
+	}
+});
+
+test("Draft and Published show no ribbon", async () => {
+	const { handlers } = loadPublishStatus("Published");
+	for (const status of ["Draft", "Published"]) {
+		const { frm, messages } = makeForm("Publication", { status });
+		await handlers.get("Publication").refresh(frm);
+		assert.equal(messages.length, 1);
+	}
+});
+
+test("the Publish box follows the status rules", () => {
+	const { context } = loadPublishStatus("Published");
+	const cases = [
+		[1, "Draft", "To publish"],
+		[1, "To publish", "To publish"],
+		[1, "Published", "To update"],
+		[1, "To update", "To update"],
+		[1, "To unpublish", "To update"],
+		[0, "Draft", "Draft"],
+		[0, "To publish", "Draft"],
+		[0, "Published", "To unpublish"],
+		[0, "To update", "To unpublish"],
+		[0, "To unpublish", "To unpublish"],
+	];
+	for (const [publish, saved, expected] of cases) {
+		assert.equal(context.statusFromCheckbox(publish, saved), expected, `${publish} ${saved}`);
+	}
+});
+
+test("status pills use the agreed colors", () => {
+	const { context } = loadPublishStatus("Published");
+	const colors = {
+		Draft: "gray",
+		"To publish": "blue",
+		"To update": "blue",
+		Published: "green",
+		"To unpublish": "orange",
+	};
+	for (const [status, color] of Object.entries(colors)) {
+		const [label, indicator] = context.getPublishStatusIndicator({ website_status: status }, "Partner");
+		assert.equal(label, status);
+		assert.equal(indicator, color);
 	}
 });
