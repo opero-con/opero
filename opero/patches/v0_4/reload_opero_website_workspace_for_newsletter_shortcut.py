@@ -12,6 +12,6 @@ def execute():
 
 	doc = frappe.get_doc("Workspace", "Opero Website")
 	shortcut = next((row for row in doc.shortcuts if row.label == "Newsletter List"), None)
-	expected_filter = '[["Contact Mailing List","mailing_list","like","%Newsletter%"]]'
-	if not shortcut or shortcut.link_to != "Contact" or shortcut.stats_filter != expected_filter:
+	expected_filter = '[["Email Group Member","email_group","like","%Newsletter%"]]'
+	if not shortcut or shortcut.link_to != "Email Group Member" or shortcut.stats_filter != expected_filter:
 		frappe.throw("Opero Website workspace reloaded without the Newsletter List shortcut.")
