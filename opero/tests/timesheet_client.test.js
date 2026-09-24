@@ -69,10 +69,12 @@ function loadForm(allocationBalances = []) {
 	return { handlers, rows, frm, buttons, hiddenFields, dashboardSections };
 }
 
-test("Timesheet hides the unused Connections section", async () => {
+test("Timesheet hides report-only and unused fields on the form", async () => {
 	const { handlers, frm, hiddenFields } = loadForm();
 	for (const { doctype, events } of handlers)
 		if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
+	assert.equal(hiddenFields.has("employee_name"), true);
+	assert.equal(hiddenFields.has("workflow_state"), true);
 	assert.equal(hiddenFields.has("connections_tab"), true);
 });
 
