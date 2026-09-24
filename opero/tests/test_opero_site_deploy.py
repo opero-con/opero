@@ -449,7 +449,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
-		self.assertEqual(doc.status, "To deploy")
+		self.assertEqual(doc.status, "To publish")
 		settle_publish_statuses()
 		doc.reload()
 		self.assertEqual(doc.status, "Published")
@@ -507,20 +507,20 @@ class TestOperoSitePublish(FrappeTestCase):
 				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
-		self.assertEqual(doc.status, "To deploy")
+		self.assertEqual(doc.status, "To publish")
 		settle_publish_statuses()
 		doc.reload()
 		self.assertEqual(doc.status, "Published")
 		self.assertTrue(doc.show_on_website)
 
-	def test_publish_settles_to_unpublish_to_unpublished(self):
+	def test_publish_settles_to_unpublish_to_draft(self):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Publication",
 				"title": "Take Me Down",
 				"published_on": "2026-08-01",
 				"publication_type": "Newsletter",
-				"summary": "Queued to come off, then the deploy marks it unpublished.",
+				"summary": "Queued to come off, then the deploy returns it to Draft.",
 				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
@@ -532,12 +532,12 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertEqual(doc.status, "To unpublish")
 		settle_publish_statuses()
 		doc.reload()
-		self.assertEqual(doc.status, "Unpublished")
+		self.assertEqual(doc.status, "Draft")
 		self.assertFalse(doc.show_on_website)
 		files, keep = collect_content_plan()
 		path = "content/publications/take-me-down.md"
 		self.assertNotIn(path, dict(files))
-		self.assertNotIn(path, keep)
+		self.assertIn(path, keep)
 
 	def test_home_page_is_always_written(self):
 		frappe.get_single("Hero").db_set(
@@ -547,9 +547,9 @@ class TestOperoSitePublish(FrappeTestCase):
 		home.db_set("status", "Draft")
 		home.reload()
 		home.save(ignore_permissions=True)
-		self.assertEqual(home.status, "To deploy")
+		self.assertEqual(home.status, "To update")
 		self.assertFalse(home.meta.has_field("show_on_website"))
-		home.db_set("status", "Unpublished")
+		home.db_set("status", "Draft")
 		files, keep = collect_content_plan()
 		self.assertIn("content/homepage/home.md", dict(files))
 		self.assertNotIn("content/homepage/home.md", keep)
@@ -562,14 +562,14 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertTrue(frappe.get_meta("Enterprise").has_field("show_on_website"))
 		self.assertTrue(frappe.get_meta("Partner").has_field("show_on_website"))
 
-	def test_always_on_published_save_queues_to_deploy(self):
+	def test_always_on_published_save_queues_to_update(self):
 		home = frappe.get_single("Home Page")
 		home.db_set("status", "Published")
 		hero = frappe.get_single("Hero")
 		hero.hero_title = "Edited while already live"
 		hero.save(ignore_permissions=True)
 		home.reload()
-		self.assertEqual(home.status, "To deploy")
+		self.assertEqual(home.status, "To update")
 		self.assertEqual(
 			pending_push_for_doc(home),
 			[{"path": "content/homepage/home.md", "action": "update"}],
@@ -578,7 +578,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		home.reload()
 		self.assertEqual(home.status, "Published")
 
-	def test_optional_published_save_queues_to_deploy(self):
+	def test_optional_published_save_queues_to_update(self):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Publication",
@@ -594,7 +594,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertEqual(doc.status, "Published")
 		doc.summary = "Edited while already live"
 		doc.save(ignore_permissions=True)
-		self.assertEqual(doc.status, "To deploy")
+		self.assertEqual(doc.status, "To update")
 		self.assertTrue(doc.show_on_website)
 
 	def test_enterprise_show_on_website_queues_content_path(self):
@@ -608,7 +608,7 @@ class TestOperoSitePublish(FrappeTestCase):
 			}
 		).insert(ignore_permissions=True)
 		self.assertEqual(doc.status, "Active Support")
-		self.assertEqual(doc.website_status, "To deploy")
+		self.assertEqual(doc.website_status, "To publish")
 		self.assertEqual(
 			pending_push_for_doc(doc),
 			[{"path": "content/enterprises/gasia-poa-test.md", "action": "update"}],
@@ -651,7 +651,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
-		self.assertEqual(doc.website_status, "To deploy")
+		self.assertEqual(doc.website_status, "To publish")
 		self.assertEqual(
 			pending_push_for_doc(doc),
 			[{"path": "content/partners/practica-foundation.md", "action": "update"}],
@@ -678,7 +678,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertEqual(doc.status, "Draft")
 		doc.show_on_website = 1
 		doc.save(ignore_permissions=True)
-		self.assertEqual(doc.status, "To deploy")
+		self.assertEqual(doc.status, "To publish")
 		settle_publish_statuses()
 		doc.reload()
 		self.assertEqual(doc.status, "Published")
@@ -688,8 +688,33 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertEqual(doc.status, "To unpublish")
 		settle_publish_statuses()
 		doc.reload()
-		self.assertEqual(doc.status, "Unpublished")
+		self.assertEqual(doc.status, "Draft")
 		self.assertFalse(doc.show_on_website)
+
+	def test_retick_before_deploy_follows_whether_the_record_is_live(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Changed My Mind",
+				"published_on": "2026-08-01",
+				"publication_type": "Newsletter",
+				"summary": "Ticked and unticked before any deploy.",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		doc.show_on_website = 0
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "Draft")
+		doc.show_on_website = 1
+		doc.save(ignore_permissions=True)
+		settle_publish_statuses()
+		doc.reload()
+		doc.show_on_website = 0
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "To unpublish")
+		doc.show_on_website = 1
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.status, "To update")
 
 	def test_content_label_for_resolves_live_docs_and_falls_back(self):
 		doc = frappe.get_doc(

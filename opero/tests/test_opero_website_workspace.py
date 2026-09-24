@@ -154,7 +154,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		)
 		self.assertEqual(
 			frappe.get_meta("Enterprise").get_field("website_status").options.split("\n"),
-			["Draft", "To deploy", "Published", "To unpublish", "Unpublished"],
+			["Draft", "To publish", "To update", "Published", "To unpublish"],
 		)
 
 	def test_lone_section_children_do_not_repeat_the_section_title(self):

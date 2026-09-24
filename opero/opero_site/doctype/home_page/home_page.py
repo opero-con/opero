@@ -3,14 +3,14 @@ from __future__ import annotations
 import frappe
 from frappe.model.document import Document
 
-from opero.opero_site.publish_status import TO_DEPLOY, apply_publish_status
+from opero.opero_site.publish_status import TO_UPDATE, apply_publish_status
 
 HOME_SECTIONS = ("Hero", "About", "Our Work", "Impact")
 
 
 class HomePage(Document):
 	def validate(self):
-		apply_publish_status(self, default=TO_DEPLOY)
+		apply_publish_status(self, default=TO_UPDATE)
 
 	def to_site_frontmatter(self) -> dict:
 		"""YAML for opero-content `content/homepage/home.md`, assembled from the section singles."""

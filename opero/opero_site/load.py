@@ -14,7 +14,7 @@ from opero.opero_site.body_html import body_sections_to_html, paragraphs_to_html
 from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.markdown import parse_frontmatter, same_managed_content, to_markdown
 from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
-from opero.opero_site.publish_status import DRAFT, PUBLISHED, UNPUBLISHED
+from opero.opero_site.publish_status import DRAFT, PUBLISHED
 from opero.opero_site.utils import (
 	hero_image_focus_label,
 	normalize_publication_type,
@@ -166,7 +166,7 @@ def apply_employee_profile(doc, data: dict, slug: str):
 	doc.slug = slug
 	doc.sort_order = cint(data.get("order"))
 	if active is False:
-		doc.website_status = UNPUBLISHED
+		doc.website_status = DRAFT
 		doc.show_on_website = 0
 	else:
 		doc.website_status = PUBLISHED
@@ -201,7 +201,7 @@ def apply_enterprise(doc, data: dict, slug: str):
 		doc.enterprise_name = incoming
 	doc.sort_order = cint(data.get("order"))
 	if active is False:
-		doc.website_status = UNPUBLISHED
+		doc.website_status = DRAFT
 		doc.show_on_website = 0
 	else:
 		doc.website_status = PUBLISHED
@@ -231,7 +231,7 @@ def apply_partner(doc, data: dict):
 		doc.partner_name = incoming
 	doc.url = _text(data.get("url"))
 	doc.sort_order = cint(data.get("order"))
-	doc.website_status = UNPUBLISHED if active is False else PUBLISHED
+	doc.website_status = DRAFT if active is False else PUBLISHED
 	doc.show_on_website = 0 if active is False else 1
 
 

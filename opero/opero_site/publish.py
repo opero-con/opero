@@ -14,13 +14,12 @@ from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdow
 from opero.opero_site.media import export_planned_media, git_blob_sha
 from opero.opero_site.publish_status import (
 	ALWAYS_ON_SITE,
+	DRAFT,
 	PUBLISHED,
-	TO_DEPLOY,
+	QUEUED,
 	TO_UNPUBLISH,
-	UNPUBLISHED,
-	is_off_site,
 	is_on_site,
-	is_to_deploy,
+	is_queued,
 	is_to_unpublish,
 	publish_status_field,
 )
@@ -162,11 +161,11 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 		new_path = content_path_for(doc)
 		renamed = bool(old_path and new_path and old_path != new_path)
 		if renamed and doc.doctype == "Publication" and (
-			is_on_site(previous) or is_off_site(previous) or is_on_site(doc) or is_off_site(doc)
+			is_on_site(previous) or is_to_unpublish(previous) or is_on_site(doc) or is_to_unpublish(doc)
 		):
 			entries.append({"path": old_path, "action": "delete"})
 		elif renamed and doc.doctype in ("Employee", "Enterprise", "Partner") and (
-			is_on_site(previous) or is_off_site(previous)
+			is_on_site(previous) or is_to_unpublish(previous)
 		):
 			entries.append({"path": old_path, "action": "delete"})
 
@@ -187,12 +186,12 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 	if doc.doctype == "Publication":
 		if is_on_site(doc):
 			entries.append({"path": path, "action": "update"})
-		elif is_off_site(doc):
+		elif is_to_unpublish(doc):
 			entries.append({"path": path, "action": "delete"})
 		return _unique_pending(entries)
 
 	if doc.doctype in ("Employee", "Enterprise", "Partner"):
-		if is_on_site(doc) or is_off_site(doc):
+		if is_on_site(doc) or is_to_unpublish(doc):
 			entries.append({"path": path, "action": "update"})
 		return _unique_pending(entries)
 
@@ -243,7 +242,7 @@ def pending_from_status() -> list[dict]:
 			fields = [status_field, "slug"]
 		for row in frappe.get_all(
 			doctype,
-			filters={status_field: ["in", [TO_DEPLOY, TO_UNPUBLISH]]},
+			filters={status_field: ["in", QUEUED]},
 			fields=fields,
 		):
 			path = content_path_for(frappe._dict(doctype=doctype, **row))
@@ -256,7 +255,7 @@ def pending_from_status() -> list[dict]:
 				entries.append({"path": path, "action": "update"})
 	for name in CONTENT_SINGLES:
 		doc = frappe.get_single(name)
-		if is_to_deploy(doc) and _doc_is_ready(doc):
+		if is_queued(doc) and _doc_is_ready(doc):
 			path = content_path_for(doc)
 			if path:
 				entries.append({"path": path, "action": "update"})
@@ -298,8 +297,8 @@ def notify_pending_website_changes(doc, method: str | None = None) -> None:
 def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	"""On-site writes plus draft paths that must stay untouched on GitHub.
 
-	Off-site publications are omitted so the next deploy deletes them.
-	Off-site team members are still written with `active: false`.
+	Publications to unpublish are omitted so the next deploy deletes them.
+	Team members, enterprises, and partners to unpublish are written with `active: false`.
 	"""
 	files = []
 	keep = []
@@ -307,9 +306,9 @@ def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	def consider(path: str, doc, ready: bool, *, hide_when_unpublished: bool = False) -> None:
 		if not ready:
 			return
-		if is_on_site(doc) or (hide_when_unpublished and is_off_site(doc)):
+		if is_on_site(doc) or (hide_when_unpublished and is_to_unpublish(doc)):
 			files.append((path, to_markdown(doc.to_site_frontmatter())))
-		elif is_off_site(doc):
+		elif is_to_unpublish(doc):
 			return
 		else:
 			keep.append(path)
@@ -453,12 +452,12 @@ def record_deploy(commit_url: str, sha: str, files: list[tuple[str, str | None]]
 
 
 def settle_publish_statuses() -> None:
-	"""After a deploy, queued intents become live or off-site states."""
+	"""After a deploy, queued records become Published, or Draft once taken down."""
 	for doctype in CONTENT_DOCTYPES:
 		status_field = publish_status_field(doctype)
 		for name in frappe.get_all(
 			doctype,
-			filters={status_field: ["in", [TO_DEPLOY, TO_UNPUBLISH]]},
+			filters={status_field: ["in", QUEUED]},
 			pluck="name",
 		):
 			_settle_doc(frappe.get_doc(doctype, name))
@@ -473,10 +472,7 @@ def _settle_doc(doc) -> None:
 	if doc.doctype in ALWAYS_ON_SITE:
 		doc.db_set(field, PUBLISHED)
 		return
-	if is_to_deploy(doc):
-		doc.db_set(field, PUBLISHED)
-	elif is_to_unpublish(doc):
-		doc.db_set(field, UNPUBLISHED)
+	doc.db_set(field, DRAFT if is_to_unpublish(doc) else PUBLISHED)
 
 
 def _require_deploy_permission() -> None:

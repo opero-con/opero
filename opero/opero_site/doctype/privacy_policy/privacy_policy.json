@@ -14,12 +14,12 @@
  ],
  "fields": [
   {
-   "default": "To deploy",
+   "default": "To update",
    "fieldname": "status",
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Status",
-   "options": "Draft\nTo deploy\nPublished\nTo unpublish\nUnpublished",
+   "options": "Draft\nTo publish\nTo update\nPublished\nTo unpublish",
    "read_only": 1,
    "reqd": 1
   },
@@ -44,7 +44,7 @@
  "module": "Opero Site",
  "name": "Privacy policy",
  "owner": "Administrator",
- "modified": "2026-09-06 23:00:00.000000",
+ "modified": "2026-09-25 10:00:00.000000",
  "modified_by": "Administrator",
  "permissions": [
   {
@@ -77,24 +77,24 @@
  "sort_order": "DESC",
  "states": [
   {
-   "color": "Orange",
+   "color": "Gray",
    "title": "Draft"
   },
   {
    "color": "Blue",
-   "title": "To deploy"
+   "title": "To publish"
+  },
+  {
+   "color": "Blue",
+   "title": "To update"
   },
   {
    "color": "Green",
    "title": "Published"
   },
   {
-   "color": "Red",
+   "color": "Orange",
    "title": "To unpublish"
-  },
-  {
-   "color": "Gray",
-   "title": "Unpublished"
   }
  ],
  "index_web_pages_for_search": 0,

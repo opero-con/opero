@@ -14,7 +14,7 @@
   {"fieldname": "image", "fieldtype": "Attach Image", "label": "Image"},
   {"fieldname": "image_alt", "fieldtype": "Data", "label": "Image alt text"},
   {"fieldname": "page_conclusion", "fieldtype": "Small Text", "label": "Page conclusion"},
-  {"default": "To deploy", "fieldname": "status", "fieldtype": "Select", "hidden": 1, "label": "Status", "options": "Draft\nTo deploy\nPublished\nTo unpublish\nUnpublished", "read_only": 1, "reqd": 1}
+  {"default": "To update", "fieldname": "status", "fieldtype": "Select", "hidden": 1, "label": "Status", "options": "Draft\nTo publish\nTo update\nPublished\nTo unpublish", "read_only": 1, "reqd": 1}
  ],
  "issingle": 1,
  "istable": 0,
