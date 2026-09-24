@@ -542,7 +542,7 @@ def content_diff(repo: ContentRepo, path: str) -> dict:
 	if not match:
 		return {"path": path, **label, "diff": [], "message": _("Nothing pending for {0}.").format(label["title"])}
 
-	_, planned_content = match
+	_path, planned_content = match
 	if planned_content is not None and not isinstance(planned_content, str):
 		return {"path": path, **label, "is_binary": True, "diff": []}
 
