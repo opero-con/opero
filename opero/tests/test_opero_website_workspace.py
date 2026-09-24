@@ -36,7 +36,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(card_breaks, ["Home Page", "Other Content", "Setup"])
 		self.assertEqual(
 			[row.link_count for row in doc.links if row.type == "Card Break"],
-			[3, 6, 2],
+			[3, 6, 3],
 		)
 		cards = [block["data"]["card_name"] for block in json.loads(doc.content) if block["type"] == "card"]
 		self.assertEqual(cards, ["Home Page", "Other Content", "Setup"])
@@ -54,6 +54,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Privacy policy": "Privacy policy",
 				"Deploy Center": "Deploy Center",
 				"Settings": "Site Settings",
+				"Mailing Lists": "Email Group",
 			},
 		)
 		self.assertNotIn("Website Settings", links.values())
@@ -68,9 +69,11 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Partners",
 				"Publications",
 				"Website Enquiries",
+				"Newsletter List",
 			},
 		)
 		enquiries = next(row for row in doc.shortcuts if row.label == "Website Enquiries")
+		newsletter = next(row for row in doc.shortcuts if row.label == "Newsletter List")
 		team = next(row for row in doc.shortcuts if row.label == "Team")
 		enterprises = next(row for row in doc.links if row.label == "Enterprises")
 		self.assertEqual(enterprises.link_type, "DocType")
@@ -88,6 +91,13 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(enquiries.link_to, "Communication")
 		self.assertEqual(enquiries.doc_view, "List")
 		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
+		self.assertEqual(newsletter.type, "DocType")
+		self.assertEqual(newsletter.link_to, "Contact")
+		self.assertEqual(newsletter.doc_view, "List")
+		self.assertEqual(
+			json.loads(newsletter.stats_filter),
+			[["Contact Mailing List", "mailing_list", "like", "%Newsletter%"]],
+		)
 		self.assertEqual(team.link_to, "Employee")
 		self.assertEqual(team.type, "DocType")
 		self.assertEqual(team.doc_view, "List")
