@@ -2,10 +2,9 @@
  "actions": [],
  "allow_import": 1,
  "allow_rename": 1,
- "creation": "2026-08-25 12:35:00.000000",
- "custom": 0,
+ "autoname": "field:slug",
+ "creation": "2026-08-25 12:35:00",
  "doctype": "DocType",
- "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
   "title",
@@ -22,6 +21,7 @@
   "publication_type",
   "column_break_service",
   "service_area",
+  "column_break_xgao",
   "views",
   "section_summary",
   "summary",
@@ -45,9 +45,9 @@
   {
    "fieldname": "title",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Title",
-   "reqd": 1,
-   "in_list_view": 1
+   "reqd": 1
   },
   {
    "description": "URL id; leave blank to generate from the title.",
@@ -67,6 +67,7 @@
    "label": "Show on website"
   },
   {
+   "default": "0",
    "fieldname": "featured",
    "fieldtype": "Check",
    "label": "Featured"
@@ -84,15 +85,14 @@
   },
   {
    "fieldname": "section_details",
-   "fieldtype": "Section Break",
-   "label": ""
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "published_on",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Published on",
-   "reqd": 1,
-   "in_list_view": 1
+   "reqd": 1
   },
   {
    "fieldname": "column_break_year",
@@ -111,10 +111,10 @@
   {
    "fieldname": "publication_type",
    "fieldtype": "Select",
-   "label": "Type",
-   "reqd": 1,
    "in_list_view": 1,
-   "options": "Case study\nDigest\nNewsletter\nOverview\nProject"
+   "label": "Type",
+   "options": "Case study\nDigest\nNewsletter\nOverview\nProject",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_service",
@@ -128,17 +128,15 @@
   },
   {
    "default": "0",
-   "description": "Times the article has been opened on the website. Counted by the site, not editable.",
    "fieldname": "views",
    "fieldtype": "Int",
-   "label": "Views",
+   "label": "Web Views",
    "no_copy": 1,
    "read_only": 1
   },
   {
    "fieldname": "section_summary",
-   "fieldtype": "Section Break",
-   "label": ""
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "summary",
@@ -177,11 +175,11 @@
    "label": "PDF"
   },
   {
+   "description": "Internal page this card should open instead of a publication article, such as /pupu-pump.html.",
    "fieldname": "page_url",
    "fieldtype": "Data",
    "label": "Page URL",
-   "options": "URL",
-   "description": "Internal page this card should open instead of a publication article, such as /pupu-pump.html."
+   "options": "URL"
   },
   {
    "fieldname": "external_url",
@@ -195,10 +193,10 @@
    "label": "Video"
   },
   {
+   "description": "Use a privacy-enhanced embed URL, such as youtube-nocookie.com/embed/...",
    "fieldname": "video_embed_url",
    "fieldtype": "Data",
-   "label": "Embed URL",
-   "description": "Use a privacy-enhanced embed URL, such as youtube-nocookie.com/embed/..."
+   "label": "Embed URL"
   },
   {
    "fieldname": "video_title",
@@ -212,8 +210,7 @@
   },
   {
    "fieldname": "section_topics",
-   "fieldtype": "Section Break",
-   "label": ""
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "topics",
@@ -223,25 +220,26 @@
   },
   {
    "fieldname": "section_body",
-   "fieldtype": "Section Break",
-   "label": ""
+   "fieldtype": "Section Break"
   },
   {
    "description": "Use headings for sections, lists for bullets, and a link on its own line for a button on the public page.",
    "fieldname": "body",
    "fieldtype": "Text Editor",
    "label": "Body"
+  },
+  {
+   "fieldname": "column_break_xgao",
+   "fieldtype": "Column Break"
   }
  ],
- "issingle": 0,
- "istable": 0,
- "is_submittable": 0,
- "has_web_view": 0,
+ "links": [],
+ "modified": "2026-09-24 22:07:59.849369",
+ "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Publication",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
- "modified": "2026-09-21 12:00:00.000000",
- "modified_by": "Administrator",
  "permissions": [
   {
    "create": 1,
@@ -268,7 +266,9 @@
    "write": 1
   }
  ],
- "track_changes": 1,
+ "row_format": "Dynamic",
+ "search_fields": "title,publication_type",
+ "show_title_field_in_link": 1,
  "sort_field": "published_on",
  "sort_order": "DESC",
  "states": [
@@ -293,11 +293,6 @@
    "title": "Unpublished"
   }
  ],
- "index_web_pages_for_search": 0,
- "make_attachments_public": 0,
- "autoname": "field:slug",
- "naming_rule": "By fieldname",
  "title_field": "title",
- "show_title_field_in_link": 1,
- "search_fields": "title,publication_type"
+ "track_changes": 1
 }
