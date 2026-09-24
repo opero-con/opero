@@ -224,8 +224,6 @@ override_whitelisted_methods = {
 	"frappe.email.doctype.email_group.email_group.add_subscribers": "opero.mailing.overrides.add_subscribers",
 	"frappe.email.doctype.newsletter.newsletter.subscribe": "opero.mailing.confirmation.subscribe",
 	"frappe.email.doctype.newsletter.newsletter.confirm_subscription": "opero.mailing.confirmation.legacy_confirmation",
-	"frappe.desk.reportview.get": "opero.mailing.filters.get",
-	"frappe.desk.reportview.get_count": "opero.mailing.filters.get_count",
 }
 
 doc_events = {

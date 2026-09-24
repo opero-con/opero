@@ -8,7 +8,7 @@ from frappe.utils import cint
 
 from opero.mailing import confirmation as confirm_api
 from opero.mailing import membership as m
-from opero.mailing.filters import export_rows, matching_names
+from opero.mailing.filters import export_rows
 from opero.mailing.overrides import add_subscribers
 
 
@@ -197,18 +197,14 @@ class TestMailingLists(FrappeTestCase):
 			frappe.db.exists("Mailing Membership Event", {"member": self.member().name, "action": "Added"})
 		)
 
-	def test_any_all_status_filter_and_export(self):
+	def test_export_respects_standard_mailing_list_filter(self):
 		one = self.contact(self.email, [self.a.name, self.b.name])
-		two = self.contact("second-" + self.email, [self.a.name])
-		base = {"mailing_lists": [self.a.name, self.b.name]}
-		self.assertEqual(set(matching_names(base)), {one.name, two.name})
-		self.assertEqual(matching_names({**base, "match": "All"}), [one.name])
+		self.contact("second-" + self.email, [self.a.name])
 		self.member(self.b.name).db_set("unsubscribed", 1)
 		m.sync_email(self.email)
-		self.assertEqual(matching_names({**base, "match": "All", "status": "Confirmed"}), [])
-		self.assertEqual(matching_names({**base, "status": "Confirmed"}), [one.name, two.name])
-		rows = export_rows(mailing_filter={**base, "match": "All"})
+		rows = export_rows(filters=[[m.CHILD, "mailing_list", "=", self.b.name]])
 		self.assertEqual(len(rows), 3)
+		self.assertEqual({r[0] for r in rows[1:]}, {one.name})
 		self.assertEqual({r[-1] for r in rows[1:]}, {"Confirmed", "Unsubscribed"})
 
 	def test_existing_members_stay_eligible(self):
@@ -265,9 +261,7 @@ class TestMailingLists(FrappeTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			frappe.get_doc({"doctype": "Email Group", "title": self.prefix + " Forbidden"}).insert()
 
-	def test_export_and_filtered_list_respect_contact_permissions(self):
-		from opero.mailing.filters import get, get_count
-
+	def test_export_respects_contact_permissions(self):
 		self.contact(self.email, [self.a.name])
 		user = frappe.get_doc(
 			{
@@ -279,17 +273,8 @@ class TestMailingLists(FrappeTestCase):
 			}
 		).insert()
 		frappe.set_user(user.name)
-		old_form = frappe.local.form_dict
-		try:
-			frappe.local.form_dict = frappe._dict(
-				doctype="Contact", fields=["name"], opero_mailing_filter={"mailing_lists": [self.a.name]}
-			)
-			self.assertEqual(get(), [])
-			self.assertEqual(get_count(), 0)
-			with self.assertRaises(frappe.PermissionError):
-				export_rows(mailing_filter={"mailing_lists": [self.a.name]})
-		finally:
-			frappe.local.form_dict = old_form
+		with self.assertRaises(frappe.PermissionError):
+			export_rows(filters=[[m.CHILD, "mailing_list", "=", self.a.name]])
 
 	def test_deleting_and_renaming_lists_keep_native_behavior(self):
 		c = self.contact(self.email, [self.a.name])
