@@ -10,9 +10,9 @@
  "fields": [
   {"bold": 1, "fieldname": "partner_name", "fieldtype": "Data", "in_global_search": 1, "in_list_view": 1, "label": "Partner Name", "reqd": 1, "search_index": 1},
   {"fieldname": "url", "fieldtype": "Data", "label": "URL", "options": "URL"},
-  {"description": "Transparent PNG or SVG works best.", "fieldname": "logo", "fieldtype": "Attach Image", "label": "Logo"},
+  {"description": "Transparent PNG/SVG preferred.", "fieldname": "logo", "fieldtype": "Attach Image", "label": "Logo"},
   {"fieldname": "website_section", "fieldtype": "Section Break", "label": "Website"},
-  {"default": "0", "description": "Takes effect on the next Deploy to website.", "fieldname": "show_on_website", "fieldtype": "Check", "label": "Show on website"},
+  {"default": "0", "fieldname": "show_on_website", "fieldtype": "Check", "label": "Show on website"},
   {"default": "Draft", "fieldname": "website_status", "fieldtype": "Select", "in_standard_filter": 1, "label": "Website Status", "options": "Draft\nTo deploy\nPublished\nTo unpublish\nUnpublished", "read_only": 1, "reqd": 1},
   {"default": "10", "description": "Lower numbers appear first on the Partners logo conveyor.", "fieldname": "sort_order", "fieldtype": "Int", "in_list_view": 1, "label": "Order"}
  ],
@@ -32,7 +32,9 @@
   {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
   {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Website Manager", "share": 1, "write": 1}
  ],
+ "show_title_field_in_link": 1,
  "sort_field": "sort_order",
  "sort_order": "ASC",
+ "title_field": "partner_name",
  "track_changes": 1
 }
