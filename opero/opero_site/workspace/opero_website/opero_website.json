@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-enterprises\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Enterprises\",\"col\":3}},{\"id\":\"ow-s-partners\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Partners\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-enquiries\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Website Enquiries\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Content &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-home-page\",\"type\":\"card\",\"data\":{\"card_name\":\"Home Page\",\"col\":4}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Other Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "content": "[{\"id\":\"ow-h-shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ow-s-team\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Team\",\"col\":3}},{\"id\":\"ow-s-enterprises\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Enterprises\",\"col\":3}},{\"id\":\"ow-s-partners\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Partners\",\"col\":3}},{\"id\":\"ow-s-publications\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publications\",\"col\":3}},{\"id\":\"ow-s-enquiries\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Website Enquiries\",\"col\":3}},{\"id\":\"ow-s-newsletter\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Newsletter List\",\"col\":3}},{\"id\":\"ow-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ow-h-cards\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Content &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"ow-c-home-page\",\"type\":\"card\",\"data\":{\"card_name\":\"Home Page\",\"col\":4}},{\"id\":\"ow-c-content\",\"type\":\"card\",\"data\":{\"card_name\":\"Other Content\",\"col\":4}},{\"id\":\"ow-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
  "creation": "2026-09-09 22:14:46.622196",
  "custom_blocks": [],
  "docstatus": 0,
@@ -122,7 +122,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Setup",
-   "link_count": 2,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -142,6 +142,16 @@
    "label": "Settings",
    "link_count": 0,
    "link_to": "Site Settings",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Mailing Lists",
+   "link_count": 0,
+   "link_to": "Email Group",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -198,6 +208,13 @@
    "label": "Website Enquiries",
    "link_to": "Communication",
    "stats_filter": "{\"custom_source\":\"Website\"}",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "List",
+   "label": "Newsletter List",
+   "link_to": "Contact",
+   "stats_filter": "[[\"Contact Mailing List\",\"mailing_list\",\"like\",\"%Newsletter%\"]]",
    "type": "DocType"
   }
  ],
