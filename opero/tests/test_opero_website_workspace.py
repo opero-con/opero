@@ -92,11 +92,11 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(enquiries.doc_view, "List")
 		self.assertEqual(enquiries.stats_filter, '{"custom_source":"Website"}')
 		self.assertEqual(newsletter.type, "DocType")
-		self.assertEqual(newsletter.link_to, "Contact")
+		self.assertEqual(newsletter.link_to, "Email Group Member")
 		self.assertEqual(newsletter.doc_view, "List")
 		self.assertEqual(
 			json.loads(newsletter.stats_filter),
-			[["Contact Mailing List", "mailing_list", "like", "%Newsletter%"]],
+			[["Email Group Member", "email_group", "like", "%Newsletter%"]],
 		)
 		self.assertEqual(team.link_to, "Employee")
 		self.assertEqual(team.type, "DocType")

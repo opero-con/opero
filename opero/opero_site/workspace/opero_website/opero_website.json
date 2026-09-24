@@ -213,8 +213,8 @@
   {
    "doc_view": "List",
    "label": "Newsletter List",
-   "link_to": "Contact",
-   "stats_filter": "[[\"Contact Mailing List\",\"mailing_list\",\"like\",\"%Newsletter%\"]]",
+   "link_to": "Email Group Member",
+   "stats_filter": "[[\"Email Group Member\",\"email_group\",\"like\",\"%Newsletter%\"]]",
    "type": "DocType"
   }
  ],

@@ -132,6 +132,6 @@ opero.patches.v0_4.show_timesheet_workflow_state_in_reports
 opero.patches.v0_4.compact_timesheet_naming_series
 opero.patches.v0_4.make_partners_standalone
 opero.patches.v0_4.reload_opero_website_workspace_for_mailing_lists
-opero.patches.v0_4.reload_opero_website_workspace_for_newsletter_shortcut
+opero.patches.v0_4.reload_opero_website_workspace_for_newsletter_shortcut #mailing-list-members
 opero.patches.v0_4.normalize_partner_names
 opero.patches.v0_4.backfill_publication_cover_position
