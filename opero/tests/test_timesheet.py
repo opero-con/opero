@@ -14,6 +14,12 @@ from opero.opero.report.used_hrs_summary.used_hrs_summary import execute as used
 
 
 class TestTimesheetBalances(FrappeTestCase):
+	def test_workflow_state_is_available_to_reports_and_filters(self):
+		field = frappe.get_meta("Timesheet").get_field("workflow_state")
+		self.assertFalse(field.hidden)
+		self.assertTrue(field.in_list_view)
+		self.assertTrue(field.in_standard_filter)
+
 	def test_allocated_hours_is_not_a_grid_column(self):
 		self.assertFalse(frappe.get_meta("Timesheet Detail").get_field("custom_a_hrs").in_list_view)
 

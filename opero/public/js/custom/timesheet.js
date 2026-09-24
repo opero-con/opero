@@ -2,11 +2,12 @@
 // Migrated from Frappe Cloud Client Scripts (enabled Form scripts).
 
 // Hide unused form-only fields without changing ERPNext-owned DocType metadata.
-// Keep Personnel unhidden in meta so Report/List export can still include it
-// (export pickers skip df.hidden).
+// Keep Personnel and Workflow State unhidden in meta so Report/List views can
+// include them (column pickers skip df.hidden). Hide them only in the form body.
 frappe.ui.form.on("Timesheet", {
 	refresh: function (frm) {
 		frm.toggle_display("employee_name", false);
+		frm.toggle_display("workflow_state", false);
 		frm.toggle_display("connections_tab", false);
 	},
 });
