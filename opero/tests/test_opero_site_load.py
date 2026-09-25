@@ -7,7 +7,12 @@ from frappe.tests.utils import FrappeTestCase
 
 from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.load import load_files, matches_website, slug_from_path
-from opero.opero_site.markdown import canonical_frontmatter, parse_frontmatter, to_markdown
+from opero.opero_site.markdown import (
+	canonical_frontmatter,
+	parse_frontmatter,
+	same_managed_content,
+	to_markdown,
+)
 from opero.tests.website_employee import clear_website_test_employees, make_website_employee
 
 SETTINGS_MD = """---
@@ -100,6 +105,10 @@ body:
       - Second paragraph.
 ---
 """
+
+COVER_FRAMING_MD = PUBLICATION_MD.replace(
+	"featured: true\n", "featured: true\ncover: /media/publications/slide.png\ncoverPosition: 48% center\ncoverFit: contain\n"
+)
 
 PORTFOLIO_MD = """---
 slug: opero-project-portfolio
@@ -286,6 +295,22 @@ class TestOperoSiteLoad(FrappeTestCase):
 		)
 		with patch("frappe.model.document.Document.save", side_effect=AssertionError("unexpected save")):
 			self.assertEqual(sum(load_files(files).values()), 0)
+
+	def test_cover_framing_round_trips_through_load_and_deploy_comparison(self):
+		path = "content/publications/january-2025-update.md"
+		load_files({path: COVER_FRAMING_MD})
+		publication = frappe.get_doc("Publication", "january-2025-update")
+		self.assertEqual((publication.cover_position, publication.cover_fit), ("48% center", "contain"))
+		planned = to_markdown(publication.to_site_frontmatter())
+		self.assertTrue(same_managed_content(path, COVER_FRAMING_MD, planned))
+		with patch("frappe.model.document.Document.save", side_effect=AssertionError("unexpected save")):
+			self.assertEqual(sum(load_files({path: COVER_FRAMING_MD}).values()), 0)
+
+	def test_deploy_comparison_sees_a_change_in_cover_framing(self):
+		path = "content/publications/january-2025-update.md"
+		self.assertFalse(same_managed_content(path, PUBLICATION_MD, COVER_FRAMING_MD))
+		refit = COVER_FRAMING_MD.replace("coverFit: contain\n", "")
+		self.assertFalse(same_managed_content(path, COVER_FRAMING_MD, refit))
 
 	def test_load_only_updates_changed_employee_profile(self):
 		doc = make_website_employee("Anita Onyango", show_on_website=0)

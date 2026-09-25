@@ -57,7 +57,7 @@ class Publication(Document):
 		self._set_cover_framing()
 
 	def _set_cover_framing(self):
-		if not self.has_value_changed("cover"):
+		if frappe.flags.get("opero_site_syncing") or not self.has_value_changed("cover"):
 			return
 		self.cover_fit = self.cover_position = ""
 		file_url = desk_file_url(self.cover) if self.cover else None

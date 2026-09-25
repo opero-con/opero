@@ -11,6 +11,7 @@ from frappe.utils import cint, cstr, getdate
 from frappe.utils.file_manager import save_file
 
 from opero.opero_site.body_html import body_sections_to_html, paragraphs_to_html
+from opero.opero_site.cover_focal_point import CONTAIN, COVER
 from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.markdown import parse_frontmatter, same_managed_content, to_markdown
 from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
@@ -141,6 +142,9 @@ def apply_publication(doc, data: dict, slug: str):
 	doc.summary = _text(data.get("summary"))
 	doc.cover = _text(data.get("cover"))
 	doc.cover_alt = _text(data.get("coverAlt"))
+	if "coverPosition" in data or "coverFit" in data:
+		doc.cover_position = _text(data.get("coverPosition"))
+		doc.cover_fit = CONTAIN if data.get("coverFit") == CONTAIN else COVER
 	doc.file_url = _text(data.get("fileUrl"))
 	doc.page_url = _text(data.get("pageUrl"))
 	doc.external_url = _text(data.get("externalUrl"))

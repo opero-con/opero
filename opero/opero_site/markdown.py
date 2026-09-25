@@ -305,6 +305,10 @@ def _canonical_publication(data: dict, slug: str) -> dict:
 		payload["cover"] = cstr(data.get("cover"))
 	if _text(data.get("coverAlt")):
 		payload["coverAlt"] = _text(data.get("coverAlt"))
+	if _text(data.get("coverPosition")):
+		payload["coverPosition"] = _text(data.get("coverPosition"))
+	if data.get("coverFit") == "contain":
+		payload["coverFit"] = "contain"
 	if data.get("fileUrl"):
 		payload["fileUrl"] = _text(data.get("fileUrl"))
 	if data.get("pageUrl"):
