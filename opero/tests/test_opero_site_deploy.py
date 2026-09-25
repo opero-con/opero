@@ -1,9 +1,11 @@
 """Publish Opero Site DocTypes into opero-content Markdown."""
 
 import base64
+import io
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from PIL import Image, ImageDraw
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.load import load_files
@@ -273,6 +275,20 @@ class TestOperoSitePublish(FrappeTestCase):
 		paths = [path for path, _content in collect_content_files()]
 		self.assertIn("content/settings/general.md", paths)
 		self.assertIn("content/team/anita-onyango.md", paths)
+
+	def test_get_blob_bytes_reads_a_file_the_contents_api_would_not_return(self):
+		def transport(method, url, json=None):
+			if url.endswith("/commits/main"):
+				return {"sha": "base-sha", "commit": {"tree": {"sha": "tree-sha"}}}
+			if url.endswith("/git/trees/tree-sha?recursive=1"):
+				return {"tree": [{"type": "blob", "path": "media/big.jpg", "sha": "big-sha"}]}
+			if url.endswith("/git/blobs/big-sha"):
+				return {"content": base64.b64encode(b"large-bytes").decode() + "\n"}
+			raise AssertionError(url)
+
+		repo = ContentRepo("token", "opero-con/opero-content", transport=transport)
+		self.assertEqual(repo.get_blob_bytes("media/big.jpg", "main"), b"large-bytes")
+		self.assertIsNone(repo.get_blob_bytes("media/missing.jpg", "main"))
 
 	def test_existing_files_reports_progress(self):
 		seen = []
@@ -773,15 +789,19 @@ class TestOperoSitePublish(FrappeTestCase):
 class _FakeContentRepo:
 	base_branch = "main"
 
-	def __init__(self, existing=None, blobs=None):
+	def __init__(self, existing=None, blobs=None, contents=None):
 		self._existing = existing or {}
 		self._blobs = blobs or {}
+		self._contents = contents or {}
 
 	def existing_files(self, paths, ref, on_progress=None):
 		return {path: self._existing[path] for path in paths if path in self._existing}
 
 	def tree_blobs(self, ref):
 		return dict(self._blobs)
+
+	def get_blob_bytes(self, path, ref):
+		return self._contents.get(path)
 
 	def list_markdown(self, prefix, ref):
 		return [path for path in self._blobs if path.startswith(prefix) and path.endswith(".md")]
@@ -989,6 +1009,71 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		repo_path = "media/publications/honey-dipper.webp"
 		files = planned_content_changes(_FakeContentRepo(blobs={repo_path: "deadbeef"}))
 		self.assertNotIn((repo_path, None), files)
+
+	def test_planned_changes_frame_a_cover_that_lives_only_in_the_content_repo(self):
+		canvas = Image.new("L", (400, 160), 255)
+		draw = ImageDraw.Draw(canvas)
+		for x in range(0, 400, 8):
+			draw.line([(x, 0), (x, 160)], fill=0, width=2)
+		buffer = io.BytesIO()
+		canvas.save(buffer, format="PNG")
+		frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Wide Slide",
+				"published_on": "2026-09-09",
+				"publication_type": "Overview",
+				"summary": "A slide cover loaded from the website.",
+				"cover": "/media/publications/slide.png",
+				"status": "Published",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		repo_path = "media/publications/slide.png"
+		repo = _FakeContentRepo(blobs={repo_path: "deadbeef"}, contents={repo_path: buffer.getvalue()})
+
+		files = dict(planned_content_changes(repo))
+
+		self.assertEqual(frappe.db.get_value("Publication", "wide-slide", "cover_fit"), "contain")
+		self.assertIn("coverFit: contain", files["content/publications/wide-slide.md"])
+
+	def test_planned_changes_keep_framing_already_set_on_github(self):
+		frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Tuned Cover",
+				"published_on": "2026-09-09",
+				"publication_type": "Overview",
+				"summary": "Crop tuned by hand on GitHub.",
+				"cover": "/media/publications/tuned.png",
+				"status": "Published",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+		tuned = "---\nslug: tuned-cover\ncover: /media/publications/tuned.png\ncoverPosition: center 40%\n---\n"
+		repo = _FakeContentRepo(existing={"content/publications/tuned-cover.md": tuned})
+
+		planned_content_changes(repo)
+
+		self.assertEqual(frappe.db.get_value("Publication", "tuned-cover", "cover_position"), "center 40%")
+
+	def test_planned_changes_leave_framing_alone_when_the_cover_is_not_in_the_repo(self):
+		frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Missing Cover",
+				"published_on": "2026-09-09",
+				"publication_type": "Overview",
+				"summary": "Cover file is not in the repository.",
+				"cover": "/media/publications/gone.png",
+				"status": "Published",
+				"show_on_website": 1,
+			}
+		).insert(ignore_permissions=True)
+
+		planned_content_changes(_FakeContentRepo())
+
+		self.assertFalse(frappe.db.get_value("Publication", "missing-cover", "cover_position"))
 
 	def test_planned_changes_still_prunes_media_for_deleted_publication(self):
 		"""The fix must not defeat the original point of a865eb9: media for a
