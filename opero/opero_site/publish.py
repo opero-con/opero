@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import now_datetime
 
 from opero.opero.doctype.enterprise.enterprise import enterprise_content_slug
+from opero.opero_site.cover_focal_point import fill_missing_cover_framing
 from opero.opero_site.doctype.partner.partner import partner_content_slug
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
@@ -370,6 +371,7 @@ def _media_refs_in_text(text: str) -> set[str]:
 
 
 def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | bytes | None]]:
+	fill_missing_cover_framing(repo)
 	planned, keep = collect_content_plan()
 	planned, media = export_planned_media(planned)
 	write_paths = [path for path, _content in planned]

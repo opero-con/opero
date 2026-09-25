@@ -113,6 +113,14 @@ class ContentRepo:
 			return None
 		return base64.b64decode(encoded.replace("\n", ""))
 
+	def get_blob_bytes(self, path: str, ref: str) -> bytes | None:
+		"""File content at any size; `get_bytes` returns nothing above 1 MB."""
+		sha = self.tree_blobs(ref).get(path)
+		if not sha:
+			return None
+		blob = self._api("GET", f"/repos/{self.repo}/git/blobs/{sha}")
+		return base64.b64decode(blob["content"].replace("\n", ""))
+
 	def existing_files(self, paths: list[str], ref: str, on_progress=None) -> dict[str, str]:
 		"""Current content for `paths`, served from a blob-sha cache where possible.
 

@@ -3,7 +3,10 @@ from __future__ import annotations
 import io
 from typing import NamedTuple
 
+import frappe
 from PIL import Image, ImageFilter, ImageStat
+
+from opero.opero_site.markdown import parse_frontmatter
 
 TARGET_ASPECT_RATIO = 1.6  # opero-frontend card tile: aspect-ratio 16 / 10
 CONTAIN = "contain"
@@ -72,3 +75,46 @@ def _best_window(
 			best_offset, best_score, best_energy = offset, score, energy
 	total = ImageStat.Stat(edges).sum[0] or 1.0
 	return round(best_offset / max_offset * 100), best_energy / total
+
+
+def fill_missing_cover_framing(repo) -> None:
+	"""Set framing for covers that live in the content repo as `/media/...`.
+
+	Covers loaded from the website are never Desk files, so saving cannot read
+	them. Framing already set on GitHub wins; otherwise it is computed.
+	"""
+	rows = frappe.get_all(
+		"Publication",
+		filters={"cover": ["like", "/media/%"], "cover_position": ["in", ("", None)]},
+		fields=["name", "cover"],
+	)
+	paths = [f"content/publications/{row.name}.md" for row in rows]
+	existing = repo.existing_files(paths, repo.base_branch) if paths else {}
+	for row, path in zip(rows, paths, strict=True):
+		framing = _framing_from_frontmatter(existing.get(path)) or _framing_from_image(repo, row.cover)
+		if framing:
+			frappe.db.set_value(
+				"Publication",
+				row.name,
+				{"cover_fit": framing.fit, "cover_position": framing.position},
+				update_modified=False,
+			)
+
+
+def _framing_from_frontmatter(text: str | None) -> CoverFraming | None:
+	data = parse_frontmatter(text) if text else {}
+	if "coverPosition" not in data and "coverFit" not in data:
+		return None
+	fit = CONTAIN if data.get("coverFit") == CONTAIN else COVER
+	return CoverFraming(fit, str(data.get("coverPosition") or ""))
+
+
+def _framing_from_image(repo, cover: str) -> CoverFraming | None:
+	content = repo.get_blob_bytes(cover.lstrip("/"), repo.base_branch)
+	if not content:
+		return None
+	try:
+		return compute_cover_framing(content)
+	except (OSError, ValueError):
+		frappe.log_error(title="Cover framing")
+		return None
