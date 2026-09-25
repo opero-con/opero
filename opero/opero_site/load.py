@@ -313,7 +313,7 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		return previous != existing
 
 	if repo and legacy_portrait:
-		site_repo = ContentRepo(repo.token, "opero-con/opero-site", repo.base_branch)
+		site_repo = ContentRepo(repo.token, "opero-con/opero-frontend", repo.base_branch)
 		blob = site_repo.get_bytes(f"public/{repo_path}", site_repo.base_branch)
 		if not blob and repo_path == f"team/{filename}":
 			# The content token need not have access to the separate site repository.
