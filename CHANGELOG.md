@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.3.2 — 2026-10-02
+
+### Added
+
+- Each queued website record has a Deploy button that deploys only that record after a review; other pending changes stay queued
+- Deploy Center shows whether each deploy reached the website (Building, Live, or Failed) and alerts the deployer when a build fails
+- Deploy Center can load a single file from the website without replacing other pending content changes
+- Editors can manage publication types, with existing types seeded during migration
+- Approvals and Site Content are grouped under the Opero workspace, with approval queues arranged three per row
+- Material Request entry shows item rates, an aligned two-row header, and a right-aligned total below the items grid
+- Weekly Hours report compares personnel hours against expected hours
+- Task Allocation is the monthly allocation record, with per-person task budgets entered in days and distributed across months as draft allocations
+- Selecting a Timesheet task adds its heading to Notes without duplicating it
+
+### Changed
+
+- Project Manager details on dependent documents now come from the Project
+- Frappe's Website workspace is hidden outside development while Opero retains the website tools it needs
+- Allocation reports use Task Allocation, and Timesheet entry is reduced to the essential fields and Task, From Time, and Hrs grid columns
+- Project Task terminology is simplified to Task
+- Saving a publication with an empty body moves a multi-paragraph summary into the body, keeping the first paragraph as the summary
+
+### Fixed
+
+- Deploy Center detects and deploys publication cover-framing changes, imports framing from the website, preserves existing repository crops, and reads repository images over 1 MB
+- Task allocation enforces per-person hour budgets and safely skips Timesheets without an employee
+- Timesheet allocation previews support row-level projects and submitted documents, with clear empty and error states and protection from stale responses
+- System Managers can cancel approved Timesheets as well as Project Managers
+- Deploys that reference media missing from the content repository are refused before they break the website build, and long media paths stay on one frontmatter line
+- Timesheet report view offers Task Name, so exports can carry the task's name instead of its ID
+
 ## 0.3.1 — 2026-09-25
 
 ### Added
