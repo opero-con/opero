@@ -17,7 +17,7 @@ from opero.opero_site.body_html import (
 	normalize_paragraphs_html,
 	paragraphs_to_html,
 )
-from opero.opero_site.cover_focal_point import compute_cover_focal_point
+from opero.opero_site.cover_focal_point import compute_cover_framing
 from opero.opero_site.utils import normalize_publication_type, parse_links, slugify
 
 
@@ -448,11 +448,35 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(y_position, "center")
 		self.assertGreaterEqual(int(x_position.rstrip("%")), 80)
 		self.assertEqual(doc.to_site_frontmatter()["coverPosition"], doc.cover_position)
+		self.assertNotIn("coverFit", doc.to_site_frontmatter())
 
 		doc.cover = ""
 		doc.save(ignore_permissions=True)
 		self.assertEqual(doc.cover_position, "")
 		self.assertNotIn("coverPosition", doc.to_site_frontmatter())
+
+	def test_publication_wide_cover_is_letterboxed(self):
+		from frappe.utils.file_manager import save_file
+
+		canvas = Image.new("L", (400, 160), 255)
+		draw = ImageDraw.Draw(canvas)
+		for x in range(0, 400, 8):
+			draw.line([(x, 0), (x, 160)], fill=0, width=2)
+
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Slide Cover",
+				"published_on": "2025-03-01",
+				"publication_type": "Digest",
+				"summary": "Content runs edge to edge.",
+			}
+		).insert(ignore_permissions=True)
+		file_doc = save_file("slide-cover.png", _png_bytes(canvas), "Publication", doc.name, is_private=0)
+		doc.cover = file_doc.file_url
+		doc.save(ignore_permissions=True)
+
+		self.assertEqual(doc.to_site_frontmatter()["coverFit"], "contain")
 
 	def test_privacy_frontmatter_matches_privacy_collection(self):
 		doc = frappe.get_single("Privacy policy")
@@ -505,17 +529,31 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(str(doc.last_reviewed), "2026-07-23")
 
 
-class TestCoverFocalPoint(FrappeTestCase):
+class TestCoverFraming(FrappeTestCase):
 	def test_returns_center_when_the_image_already_matches_the_card_ratio(self):
 		canvas = Image.new("L", (320, 200), 128)
-		self.assertEqual(compute_cover_focal_point(_png_bytes(canvas)), "center center")
+		self.assertEqual(compute_cover_framing(_png_bytes(canvas)), ("cover", "center center"))
+
+	def test_letterboxes_a_wide_cover_whose_content_spans_the_width(self):
+		canvas = Image.new("L", (400, 160), 255)
+		draw = ImageDraw.Draw(canvas)
+		for x in range(0, 400, 8):
+			draw.line([(x, 0), (x, 160)], fill=0, width=2)
+		self.assertEqual(compute_cover_framing(_png_bytes(canvas)).fit, "contain")
+
+	def test_never_letterboxes_a_tall_cover(self):
+		canvas = Image.new("L", (200, 400), 255)
+		draw = ImageDraw.Draw(canvas)
+		for y in range(0, 400, 8):
+			draw.line([(0, y), (200, y)], fill=0, width=2)
+		self.assertEqual(compute_cover_framing(_png_bytes(canvas)).fit, "cover")
 
 	def test_picks_the_edgy_side_when_cropping_vertically(self):
 		canvas = Image.new("L", (200, 400), 255)
 		draw = ImageDraw.Draw(canvas)
 		for y in range(350, 400, 4):
 			draw.line([(0, y), (200, y)], fill=0, width=2)
-		x_position, y_position = compute_cover_focal_point(_png_bytes(canvas)).split(" ")
+		x_position, y_position = compute_cover_framing(_png_bytes(canvas)).position.split(" ")
 		self.assertEqual(x_position, "center")
 		self.assertGreaterEqual(int(y_position.rstrip("%")), 80)
 

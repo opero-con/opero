@@ -29,6 +29,7 @@
   "cover",
   "cover_alt",
   "cover_position",
+  "cover_fit",
   "file_url",
   "page_url",
   "external_url",
@@ -165,6 +166,15 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Cover position",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Whether the card crops or shows the whole cover. Computed from the cover image.",
+   "fieldname": "cover_fit",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Cover fit",
    "no_copy": 1,
    "read_only": 1
   },
