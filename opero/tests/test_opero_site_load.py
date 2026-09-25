@@ -243,7 +243,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 		)
 		with patch("opero.opero_site.load.ContentRepo", return_value=site_repo) as factory:
 			self.assertEqual(load_files({path: text}, repo=repo)["team"], 1)
-			factory.assert_called_once_with("test-token", "opero-con/opero-site", "main")
+			factory.assert_called_once_with("test-token", "opero-con/opero-frontend", "main")
 		site_repo.get_bytes.assert_called_once_with("public/team/wycliffe-odongo.jpg", "main")
 		doc.reload()
 		self.assertTrue(doc.portrait.startswith("/files/"))
