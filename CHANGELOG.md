@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 — 2026-09-25
+
+### Fixed
+
+- Deploy Center now detects a change to a publication's cover framing instead of reporting "Public site content is already up to date", so the automatic crop or full-frame setting reaches the website
+- Load from website imports cover framing, keeping crops already set on GitHub
+- Covers that live in the content repository, which is every cover loaded from the website, now get their framing when Deploy Center checks or deploys; crops already set on GitHub are kept, and images over 1 MB are read too
+
 ## 0.3.1 — 2026-09-25
 
 ### Added
