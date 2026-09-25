@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.1 — 2026-09-25
+
+### Added
+
+- Publication covers are framed automatically: a hidden focal point crops each cover to its busiest region, and a cover too wide to crop without losing content, such as a slide, is shown whole over a blurred backdrop; a patch backfills existing publications
+- Publish checkbox with five statuses (Draft, To publish, To update, Published, To unpublish) for site records
+- Partners managed as standalone website records
+- Website view counts on publications, in their own list column
+- Mailing lists in the Opero Website workspace; contacts filtered by mailing list with standard filters
+- Deploy status on homepage sections and relative times in deploy history
+- Compact Timesheet IDs and workflow state in timesheet reports
+
+### Changed
+
+- Homepage Impact doctypes renamed
+- Timesheet allocation display simplified and unused connections hidden
+- Legacy portrait import reads from the renamed `opero-frontend` repository
+
+### Fixed
+
+- Deploy Center diff no longer crashes when nothing is pending
+- Renaming the Impact Single no longer orphans its child rows
+- Past months stay intact when a staff allocation grows; the monthly timesheet submission cutoff is enforced; corrupt zero-day dates no longer break the week-of-month patch
+- Partner names show in partner links; the publication summary box fits its text; the Newsletter List shortcut opens its members
+- Todo customizations stabilized
+
 ## 0.3.0 — 2026-09-14
 
 ### Added
