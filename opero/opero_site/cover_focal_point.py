@@ -5,7 +5,7 @@ from typing import NamedTuple
 
 from PIL import Image, ImageFilter, ImageStat
 
-TARGET_ASPECT_RATIO = 1.6  # opero-site card tile: aspect-ratio 16 / 10
+TARGET_ASPECT_RATIO = 1.6  # opero-frontend card tile: aspect-ratio 16 / 10
 CONTAIN = "contain"
 COVER = "cover"
 _SALIENCY_MAX_DIMENSION = 400
