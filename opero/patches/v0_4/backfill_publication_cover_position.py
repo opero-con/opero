@@ -1,13 +1,13 @@
 import frappe
 
-from opero.opero_site.cover_focal_point import compute_cover_focal_point
+from opero.opero_site.cover_focal_point import compute_cover_framing
 from opero.opero_site.media import desk_file_url, read_desk_file
 
 
 def execute():
 	frappe.reload_doc("opero_site", "doctype", "publication")
 
-	if not frappe.db.has_column("Publication", "cover_position"):
+	if not frappe.db.has_column("Publication", "cover_fit"):
 		return
 
 	rows = frappe.get_all(
@@ -24,8 +24,10 @@ def _backfill(name: str, cover: str) -> None:
 	if not file_url:
 		return
 	try:
-		position = compute_cover_focal_point(read_desk_file(file_url))
+		fit, position = compute_cover_framing(read_desk_file(file_url))
 	except (OSError, ValueError):
-		frappe.log_error(title="Cover focal point backfill")
+		frappe.log_error(title="Cover framing backfill")
 		return
-	frappe.db.set_value("Publication", name, "cover_position", position, update_modified=False)
+	frappe.db.set_value(
+		"Publication", name, {"cover_fit": fit, "cover_position": position}, update_modified=False
+	)

@@ -6,7 +6,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils.file_manager import save_file
 from PIL import Image, ImageDraw
 
-from opero.opero_site.cover_focal_point import compute_cover_focal_point
+from opero.opero_site.cover_focal_point import compute_cover_framing
 from opero.patches.v0_4.backfill_publication_cover_position import execute
 from opero.tests.test_opero_site_content import _png_bytes
 
@@ -27,8 +27,8 @@ class TestBackfillPublicationCoverPositionPatch(FrappeTestCase):
 		execute()
 
 		self.assertEqual(
-			frappe.db.get_value("Publication", doc.name, "cover_position"),
-			compute_cover_focal_point(content),
+			tuple(frappe.db.get_value("Publication", doc.name, ["cover_fit", "cover_position"])),
+			compute_cover_framing(content),
 		)
 
 	def test_execute_does_not_overwrite_an_existing_cover_position(self):
