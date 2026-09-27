@@ -36,7 +36,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		self.assertEqual(card_breaks, ["Home Page", "Other Content", "Setup"])
 		self.assertEqual(
 			[row.link_count for row in doc.links if row.type == "Card Break"],
-			[3, 6, 3],
+			[3, 6, 4],
 		)
 		cards = [block["data"]["card_name"] for block in json.loads(doc.content) if block["type"] == "card"]
 		self.assertEqual(cards, ["Home Page", "Other Content", "Setup"])
@@ -55,6 +55,7 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 				"Deploy Center": "Deploy Center",
 				"Settings": "Site Settings",
 				"Mailing Lists": "Email Group",
+				"Publication Types": "Publication Type",
 			},
 		)
 		self.assertNotIn("Website Settings", links.values())

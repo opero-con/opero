@@ -8,14 +8,6 @@ from frappe.utils import cstr
 
 _PUBLIC_URL = re.compile(r"^https?://\S+\.\S+")
 
-PUBLICATION_TYPES = (
-	"Case study",
-	"Digest",
-	"Newsletter",
-	"Overview",
-	"Project",
-)
-
 PUBLICATION_TYPE_ALIASES = {
 	"Portfolio": "Overview",
 }

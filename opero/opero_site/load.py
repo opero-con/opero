@@ -141,6 +141,11 @@ def apply_publication(doc, data: dict, slug: str):
 	year = data.get("year")
 	doc.year = cint(year) if year not in (None, "") else None
 	doc.publication_type = normalize_publication_type(data.get("type"))
+	# The content repository is authoritative, so a type it uses joins the Desk list.
+	if doc.publication_type and not frappe.db.exists("Publication Type", doc.publication_type):
+		frappe.get_doc({"doctype": "Publication Type", "title": doc.publication_type}).insert(
+			ignore_permissions=True
+		)
 	doc.service_area = _text(data.get("serviceArea"))
 	doc.featured = 1 if data.get("featured") else 0
 	doc.summary = _text(data.get("summary"))

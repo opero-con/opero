@@ -10,7 +10,6 @@ from opero.opero_site.cover_focal_point import CONTAIN, compute_cover_framing
 from opero.opero_site.media import desk_file_url, read_desk_file
 from opero.opero_site.publish_status import apply_publish_status
 from opero.opero_site.utils import (
-	PUBLICATION_TYPES,
 	normalize_publication_type,
 	optional_url,
 	slugify,
@@ -19,6 +18,7 @@ from opero.opero_site.utils import (
 
 class Publication(Document):
 	def _validate_links(self):
+		self.publication_type = normalize_publication_type(self.publication_type)
 		for row in self.topics or []:
 			title = cstr(row.topic).strip()
 			if title:
@@ -42,9 +42,6 @@ class Publication(Document):
 		self.slug = slugify(self.slug or self.title)
 		if not self.slug:
 			frappe.throw(_("Slug must contain at least one letter or number."))
-		self.publication_type = normalize_publication_type(self.publication_type)
-		if self.publication_type not in PUBLICATION_TYPES:
-			frappe.throw(_("Type must be Case study, Digest, Newsletter, Overview, or Project."))
 		self.file_url = optional_url(self.file_url, "File URL")
 		self.page_url = optional_url(self.page_url, "Page URL")
 		self.external_url = optional_url(self.external_url, "External URL")
