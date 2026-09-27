@@ -1,0 +1,207 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"op-h\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Opero</b></span>\",\"col\":12}},{\"id\":\"op-c-time\",\"type\":\"card\",\"data\":{\"card_name\":\"Time\",\"col\":4}},{\"id\":\"op-c-requests\",\"type\":\"card\",\"data\":{\"card_name\":\"Requests\",\"col\":4}},{\"id\":\"op-c-budgets\",\"type\":\"card\",\"data\":{\"card_name\":\"Budgets\",\"col\":4}},{\"id\":\"op-c-partners-contracts\",\"type\":\"card\",\"data\":{\"card_name\":\"Partners & Contracts\",\"col\":4}},{\"id\":\"op-c-setup\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "creation": "2026-09-27 18:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "organization",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Opero",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Time",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Timesheet",
+   "link_count": 0,
+   "link_to": "Timesheet",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Task Time Distribution",
+   "link_count": 0,
+   "link_to": "Task Time Distribution",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Consultant Task",
+   "link_count": 0,
+   "link_to": "Consultant Task",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Dynamic Timesheet",
+   "link_count": 0,
+   "link_to": "Dynamic Timesheet",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Used Hrs Summary",
+   "link_count": 0,
+   "link_to": "Used Hrs Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Requests",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Cash Advance",
+   "link_count": 0,
+   "link_to": "Cash Advance-Reimbursable Form",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Budgets",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Budget",
+   "link_count": 0,
+   "link_to": "Project Budget",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Budget Line",
+   "link_count": 0,
+   "link_to": "Budget Line",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Actual Spend",
+   "link_count": 0,
+   "link_to": "Actual Spend",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Partners & Contracts",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Enterprise",
+   "link_count": 0,
+   "link_to": "Enterprise",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Contract Documents",
+   "link_count": 0,
+   "link_to": "Contract Documents",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Setup",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Zoho Books Settings",
+   "link_count": 0,
+   "link_to": "Zoho Books Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Integration Mapping",
+   "link_count": 0,
+   "link_to": "Integration Mapping",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-27 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Opero",
+ "name": "Opero",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Desk User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 14.0,
+ "shortcuts": [],
+ "title": "Opero"
+}

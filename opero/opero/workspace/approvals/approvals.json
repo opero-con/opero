@@ -1,0 +1,148 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"ap-h-approve\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>To approve</b></span>\",\"col\":12}},{\"id\":\"ap-s-0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Timesheets\",\"col\":3}},{\"id\":\"ap-s-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Cash Advances\",\"col\":3}},{\"id\":\"ap-s-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Consultant Tasks\",\"col\":3}},{\"id\":\"ap-s-travel\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Travel Requests\",\"col\":3}},{\"id\":\"ap-sp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ap-h-todo\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>My ToDos</b></span>\",\"col\":12}},{\"id\":\"ap-s-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow Hub\",\"col\":4}},{\"id\":\"ap-s-4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New ToDo\",\"col\":4}},{\"id\":\"ap-s-5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"My ToDos\",\"col\":4}},{\"id\":\"ap-c-todo\",\"type\":\"card\",\"data\":{\"card_name\":\"ToDo Reports\",\"col\":4}}]",
+ "creation": "2026-09-27 18:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "tick",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Approvals",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "ToDo Reports",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "ToDo Explorer",
+   "link_count": 0,
+   "link_to": "ToDo Explorer",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "ToDo Created vs Closed",
+   "link_count": 0,
+   "link_to": "ToDo Created vs Closed",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "ToDo Assignee Load and Risk",
+   "link_count": 0,
+   "link_to": "ToDo Assignee Load and Risk",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "ToDo In Progress Aging",
+   "link_count": 0,
+   "link_to": "ToDo In Progress Aging",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "ToDo",
+   "link_count": 0,
+   "link_to": "ToDo",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-27 19:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Opero",
+ "name": "Approvals",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Opero",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Desk User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 14.1,
+ "shortcuts": [
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} to approve",
+   "label": "Timesheets",
+   "link_to": "Timesheet",
+   "stats_filter": "[[\"Timesheet\",\"workflow_state\",\"=\",\"Submitted\"],[\"Timesheet\",\"custom_pm_email\",\"=\",frappe.session.user]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} to approve",
+   "label": "Cash Advances",
+   "link_to": "Cash Advance-Reimbursable Form",
+   "stats_filter": "[[\"Cash Advance-Reimbursable Form\",\"workflow_state\",\"=\",\"Pending PM's Approval\"],[\"Cash Advance-Reimbursable Form\",\"pm_email\",\"=\",frappe.session.user]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} to approve",
+   "label": "Consultant Tasks",
+   "link_to": "Consultant Task",
+   "stats_filter": "[[\"Consultant Task\",\"workflow_state\",\"=\",\"Open\"],[\"Consultant Task\",\"pm_email\",\"=\",frappe.session.user]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} to approve",
+   "label": "Travel Requests",
+   "link_to": "Travel Request",
+   "stats_filter": "[[\"Travel Request\",\"workflow_state\",\"=\",\"Pending PM's Approval\"],[\"Travel Request\",\"custom_pm_email\",\"=\",frappe.session.user]]",
+   "type": "DocType"
+  },
+  {
+   "label": "Flow Hub",
+   "link_to": "flow-hub",
+   "type": "Page"
+  },
+  {
+   "doc_view": "New",
+   "label": "New ToDo",
+   "link_to": "ToDo",
+   "type": "DocType"
+  },
+  {
+   "label": "My ToDos",
+   "link_to": "ToDo Explorer",
+   "type": "Report"
+  }
+ ],
+ "title": "Approvals"
+}

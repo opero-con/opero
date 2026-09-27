@@ -139,3 +139,4 @@ opero.patches.v0_4.adopt_publish_statuses
 opero.patches.v0_4.seed_publication_types
 opero.patches.v0_4.reload_opero_website_workspace_for_publication_types
 opero.patches.v0_4.resync_project_managers
+opero.patches.v0_4.nest_opero_workspaces

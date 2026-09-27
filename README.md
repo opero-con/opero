@@ -64,9 +64,12 @@ A custom page (`/app/flow-hub`) that presents open and in-progress ToDos in a ca
 
 ---
 
-### ToDo Hub Workspace
+### Opero Workspaces
 
-A pre-built workspace with number cards (My Overdue, Due Today, In Progress, Unassigned) and shortcuts to the reports and Flow Hub.
+The **Opero** workspace groups the app's own DocTypes and nests two children in the Desk sidebar:
+
+- **Approvals** shows each project manager their own queues (Timesheets, Cash Advances, Consultant Tasks and Travel Requests whose PM email is the signed-in user), plus Flow Hub and the ToDo reports.
+- **Site Content** manages the public website (see `AGENTS.md`).
 
 ---
 
