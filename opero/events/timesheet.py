@@ -14,7 +14,6 @@ SUBMISSION_CUTOFF_BYPASS_ROLES = {"Projects Manager"}
 def validate_timesheet(doc, _method=None):
 	_set_week_of_month(doc)
 	_anti_spill(doc)
-	_fetch_pm_email(doc)
 	_validate_allocated_hours(doc)
 
 
@@ -76,12 +75,6 @@ def _anti_spill(doc):
 			f"Row {row.idx}: this entry crosses midnight. Use Split at midnight to preserve its times.",
 			title="Split time entry",
 		)
-
-
-def _fetch_pm_email(doc):
-	doc.custom_pm_email = (
-		frappe.db.get_value("Project", doc.parent_project, "custom_pm_email") if doc.parent_project else None
-	)
 
 
 def _validate_allocated_hours(doc):
