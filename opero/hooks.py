@@ -247,7 +247,10 @@ doc_events = {
 		"on_update": "opero.todo_enhancements.on_update_todo",
 	},
 	"Timesheet": {
-		"validate": "opero.events.timesheet.validate_timesheet",
+		"validate": [
+			"opero.events.project.copy_project_manager",
+			"opero.events.timesheet.validate_timesheet",
+		],
 		"before_submit": "opero.events.timesheet.before_submit_timesheet",
 		"on_submit": "opero.zoho_books.sync_timesheet_to_zoho",
 		"on_cancel": "opero.zoho_books.sync_timesheet_to_zoho",
@@ -259,7 +262,19 @@ doc_events = {
 		"on_update": "opero.events.task.on_update_task",
 	},
 	"Travel Request": {
-		"validate": "opero.events.travel_request.validate_travel_request",
+		"validate": [
+			"opero.events.project.copy_project_manager",
+			"opero.events.travel_request.validate_travel_request",
+		],
+	},
+	"Cash Advance-Reimbursable Form": {
+		"validate": "opero.events.project.copy_project_manager",
+	},
+	"Consultant Task": {
+		"validate": "opero.events.project.copy_project_manager",
+	},
+	"Project": {
+		"on_update": "opero.events.project.on_update_project",
 	},
 	"HR Settings": {
 		"on_update": "opero.events.hr_settings.on_update_hr_settings",
