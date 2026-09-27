@@ -1,4 +1,4 @@
-"""Opero Website workspace lists public-site DocTypes, not Frappe Website."""
+"""Site Content workspace lists public-site DocTypes, not Frappe Website."""
 
 import json
 from unittest.mock import patch
@@ -24,9 +24,9 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 		rename_doc.assert_called_once_with("DocType", "Home Hero", "Hero", force=True)
 		reload_doc.assert_any_call("opero_site", "doctype", "hero", force=True)
 
-	def test_workspace_is_top_level_and_lists_site_doctypes(self):
-		doc = frappe.get_doc("Workspace", "Opero Website")
-		self.assertEqual(doc.parent_page, "")
+	def test_workspace_nests_under_opero_and_lists_site_doctypes(self):
+		doc = frappe.get_doc("Workspace", "Site Content")
+		self.assertEqual(doc.parent_page, "Opero")
 		self.assertEqual(doc.public, 1)
 		self.assertEqual(doc.module, "Opero Site")
 		self.assertNotEqual(doc.name, "Website")

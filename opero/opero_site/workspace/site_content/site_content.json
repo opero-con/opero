@@ -10,7 +10,7 @@
  "icon": "website",
  "idx": 0,
  "is_hidden": 0,
- "label": "Opero Website",
+ "label": "Site Content",
  "links": [
   {
    "hidden": 0,
@@ -167,13 +167,13 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-27 12:00:00.000000",
+ "modified": "2026-09-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
- "name": "Opero Website",
+ "name": "Site Content",
  "number_cards": [],
  "owner": "Administrator",
- "parent_page": "",
+ "parent_page": "Opero",
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
@@ -185,7 +185,7 @@
    "role": "Website Manager"
   }
  ],
- "sequence_id": 15.0,
+ "sequence_id": 14.2,
  "shortcuts": [
   {
    "doc_view": "List",
@@ -228,5 +228,5 @@
    "type": "DocType"
   }
  ],
- "title": "Opero Website"
+ "title": "Site Content"
 }
