@@ -645,6 +645,21 @@
   "doctype": "Property Setter"
  },
  {
+  "name": "Material Request Item-rate-in_list_view",
+  "idx": 0,
+  "is_system_generated": 0,
+  "doctype_or_field": "DocField",
+  "doc_type": "Material Request Item",
+  "field_name": "rate",
+  "row_name": null,
+  "module": "Opero",
+  "property": "in_list_view",
+  "property_type": "Check",
+  "value": "1",
+  "default_value": null,
+  "doctype": "Property Setter"
+ },
+ {
   "name": "Material Request-main-field_order",
   "idx": 0,
   "is_system_generated": 0,
