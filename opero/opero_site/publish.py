@@ -230,6 +230,12 @@ def clear_pending_cache() -> None:
 	frappe.cache.delete_value(PENDING_CACHE_KEY)
 
 
+def drop_pending_path(path: str) -> None:
+	by_path = _pending_cache()
+	if by_path.pop(path, None) is not None:
+		_set_pending_cache(by_path)
+
+
 def pending_from_status() -> list[dict]:
 	"""Queued publish intents that should appear even before a GitHub compare."""
 	entries: list[dict] = []
