@@ -71,3 +71,18 @@ frappe.ui.form.on('Material Request', {
         };
     }
 });
+
+// --- Total below the items table (server recalculates on save) ---
+function update_total(frm) {
+    const total = (frm.doc.items || []).reduce(
+        (sum, row) => sum + flt(row.qty) * flt(row.rate),
+        0
+    );
+    frm.set_value('custom_total', total);
+}
+
+frappe.ui.form.on('Material Request Item', {
+    qty: update_total,
+    rate: update_total,
+    items_remove: update_total,
+});

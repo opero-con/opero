@@ -3,6 +3,7 @@ import json
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from opero.events.material_request import validate_material_request
 from opero.patches.v0_4.show_material_request_item_rate import reset_saved_grid_columns
 
 
@@ -54,3 +55,29 @@ class TestMaterialRequestLayout(FrappeTestCase):
 		self.assertEqual(column_heads, ["company", "buying_price_list", "set_warehouse"])
 		self.assertEqual(fields[fields.index("set_warehouse") + 1], "warehouse_section")
 
+
+class TestMaterialRequestTotal(FrappeTestCase):
+	def test_total_sits_right_aligned_below_the_items_table(self):
+		fields = [field.fieldname for field in frappe.get_meta("Material Request").fields]
+		below_items = fields[fields.index("items") + 1 : fields.index("custom_total") + 1]
+		self.assertEqual(
+			below_items,
+			[
+				"custom_total_section",
+				"custom_total_left_column",
+				"custom_total_right_column",
+				"custom_total",
+			],
+		)
+
+	def test_total_sums_quantity_times_rate(self):
+		request = frappe.get_doc(
+			{
+				"doctype": "Material Request",
+				"items": [{"qty": 2, "rate": 10.5}, {"qty": 3, "rate": 4}, {"qty": 1}],
+			}
+		)
+
+		validate_material_request(request)
+
+		self.assertEqual(request.custom_total, 33)

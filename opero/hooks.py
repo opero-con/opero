@@ -276,6 +276,9 @@ doc_events = {
 	"Project": {
 		"on_update": "opero.events.project.on_update_project",
 	},
+	"Material Request": {
+		"validate": "opero.events.material_request.validate_material_request",
+	},
 	"HR Settings": {
 		"on_update": "opero.events.hr_settings.on_update_hr_settings",
 	},
