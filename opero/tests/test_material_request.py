@@ -30,3 +30,27 @@ class TestMaterialRequestItemGrid(FrappeTestCase):
 		)[0][0]
 		self.assertEqual(json.loads(data), {"GridView": {"Other": []}, "last_view": "List"})
 
+
+class TestMaterialRequestLayout(FrappeTestCase):
+	def test_purpose_and_dates_share_the_first_row(self):
+		fields = [field.fieldname for field in frappe.get_meta("Material Request").fields]
+		first_section = fields[: fields.index("custom_request_details_section")]
+		self.assertEqual(
+			first_section,
+			[
+				"type_section",
+				"material_request_type",
+				"column_break_2",
+				"transaction_date",
+				"custom_required_by_column",
+				"schedule_date",
+			],
+		)
+
+	def test_company_price_list_and_target_warehouse_share_the_second_row(self):
+		fields = [field.fieldname for field in frappe.get_meta("Material Request").fields]
+		breaks = ["custom_request_details_section", "custom_request_details_column", "column_break5"]
+		column_heads = [fields[fields.index(name) + 1] for name in breaks]
+		self.assertEqual(column_heads, ["company", "buying_price_list", "set_warehouse"])
+		self.assertEqual(fields[fields.index("set_warehouse") + 1], "warehouse_section")
+
