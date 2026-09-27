@@ -100,7 +100,6 @@ doctype_js = {
 	"WASH Category": "public/js/custom/wash_category.js",
 	"WASH Personnel": "public/js/custom/wash_personnel.js",
 	"Work Hours Summary": "public/js/custom/work_hours_summary.js",
-	"Site Settings": "public/js/opero_site_settings.js",
 	"Deploy Center": "public/js/opero_site_deploy_center.js",
 	"Publication": "public/js/opero_site_publication.js",
 	"Privacy policy": "public/js/opero_site_privacy_policy.js",

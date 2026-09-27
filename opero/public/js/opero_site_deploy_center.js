@@ -9,6 +9,7 @@ frappe.ui.form.on("Deploy Center", {
 		loadPending(frm);
 		frm.page.set_primary_action(__("Deploy to website"), () => deployWebsite(frm));
 		frm.page.set_secondary_action(__("Refresh"), () => syncPending(frm), "refresh");
+		frm.add_custom_button(__("Load all from website"), () => loadAllFromWebsite(frm));
 	},
 });
 
@@ -115,7 +116,7 @@ function bindProgress(wrap) {
 
 const GROUP_ORDER = ["Site pages", "Publications", "Team", "Enterprises", "Other"];
 
-function renderPending(wrap, payload) {
+function renderPending(frm, wrap, payload) {
 	const files = (payload && payload.files) || [];
 	if (!files.length) {
 		wrap.html(`<p class="text-muted">${frappe.utils.escape_html(payload.message || __("Nothing due."))}</p>`);
@@ -141,7 +142,7 @@ function renderPending(wrap, payload) {
 		})
 		.join("");
 	wrap.html(sections);
-	bindPendingRowClicks(wrap);
+	bindPendingRowClicks(frm, wrap);
 }
 
 function pendingRowHtml(row) {
@@ -158,13 +159,22 @@ function pendingRowHtml(row) {
 		const docname = frappe.utils.escape_html(row.docname);
 		openLink = ` <a href="#" class="text-muted opero-pending-open" data-doctype="${doctype}" data-docname="${docname}" title="${__("Open record")}">↗</a>`;
 	}
-	return `<strong>${frappe.utils.escape_html(action)}</strong> ${diffLink}${openLink}`;
+	let loadLink = "";
+	if (row.path.startsWith("content/") && row.path.endsWith(".md")) {
+		loadLink = ` <a href="#" class="small opero-pending-load" data-path="${path}" data-title="${title}">${__("Load from website")}</a>`;
+	}
+	return `<strong>${frappe.utils.escape_html(action)}</strong> ${diffLink}${openLink}${loadLink}`;
 }
 
-function bindPendingRowClicks(wrap) {
+function bindPendingRowClicks(frm, wrap) {
 	wrap.find(".opero-pending-diff").on("click", (e) => {
 		e.preventDefault();
 		showContentDiff($(e.currentTarget).data("path"));
+	});
+	wrap.find(".opero-pending-load").on("click", (e) => {
+		e.preventDefault();
+		const el = $(e.currentTarget);
+		loadFileFromWebsite(frm, el.data("path"), el.data("title"));
 	});
 	wrap.find(".opero-pending-open").on("click", (e) => {
 		e.preventDefault();
@@ -283,7 +293,7 @@ function applyPendingFiles(frm, incoming) {
 		.sort()
 		.map((path) => byPath[path]);
 	frm._opero_pending_files = files;
-	renderPending(frm.get_field("pending_html").$wrapper, { files });
+	renderPending(frm, frm.get_field("pending_html").$wrapper, { files });
 }
 
 function loadPending(frm) {
@@ -298,7 +308,7 @@ function loadPending(frm) {
 			setBusy(frm, false);
 			const payload = r.message || {};
 			frm._opero_pending_files = payload.files || [];
-			renderPending(wrap, payload);
+			renderPending(frm, wrap, payload);
 			applyPendingQueue(frm);
 		},
 		error() {
@@ -324,7 +334,7 @@ function syncPending(frm) {
 			setBusy(frm, false);
 			const payload = r.message || {};
 			frm._opero_pending_files = payload.files || [];
-			renderPending(wrap, payload);
+			renderPending(frm, wrap, payload);
 			applyPendingQueue(frm);
 		},
 		error() {
@@ -368,4 +378,59 @@ function deployWebsite(frm) {
 			wrap.html(`<p class="text-danger">${__("Could not deploy to GitHub.")}</p>`);
 		},
 	});
+}
+
+function loadFileFromWebsite(frm, path, title) {
+	if (frm._opero_busy) {
+		return;
+	}
+	frappe.confirm(
+		__("Replace {0} in Desk with the version on the website? Desk changes to it that are not deployed are lost. Other pending changes stay.", [
+			`<strong>${frappe.utils.escape_html(title || path)}</strong>`,
+		]),
+		() => {
+			setBusy(frm, true);
+			frappe.call({
+				method: "opero.opero_site.load.load_file_from_website",
+				args: { path },
+				freeze: true,
+				freeze_message: __("Loading from the website..."),
+				callback(r) {
+					setBusy(frm, false);
+					const files = (frm._opero_pending_files || []).filter((row) => row.path !== path);
+					frm._opero_pending_files = files;
+					renderPending(frm, frm.get_field("pending_html").$wrapper, { files });
+					frappe.show_alert({ message: (r.message || {}).message, indicator: "green" });
+				},
+				error() {
+					setBusy(frm, false);
+				},
+			});
+		}
+	);
+}
+
+function loadAllFromWebsite(frm) {
+	if (frm._opero_busy) {
+		return;
+	}
+	frappe.confirm(
+		__("Load every changed file from the website? Desk changes that are not deployed are lost for each record the website changes. Extra personnel on this site are kept."),
+		() => {
+			setBusy(frm, true);
+			frappe.call({
+				method: "opero.opero_site.load.load_from_website",
+				freeze: true,
+				freeze_message: __("Loading from the website..."),
+				callback(r) {
+					setBusy(frm, false);
+					frappe.msgprint((r.message || {}).message || __("Website content loaded."));
+					loadPending(frm);
+				},
+				error() {
+					setBusy(frm, false);
+				},
+			});
+		}
+	);
 }

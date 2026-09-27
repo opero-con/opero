@@ -3,9 +3,8 @@ from __future__ import annotations
 import os
 from urllib.parse import quote
 
-import requests
-
 import frappe
+import requests
 from frappe import _
 from frappe.utils import cint, cstr, getdate
 from frappe.utils.file_manager import save_file
@@ -14,7 +13,12 @@ from opero.opero_site.body_html import body_sections_to_html, paragraphs_to_html
 from opero.opero_site.cover_focal_point import CONTAIN, COVER
 from opero.opero_site.github import ContentRepo, GithubError
 from opero.opero_site.markdown import parse_frontmatter, same_managed_content, to_markdown
-from opero.opero_site.publish import clear_pending_cache, content_repo_from_conf
+from opero.opero_site.publish import (
+	clear_pending_cache,
+	content_label_for,
+	content_repo_from_conf,
+	drop_pending_path,
+)
 from opero.opero_site.publish_status import DRAFT, PUBLISHED
 from opero.opero_site.utils import (
 	hero_image_focus_label,
@@ -505,15 +509,17 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 				counts["partners"] += 1
 	finally:
 		frappe.flags.opero_site_syncing = previous_syncing
-		if sum(counts.values()):
-			clear_pending_cache()
 	return counts
+
+
+def _require_load_permission() -> None:
+	if not frappe.has_permission("Site Settings", "write"):
+		frappe.throw(_("Not permitted to load Opero Site content."))
 
 
 @frappe.whitelist()
 def load_from_website() -> dict:
-	if not frappe.has_permission("Site Settings", "write"):
-		frappe.throw(_("Not permitted to load Opero Site content."))
+	_require_load_permission()
 	repo = content_repo_from_conf()
 	try:
 		paths = repo.list_markdown("content/", repo.base_branch)
@@ -522,7 +528,30 @@ def load_from_website() -> dict:
 	except GithubError as exc:
 		frappe.throw(str(exc))
 	total = sum(counts.values())
+	if total:
+		clear_pending_cache()
 	return {
 		"counts": counts,
 		"message": _("Loaded {0} changed content files from the public site repository. Unchanged content was skipped.").format(total),
 	}
+
+
+@frappe.whitelist()
+def load_file_from_website(path: str) -> dict:
+	"""Replace one Desk record with its version on the public site; other pending changes stay."""
+	_require_load_permission()
+	if not (path.startswith("content/") and path.endswith(".md")):
+		frappe.throw(_("Only website content files can be loaded."))
+	repo = content_repo_from_conf()
+	title = content_label_for(path)["title"]
+	try:
+		text = repo.get_file(path, repo.base_branch)
+		if text is None:
+			frappe.throw(_("{0} is not on the website yet, so there is nothing to load.").format(title))
+		counts = load_files({path: text}, repo=repo)
+	except GithubError as exc:
+		frappe.throw(str(exc))
+	drop_pending_path(path)
+	if not sum(counts.values()):
+		return {"message": _("{0} in Desk already matches the website.").format(title)}
+	return {"message": _("Loaded {0} from the website.").format(title)}
