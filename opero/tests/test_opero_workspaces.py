@@ -6,7 +6,8 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from opero.patches.v0_4 import nest_opero_workspaces
+from opero import boot, workspace_sidebar
+from opero.patches.v0_4 import hide_frappe_website_workspace, nest_opero_workspaces
 
 
 class TestOperoWorkspaces(FrappeTestCase):
@@ -74,3 +75,48 @@ class TestOperoWorkspaces(FrappeTestCase):
 		):
 			nest_opero_workspaces.execute()
 		delete_doc.assert_not_called()
+
+	def test_hidden_workspaces_show_only_to_system_and_workspace_managers(self):
+		self.assertEqual(
+			frappe.get_hooks("override_whitelisted_methods")[
+				"frappe.desk.desktop.get_workspace_sidebar_items"
+			],
+			["opero.workspace_sidebar.get_workspace_sidebar_items"],
+		)
+		hide_frappe_website_workspace.execute()
+		self.assertEqual(frappe.db.get_value("Workspace", "Website", "is_hidden"), 1)
+		self.assertIn("Website", self._sidebar_for(["System Manager", "Workspace Manager"]))
+		for roles in (["Website Manager"], ["Website Manager", "Workspace Manager"], ["System Manager"]):
+			with self.subTest(roles=roles):
+				pages = self._sidebar_for(roles)
+				self.assertNotIn("Website", pages)
+				self.assertIn("Site Content", pages)
+
+	def test_boot_drops_hidden_workspaces_from_search_and_breadcrumbs(self):
+		bootinfo = frappe._dict(
+			allowed_workspaces=[
+				frappe._dict(name="Website", public=1, is_hidden=1),
+				frappe._dict(name="Site Content", public=1, is_hidden=0),
+				frappe._dict(name="Mine", public=0, is_hidden=1, for_user="someone@example.com"),
+			]
+		)
+		with self.set_user(self._user(["Workspace Manager"])):
+			boot.boot_session(bootinfo)
+		self.assertEqual([page.name for page in bootinfo.allowed_workspaces], ["Site Content", "Mine"])
+
+	def _user(self, roles):
+		return (
+			frappe.get_doc(
+				doctype="User",
+				email=f"workspace-{frappe.generate_hash(length=8)}@example.com",
+				first_name="Workspace test",
+				send_welcome_email=0,
+				roles=[{"role": role} for role in roles],
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
+
+	def _sidebar_for(self, roles):
+		with self.set_user(self._user(roles)):
+			return [page.name for page in workspace_sidebar.get_workspace_sidebar_items()["pages"]]
