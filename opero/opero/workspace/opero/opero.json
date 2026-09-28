@@ -16,7 +16,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Time",
-   "link_count": 5,
+   "link_count": 6,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -66,6 +66,16 @@
    "label": "Used Hrs Summary",
    "link_count": 0,
    "link_to": "Used Hrs Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Weekly Hours",
+   "link_count": 0,
+   "link_to": "Weekly Hours",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -183,7 +193,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-27 18:00:00.000000",
+ "modified": "2026-09-28 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Opero",
  "name": "Opero",
