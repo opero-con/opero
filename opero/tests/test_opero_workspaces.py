@@ -31,6 +31,13 @@ class TestOperoWorkspaces(FrappeTestCase):
 			"Travel Requests": ("Travel Request", "Pending PM's Approval", "custom_pm_email"),
 		}
 		self.assertEqual(set(queues), set(expected))
+		widths = {
+			block["data"]["shortcut_name"]: block["data"]["col"]
+			for block in json.loads(doc.content)
+			if block["type"] == "shortcut"
+		}
+		# Three per row, so "N to approve" is not truncated.
+		self.assertEqual({widths[label] for label in expected}, {4})
 		for label, (doctype, state, pm_field) in expected.items():
 			row = queues[label]
 			self.assertEqual(row.link_to, doctype)
