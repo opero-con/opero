@@ -43,7 +43,7 @@ list lives — `hooks.py` wires the dispatcher once for every DocType:
 
 * `PROJECT_SCOPED_DOCTYPES` — company comes from the project. Covers Opero's own
   Budget Line, Cash Advance-Reimbursable Form, Consultant Task, Project Budget,
-  Project Time Allocation, Task Time Distribution and Actual Spend, plus the
+  Project Time Allocation, Task Allocation, Task Time Distribution and Actual Spend, plus the
   standard Task, Timesheet, Travel Request, Expense Claim, Material Request,
   Activity Type and Activity Cost.
 * `EMPLOYEE_SCOPED_DOCTYPES` — company comes from the employee, because the

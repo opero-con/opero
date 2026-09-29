@@ -9,6 +9,7 @@ from frappe.tests.utils import FrappeTestCase
 
 from opero import zoho_books
 from opero.events import timesheet
+from opero.opero.doctype.task_allocation import task_allocation
 from opero.opero.report.dynamic_timesheet.dynamic_timesheet import execute as dynamic_report
 from opero.opero.report.used_hrs_summary.used_hrs_summary import execute as used_report
 
@@ -39,17 +40,15 @@ class TestTimesheetBalances(FrappeTestCase):
 			"Project", project_name="Timesheet regression " + frappe.generate_hash(length=12)
 		)
 		self.task = self._record("Task", subject="Timesheet regression", project=self.project)
-		ttd = self._record(
-			"Task Time Distribution", personnel=self.employee, project_task=self.task, project=self.project
-		)
-		for month, hours in (("Jan 2026", 10), ("Feb 2026", 20), ("Jan 2025", 30)):
+		for month, hours in (("2026-01-01", 10), ("2026-02-01", 20), ("2025-01-01", 30)):
 			self._record(
-				"Task Time Distribution Spread",
-				parent=ttd,
-				parenttype="Task Time Distribution",
-				parentfield="task_time_distribution_spread",
-				month=month,
-				time_spread=hours,
+				"Task Allocation",
+				task=self.task,
+				project=self.project,
+				employee=self.employee,
+				hours=hours,
+				docstatus=1,
+				**task_allocation.get_month_fields(month),
 			)
 
 	def _record(self, doctype, **values):

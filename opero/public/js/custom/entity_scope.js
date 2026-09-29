@@ -21,6 +21,7 @@ opero.entity.SCOPED = {
 	"Consultant Task": { project: "project", company: "company" },
 	"Project Budget": { project: "project", company: "company" },
 	"Project Time Allocation": { project: "project", company: "company" },
+	"Task Allocation": { project: "project", company: "company" },
 	"Task Time Distribution": { project: "project", company: "company" },
 };
 

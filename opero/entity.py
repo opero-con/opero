@@ -48,6 +48,7 @@ PROJECT_SCOPED_DOCTYPES: dict[str, ProjectScope] = {
 	"Consultant Task": ProjectScope("project"),
 	"Project Budget": ProjectScope("project"),
 	"Project Time Allocation": ProjectScope("project"),
+	"Task Allocation": ProjectScope("project", via=("task", "Task")),
 	"Task Time Distribution": ProjectScope("project"),
 	"Actual Spend": ProjectScope("project", via=("cash_advance", "Cash Advance-Reimbursable Form")),
 	# Standard DocTypes driven by Opero's project workflow

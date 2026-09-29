@@ -1,0 +1,212 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:TAL{YY}{MM}{#}",
+ "creation": "2026-09-29 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "task",
+  "column_break_employee",
+  "employee",
+  "personnel_name",
+  "section_break_project",
+  "project",
+  "column_break_company",
+  "company",
+  "section_break_hours",
+  "month",
+  "column_break_year",
+  "year",
+  "month_start",
+  "column_break_hours",
+  "hours",
+  "section_break_deliverables",
+  "deliverables",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "task",
+   "label": "Task",
+   "fieldtype": "Link",
+   "options": "Task",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_employee",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee",
+   "label": "Employee",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "personnel_name",
+   "label": "Personnel Name",
+   "fieldtype": "Data",
+   "fetch_from": "employee.employee_name",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_break_project",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "project",
+   "label": "Project",
+   "fieldtype": "Link",
+   "options": "Project",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_company",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "label": "Company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_hours",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "month",
+   "label": "Month",
+   "fieldtype": "Select",
+   "options": "\nJan\nFeb\nMar\nApr\nMay\nJun\nJul\nAug\nSep\nOct\nNov\nDec",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_year",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "year",
+   "label": "Year",
+   "fieldtype": "Data",
+   "length": 4,
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "month_start",
+   "label": "Month Start",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_hours",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hours",
+   "label": "Hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "section_break_deliverables",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "deliverables",
+   "label": "Deliverables",
+   "fieldtype": "Small Text",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "label": "Amended From",
+   "fieldtype": "Link",
+   "options": "Task Allocation",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1,
+   "search_index": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-09-29 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Opero",
+ "name": "Task Allocation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "share": 1,
+   "print": 1,
+   "email": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Projects Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "share": 1,
+   "print": 1,
+   "email": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Projects User",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "share": 1,
+   "print": 1,
+   "email": 1,
+   "submit": 0,
+   "cancel": 0,
+   "amend": 0
+  }
+ ],
+ "sort_field": "month_start",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "personnel_name",
+ "track_changes": 1,
+ "is_submittable": 1
+}

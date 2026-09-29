@@ -1,5 +1,7 @@
 # Timesheet balances and accounting sync
 
+- **Status:** Accepted; allocation source superseded by [ADR-0005](0005-task-allocation.md)
+
 Timesheets enforce monthly Task Time Distribution allocations per employee and task. Submitted entries consume the allocation; drafts do not reserve it. Validation includes every entry in the current document and excludes that document from historical usage. An employee row lock serializes concurrent submissions; the usage query uses a locking read to avoid an earlier transaction snapshot. Changing an allocation requires PM review rather than silently allowing an overrun.
 
 Reports count submitted entries by each detail row's date. An entry ending exactly at midnight belongs to its start day. Entries continuing into the next day must be split without changing their original start or end times.
