@@ -268,6 +268,67 @@ def get_months(start, end):
 	return months
 
 
+def get_distribution(task, employee):
+	"""Spread the employee's unplanned task budget across the task's months by working time."""
+	budget = get_budget(task, employee)
+	if not budget:
+		frappe.throw(_("No Hours Budget for {0} on this task.").format(employee))
+	months = get_months(*frappe.db.get_value("Task", task, ["exp_start_date", "exp_end_date"]))
+	if not months:
+		frappe.throw(_("Set the task's From and To dates before distributing."))
+	planned = frappe.get_all(
+		"Task Allocation",
+		filters={"task": task, "employee": employee, "docstatus": ("<", 2)},
+		fields=["sum(hours) as hours"],
+	)
+	remaining = budget.hours - flt(planned[0].hours if planned else 0)
+	if remaining <= HOURS_TOLERANCE:
+		frappe.throw(
+			_(
+				"Nothing left to distribute: submitted and draft allocations already use the {0}h budget."
+			).format(f"{budget.hours:g}")
+		)
+	weights = [get_available_hours(employee, month) for month in months]
+	evenly = None in weights or not sum(weights)
+	if evenly:
+		weights = [1] * len(months)
+	return {
+		"remaining": remaining,
+		"evenly": evenly,
+		"months": [
+			{**get_month_fields(month), "month_start": str(month), "hours": hours}
+			for month, hours in zip(months, spread_hours(remaining, weights), strict=True)
+		],
+	}
+
+
+def spread_hours(total, weights):
+	"""Split total by weight in half hours; the last share takes the rounding difference."""
+	whole = sum(weights)
+	shares = [round(total * weight / whole * 2) / 2 for weight in weights[:-1]]
+	return [*shares, max(round(total - sum(shares), 2), 0)]
+
+
+def create_distribution(task, employee, rows):
+	"""Create one draft allocation per month with hours and return their names."""
+	names = []
+	for row in rows:
+		if flt(row.get("hours")) <= 0:
+			continue
+		doc = frappe.get_doc(
+			{
+				"doctype": "Task Allocation",
+				"task": task,
+				"employee": employee,
+				"month": row["month"],
+				"year": str(row["year"]),
+				"hours": flt(row["hours"]),
+			}
+		)
+		names.append(doc.insert().name)
+	return names
+
+
 def get_allocation_grid(task):
 	"""Submitted allocation and timesheet hours per employee and month for the Task form grid."""
 	allocations = frappe.get_all(

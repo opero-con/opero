@@ -30,6 +30,9 @@ frappe.ui.form.on("Task Time Allocation", {
 	new_allocation(frm, cdt, cdn) {
 		opero.task_allocation.new_for_budget_row(frm, locals[cdt][cdn]);
 	},
+	distribute(frm, cdt, cdn) {
+		opero.task_allocation.distribute(frm, locals[cdt][cdn]);
+	},
 	days(frm, cdt, cdn) {
 		opero.task_allocation.sync_budget(
 			cdt,
@@ -91,15 +94,25 @@ opero.task_allocation.setup_budget_table = function (frm) {
 		"formatter",
 		button("opero-row-allocate", __("New allocation"), "add")
 	);
+	field.grid.update_docfield_property(
+		"distribute",
+		"formatter",
+		button("opero-row-distribute", __("Distribute remaining budget"), "calendar")
+	);
 	const find_row = (event) =>
 		(frm.doc.custom_time_allocation || []).find(
 			(budget) => budget.name === event.currentTarget.dataset.row
 		);
-	field.grid.wrapper.off("click.opero").on("click.opero", ".opero-row-allocate", (event) => {
-		event.preventDefault();
-		event.stopPropagation();
-		opero.task_allocation.new_for_budget_row(frm, find_row(event));
-	});
+	field.grid.wrapper
+		.off("click.opero")
+		.on("click.opero", ".opero-row-allocate, .opero-row-distribute", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const action = $(event.currentTarget).hasClass("opero-row-distribute")
+				? opero.task_allocation.distribute
+				: opero.task_allocation.new_for_budget_row;
+			action(frm, find_row(event));
+		});
 	field.grid.refresh();
 };
 
@@ -118,6 +131,82 @@ opero.task_allocation.is_budget_row_ready = function (frm, row) {
 opero.task_allocation.new_for_budget_row = function (frm, row) {
 	if (!opero.task_allocation.is_budget_row_ready(frm, row)) return;
 	frappe.new_doc("Task Allocation", { task: frm.doc.name, employee: row.personnel });
+};
+
+opero.task_allocation.distribute = function (frm, row) {
+	if (!opero.task_allocation.is_budget_row_ready(frm, row)) return;
+	const args = { task: frm.doc.name, employee: row.personnel };
+	frappe.xcall("opero.api.task_allocation.get_distribution", args).then((plan) => {
+		const months = plan.months;
+		const note = plan.evenly
+			? __("Spread evenly: the Holiday List does not cover every month.")
+			: __("Spread by working days.");
+		const dialog = new frappe.ui.Dialog({
+			title: __("Distribute {0}h", [plan.remaining]),
+			fields: [
+				{
+					fieldtype: "HTML",
+					fieldname: "note",
+					options: `<p class="text-muted small">${note} ${__(
+						"Creates drafts to review and submit."
+					)}</p>`,
+				},
+				{
+					fieldtype: "Table",
+					fieldname: "months",
+					label: __("Months"),
+					cannot_add_rows: true,
+					cannot_delete_rows: true,
+					in_place_edit: true,
+					data: months,
+					get_data: () => months,
+					fields: [
+						{
+							fieldname: "month",
+							label: __("Month"),
+							fieldtype: "Data",
+							read_only: 1,
+							in_list_view: 1,
+						},
+						{
+							fieldname: "year",
+							label: __("Year"),
+							fieldtype: "Data",
+							read_only: 1,
+							in_list_view: 1,
+						},
+						{
+							fieldname: "hours",
+							label: __("Hours"),
+							fieldtype: "Float",
+							in_list_view: 1,
+						},
+					],
+				},
+			],
+			primary_action_label: __("Create drafts"),
+			primary_action(values) {
+				frappe
+					.xcall("opero.api.task_allocation.create_distribution", {
+						...args,
+						rows: values.months || [],
+					})
+					.then((names) => {
+						dialog.hide();
+						const query = frappe.utils.make_query_string({ ...args, docstatus: 0 });
+						frappe.msgprint(
+							__("{0} draft allocations created. {1}", [
+								names.length,
+								`<a href="/app/task-allocation${query}">${__(
+									"Review and submit"
+								)}</a>`,
+							])
+						);
+					});
+			},
+		});
+		dialog.show();
+	});
 };
 
 opero.task_allocation.load = function (frm) {

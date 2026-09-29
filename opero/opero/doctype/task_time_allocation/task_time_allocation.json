@@ -14,7 +14,8 @@
   "hours",
   "committed",
   "overrun",
-  "new_allocation"
+  "new_allocation",
+  "distribute"
  ],
  "fields": [
   {
@@ -85,6 +86,14 @@
    "in_list_view": 1,
    "columns": 1,
    "idx": 6
+  },
+  {
+   "fieldname": "distribute",
+   "label": "Distribute",
+   "fieldtype": "Button",
+   "in_list_view": 1,
+   "columns": 1,
+   "idx": 7
   }
  ],
  "index_web_pages_for_search": 1,
