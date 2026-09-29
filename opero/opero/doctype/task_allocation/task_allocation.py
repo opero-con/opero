@@ -343,7 +343,7 @@ def get_allocation_grid(task):
 		SELECT ts.employee, ts.employee_name, DATE_FORMAT(tl.from_time, '%%Y-%%m-01') AS month,
 			SUM(tl.hours) AS hours
 		FROM `tabTimesheet` ts JOIN `tabTimesheet Detail` tl ON tl.parent = ts.name
-		WHERE ts.docstatus = 1 AND tl.task = %s
+		WHERE ts.docstatus = 1 AND tl.task = %s AND IFNULL(ts.employee, '') != ''
 		GROUP BY ts.employee, ts.employee_name, DATE_FORMAT(tl.from_time, '%%Y-%%m-01')
 		""",
 		task,
@@ -356,7 +356,7 @@ def get_allocation_grid(task):
 		"""
 		SELECT b.personnel AS employee, e.employee_name, b.hours, b.overrun
 		FROM `tabTask Time Allocation` b LEFT JOIN `tabEmployee` e ON e.name = b.personnel
-		WHERE b.parent = %s AND b.parenttype = 'Task'
+		WHERE b.parent = %s AND b.parenttype = 'Task' AND IFNULL(b.personnel, '') != ''
 		""",
 		task,
 		as_dict=True,

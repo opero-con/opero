@@ -350,6 +350,21 @@ class TestTaskAllocation(FrappeTestCase):
 		self.assertEqual(grid["allocated"], [[self.employee, "2026-05-01", 5.5]])
 		self.assertEqual(grid["used"], [[self.employee, "2026-01-01", 3.0]])
 
+	def test_grid_leaves_out_timesheets_without_an_employee(self):
+		sheet = self._record("Timesheet", parent_project=self.project, docstatus=1)
+		self._record(
+			"Timesheet Detail",
+			parent=sheet,
+			parenttype="Timesheet",
+			parentfield="time_logs",
+			task=self.task,
+			from_time="2026-01-20 09:00:00",
+			hours=2,
+		)
+		grid = task_allocation.get_allocation_grid(self.task)
+		self.assertEqual(grid["used"], [])
+		self.assertTrue(all(row["employee"] for row in grid["employees"]))
+
 	def test_allocations_move_with_the_task_project(self):
 		self._allocate("2026-01-01", 10)
 		other = self._record("Project", project_name="Allocation test " + frappe.generate_hash(length=12))
