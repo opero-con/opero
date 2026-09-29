@@ -4,7 +4,7 @@ from datetime import date
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_months, flt, get_first_day, get_last_day
+from frappe.utils import add_months, escape_html, flt, get_first_day, get_last_day, get_link_to_form
 
 from opero.opero.report.weekly_hours.weekly_hours import WeeklyHours
 
@@ -19,17 +19,21 @@ class TaskAllocation(Document):
 		self.month_start = get_month_start(self.month, self.year)
 		self.project = frappe.db.get_value("Task", self.task, "project")
 		if self.docstatus == 1:
+			self.validate_budget_row()
 			self.warn_over_capacity()
+			self.warn_over_budget()
 
 	def on_submit(self):
 		if not self.flags.skip_totals:
 			update_allocated_totals(self.task)
+			update_budget_usage(self.task, self.employee)
 
 	def before_cancel(self):
 		self.validate_timesheets_stay_covered()
 
 	def on_cancel(self):
 		update_allocated_totals(self.task)
+		update_budget_usage(self.task, self.employee)
 
 	def validate_timesheets_stay_covered(self):
 		remaining = get_allocated_hours(
@@ -65,6 +69,39 @@ class TaskAllocation(Document):
 				title=_("Over available time"),
 				indicator="orange",
 			)
+
+	def validate_budget_row(self):
+		if not get_budget(self.task, self.employee):
+			frappe.throw(
+				_("No Hours Budget for {0} on task {1}.").format(
+					frappe.bold(self.personnel_name or self.employee),
+					get_link_to_form(
+						"Task",
+						self.task,
+						escape_html(frappe.db.get_value("Task", self.task, "subject") or self.task),
+					),
+				),
+				title=_("No task budget"),
+			)
+
+	def warn_over_budget(self):
+		budget = get_budget(self.task, self.employee)
+		total = get_allocated_hours(task=self.task, employee=self.employee, name=("!=", self.name))
+		total += flt(self.hours)
+		if total <= budget.hours + HOURS_TOLERANCE:
+			return
+		frappe.msgprint(
+			_(
+				"{0}'s budget on this task is {1}h; submitted allocations now total {2}h, an overrun of {3}h."
+			).format(
+				self.personnel_name or self.employee,
+				f"{budget.hours:g}",
+				f"{total:g}",
+				f"{total - budget.hours:g}",
+			),
+			title=_("Hours overrun"),
+			indicator="orange",
+		)
 
 	@property
 	def month_label(self):
@@ -114,6 +151,68 @@ def get_allocated_hours(**filters):
 	return flt(rows[0].hours) if rows else 0
 
 
+def get_budget(task, employee):
+	"""The employee's Hours Budget row on the task, or None."""
+	rows = frappe.get_all(
+		"Task Time Allocation",
+		filters={"parent": task, "parenttype": "Task", "personnel": employee},
+		fields=["name", "hours", "committed", "overrun"],
+		order_by="idx",
+	)
+	if len(rows) > 1:
+		frappe.throw(_("Task {0} has more than one Hours Budget row for {1}.").format(task, employee))
+	if not rows:
+		return None
+	rows[0].hours = flt(rows[0].hours)
+	rows[0].overrun = flt(rows[0].overrun)
+	return rows[0]
+
+
+def get_overrun(allocated, budget_hours):
+	overrun = flt(allocated) - flt(budget_hours)
+	return overrun if overrun > HOURS_TOLERANCE else 0
+
+
+def get_budget_usage(task):
+	"""Submitted allocation hours per employee on the task."""
+	rows = frappe.get_all(
+		"Task Allocation",
+		filters={"task": task, "docstatus": 1},
+		fields=["employee", "personnel_name", "sum(hours) as hours"],
+		group_by="employee, personnel_name",
+	)
+	return {row.employee: row for row in rows}
+
+
+def update_budget_usage(task, employee):
+	"""Store the employee's committed hours and overrun on their task budget row.
+
+	Submitting requires a budget row; the migration adds zero-budget rows for existing
+	allocations that have none.
+	"""
+	usage = get_budget_usage(task).get(employee) or frappe._dict(hours=0)
+	budget = get_budget(task, employee)
+	overrun = get_overrun(usage.hours, budget.hours if budget else 0)
+	values = {"committed": flt(usage.hours), "overrun": overrun}
+	if budget:
+		frappe.db.set_value("Task Time Allocation", budget.name, values)
+		return
+	if not overrun:
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Task Time Allocation",
+			"parent": task,
+			"parenttype": "Task",
+			"parentfield": "custom_time_allocation",
+			"idx": frappe.db.count("Task Time Allocation", {"parent": task, "parenttype": "Task"}) + 1,
+			"personnel": employee,
+			"hours": 0,
+			**values,
+		}
+	).db_insert()
+
+
 def get_month_start(month, year):
 	if not re.fullmatch(r"\d{4}", str(year or "")):
 		frappe.throw(_("Year must be four digits, for example 2026."))
@@ -159,6 +258,16 @@ def get_month_fields(value):
 	return {"month": MONTHS[month_start.month - 1], "year": str(month_start.year), "month_start": month_start}
 
 
+def get_months(start, end):
+	"""First day of every month from start to end; empty when either is missing."""
+	months = []
+	month = get_first_day(start) if start and end else None
+	while month and month <= get_first_day(end):
+		months.append(month)
+		month = add_months(month, 1)
+	return months
+
+
 def get_allocation_grid(task):
 	"""Submitted allocation and timesheet hours per employee and month for the Task form grid."""
 	allocations = frappe.get_all(
@@ -181,12 +290,25 @@ def get_allocation_grid(task):
 	)
 	start, end = frappe.db.get_value("Task", task, ["exp_start_date", "exp_end_date"])
 	months = {str(row.month_start) for row in allocations} | {row.month for row in used}
-	month = get_first_day(start) if start else None
-	while month and end and month <= get_first_day(end):
-		months.add(str(month))
-		month = add_months(month, 1)
-	employees = {row.employee: row.employee_name for row in allocations + used}
+	months |= {str(month) for month in get_months(start, end)}
+	budgets = frappe.db.sql(
+		"""
+		SELECT b.personnel AS employee, e.employee_name, b.hours, b.overrun
+		FROM `tabTask Time Allocation` b LEFT JOIN `tabEmployee` e ON e.name = b.personnel
+		WHERE b.parent = %s AND b.parenttype = 'Task'
+		""",
+		task,
+		as_dict=True,
+	)
+	employees = {row.employee: row.employee_name for row in allocations + used + budgets}
 	return {
+		"budgets": {
+			row.employee: {
+				"hours": flt(row.hours),
+				"overrun": flt(row.overrun),
+			}
+			for row in budgets
+		},
 		"months": sorted(months),
 		"employees": [
 			{"employee": employee, "employee_name": name or employee}

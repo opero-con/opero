@@ -1,6 +1,6 @@
 # ADR-0005: Task Allocation is the monthly allocation record
 
-- **Status:** Accepted
+- **Status:** Accepted; removal of the Task's Time Allocation table superseded by [ADR-0006](0006-task-hours-budget.md)
 - **Date:** 2026-09-29
 - **Affects:** Task, Timesheet, Project, allocation reports
 - **Supersedes:** Task Time Distribution as the allocation source in [ADR-0001 (timesheets)](0001-timesheet-balances-and-sync.md)

@@ -15,9 +15,13 @@ def get_allocation_grid(task):
 def get_capacity(employee, month, year, task=None, name=None):
 	frappe.has_permission("Task Allocation", "read", throw=True)
 	month_start = task_allocation.get_month_start(month, year)
-	return {
-		**task_allocation.get_capacity(employee, month_start, exclude=name),
-		"same_task": task_allocation.get_same_task_allocations(task, employee, month_start, exclude=name)
-		if task
-		else [],
-	}
+	result = {**task_allocation.get_capacity(employee, month_start, exclude=name), "same_task": []}
+	if task:
+		exclude = {"name": ("!=", name)} if name else {}
+		result.update(
+			same_task=task_allocation.get_same_task_allocations(task, employee, month_start, exclude=name),
+			budget=task_allocation.get_budget(task, employee),
+			task_subject=frappe.db.get_value("Task", task, "subject"),
+			task_allocated=task_allocation.get_allocated_hours(task=task, employee=employee, **exclude),
+		)
+	return result

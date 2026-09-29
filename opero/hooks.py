@@ -259,6 +259,7 @@ doc_events = {
 	},
 	"Task": {
 		"before_insert": "opero.events.task.before_insert_task",
+		"validate": "opero.events.task.validate_task",
 		"on_update": "opero.events.task.on_update_task",
 	},
 	"Travel Request": {

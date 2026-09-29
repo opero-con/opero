@@ -3,13 +3,24 @@
 from __future__ import annotations
 
 import frappe
+from frappe import _
+from frappe.utils import flt
 
 from opero import entity
-from opero.opero.doctype.task_allocation.task_allocation import update_project_allocated_hours
+from opero.opero.doctype.task_allocation.task_allocation import (
+	get_budget_usage,
+	get_overrun,
+	update_project_allocated_hours,
+)
 
 
 def before_insert_task(doc, _method=None):
 	_restrict_non_pm_create(doc)
+
+
+def validate_task(doc, _method=None):
+	_validate_one_budget_row_per_person(doc)
+	_update_budget_usage(doc)
 
 
 def on_update_task(doc, _method=None):
@@ -25,6 +36,38 @@ def _restrict_non_pm_create(doc):
 	personnel_name = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "employee_name")
 	if personnel_name and personnel_name != project_manager:
 		frappe.throw(f"Please contact the PM, {project_manager}, for Task creation in this Project")
+
+
+def _validate_one_budget_row_per_person(doc):
+	people = set()
+	for row in doc.get("custom_time_allocation") or []:
+		if row.personnel in people:
+			frappe.throw(_("{0} has more than one Hours Budget row.").format(row.personnel))
+		people.add(row.personnel)
+
+
+def _update_budget_usage(doc):
+	"""Committed and overrun follow the allocations; people with allocations keep their row."""
+	if doc.is_new():
+		return
+	usage = get_budget_usage(doc.name)
+	rows = {row.personnel: row for row in doc.get("custom_time_allocation") or []}
+	missing = [
+		row.personnel_name or employee
+		for employee, row in usage.items()
+		if flt(row.hours) and employee not in rows
+	]
+	if missing:
+		frappe.throw(
+			_("Keep the Hours Budget rows of people with submitted allocations: {0}").format(
+				", ".join(missing)
+			),
+			title=_("Budget row needed"),
+		)
+	for personnel, row in rows.items():
+		used = usage.get(personnel) or frappe._dict(hours=0)
+		row.committed = flt(used.hours)
+		row.overrun = get_overrun(used.hours, row.hours)
 
 
 def _move_allocations_with_task(doc):
