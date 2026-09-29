@@ -145,3 +145,4 @@ opero.patches.v0_4.arrange_material_request_header
 opero.patches.v0_4.add_material_request_total
 opero.patches.v0_4.hide_frappe_website_workspace
 opero.patches.v0_4.copy_task_time_distribution_to_task_allocation
+opero.patches.v0_4.point_allocation_reports_at_task_allocation
