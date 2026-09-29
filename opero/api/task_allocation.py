@@ -25,3 +25,15 @@ def get_capacity(employee, month, year, task=None, name=None):
 			task_allocated=task_allocation.get_allocated_hours(task=task, employee=employee, **exclude),
 		)
 	return result
+
+
+@frappe.whitelist()
+def get_distribution(task, employee):
+	frappe.get_doc("Task", task).check_permission("read")
+	return task_allocation.get_distribution(task, employee)
+
+
+@frappe.whitelist(methods=["POST"])
+def create_distribution(task, employee, rows):
+	frappe.get_doc("Task", task).check_permission("read")
+	return task_allocation.create_distribution(task, employee, frappe.parse_json(rows))

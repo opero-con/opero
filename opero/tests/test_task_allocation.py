@@ -132,6 +132,64 @@ class TestTaskBudget(FrappeTestCase):
 		task = self._save_task(lambda task: None)
 		self.assertEqual(task.custom_time_allocation[0].days, 3)
 
+	def test_spread_hours_rounds_to_half_hours(self):
+		self.assertEqual(task_allocation.spread_hours(10, [1, 1, 1]), [3.5, 3.5, 3.0])
+		self.assertEqual(task_allocation.spread_hours(9, [140, 70]), [6.0, 3.0])
+
+	def _date_task(self):
+		frappe.db.set_value("Task", self.task, {"exp_start_date": "2026-01-15", "exp_end_date": "2026-03-10"})
+
+	def test_distribution_spreads_unplanned_budget_evenly_without_holiday_list(self):
+		self._date_task()
+		self._budget(20)
+		self._submit(2)
+		frappe.get_doc(
+			dict(
+				doctype="Task Allocation",
+				task=self.task,
+				employee=self.employee,
+				month="Mar",
+				year="2026",
+				hours=3,
+			)
+		).insert()
+		plan = task_allocation.get_distribution(self.task, self.employee)
+		self.assertEqual((plan["remaining"], plan["evenly"]), (15, True))
+		self.assertEqual(
+			[(row["month"], row["year"], row["hours"]) for row in plan["months"]],
+			[("Jan", "2026", 5.0), ("Feb", "2026", 5.0), ("Mar", "2026", 5.0)],
+		)
+
+	def test_distribution_weights_months_by_working_time(self):
+		self._date_task()
+		self._budget(21)
+		with patch.object(task_allocation, "get_available_hours", side_effect=[140, 70, 70]):
+			plan = task_allocation.get_distribution(self.task, self.employee)
+		self.assertFalse(plan["evenly"])
+		self.assertEqual([row["hours"] for row in plan["months"]], [10.5, 5.0, 5.5])
+
+	def test_distribution_needs_a_budget_row(self):
+		self._date_task()
+		with self.assertRaises(frappe.ValidationError):
+			task_allocation.get_distribution(self.task, self.employee)
+
+	def test_distribution_refuses_when_nothing_is_left(self):
+		self._date_task()
+		self._budget(5)
+		self._submit(5)
+		with self.assertRaises(frappe.ValidationError):
+			task_allocation.get_distribution(self.task, self.employee)
+
+	def test_create_distribution_makes_drafts_for_months_with_hours(self):
+		self._budget(20)
+		names = task_allocation.create_distribution(
+			self.task,
+			self.employee,
+			[{"month": "Jan", "year": "2026", "hours": 4}, {"month": "Feb", "year": 2026, "hours": 0}],
+		)
+		self.assertEqual(len(names), 1)
+		self.assertEqual(frappe.db.get_value("Task Allocation", names[0], ["docstatus", "hours"]), (0, 4))
+
 	def test_one_budget_row_per_person(self):
 		self._budget(20)
 
