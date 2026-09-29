@@ -164,11 +164,10 @@ def get_monthly_balances(employee, rows, name=None, lock=False):
 	tasks = sorted({row.task for row in rows})
 	allocated = frappe.db.sql(
 		"""
-		SELECT t.project_task AS task, s.month, SUM(s.time_spread) AS hours
-		FROM `tabTask Time Distribution` t
-		JOIN `tabTask Time Distribution Spread` s ON s.parent = t.name
-		WHERE t.personnel = %(employee)s AND t.project_task IN %(tasks)s
-		GROUP BY t.project_task, s.month
+		SELECT task, CONCAT(month, ' ', year) AS month, SUM(hours) AS hours
+		FROM `tabTask Allocation`
+		WHERE docstatus = 1 AND employee = %(employee)s AND task IN %(tasks)s
+		GROUP BY task, month, year
 		""",
 		{"employee": employee, "tasks": tasks},
 		as_dict=True,

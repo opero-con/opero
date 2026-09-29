@@ -1,110 +1,134 @@
 // Opero: client scripts for Task
-// Migrated from Frappe Cloud Client Scripts (enabled Form scripts).
 
-// --- Days to Hours ---
-frappe.ui.form.on('Task Time Allocation', {
-    days: function(frm, cdt, cdn) {
-        // Get the current row
-        const row = locals[cdt][cdn];
+frappe.provide("opero.task_allocation");
 
-        // Fetch the standard working hours from HR Settings
-        frappe.db.get_single_value('HR Settings', 'standard_working_hours').then((standard_working_hours) => {
-            // Calculate hours based on the days entered
-            if (row.days && standard_working_hours) {
-                const calculated_hours = row.days * standard_working_hours;
-                // Update the hours field in the current row
-                frappe.model.set_value(cdt, cdn, 'hours', calculated_hours);
-            } else {
-                // Reset hours if days are empty
-                frappe.model.set_value(cdt, cdn, 'hours', 0);
-            }
+opero.task_allocation.MONTHS = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
 
-            // Refresh the child table row to show updated hours
-            frm.refresh_field(cdt, cdn);
-
-            // Call functions to update total hours and total days in parent document
-            update_total_hours(frm);
-            update_total_days(frm);
-        });
-    }
+frappe.ui.form.on("Task", {
+	refresh(frm) {
+		opero.task_allocation.load(frm);
+	},
 });
 
-// Function to sum hours and update custom_total_hours in the parent document
-function update_total_hours(frm) {
-    let total_hours = 0;
+opero.task_allocation.load = function (frm) {
+	const field = frm.get_field("custom_allocation_grid");
+	if (!field) return;
+	if (frm.is_new()) {
+		field.$wrapper.html(`<p class="text-muted">${__("Save the task to allocate hours.")}</p>`);
+		return;
+	}
+	frappe
+		.xcall("opero.api.task_allocation.get_allocation_grid", { task: frm.doc.name })
+		.then((grid) => opero.task_allocation.render(frm, grid));
+};
 
-    // Loop through each child row in the Task Time Allocation table
-    frm.doc.custom_time_allocation.forEach(function(row) {
-        total_hours += row.hours || 0;  // Sum the hours, defaulting to 0 if undefined
-    });
+opero.task_allocation.render = function (frm, grid) {
+	const field = frm.get_field("custom_allocation_grid");
+	const lookup = (rows) => {
+		const map = {};
+		rows.forEach(([employee, month, hours]) => (map[`${employee}|${month}`] = hours));
+		return map;
+	};
+	const allocated = lookup(grid.allocated);
+	const used = lookup(grid.used);
+	const fmt = (n) => format_number(n || 0, null, 2).replace(/\.00$/, "");
+	const label = (month) => moment(month).format("MMM YY");
+	const esc = frappe.utils.escape_html;
 
-    // Update the custom_total_hours field in the parent document
-    frm.set_value('custom_total_hours', total_hours);
-}
+	const header = grid.months.map((m) => `<th class="text-right">${label(m)}</th>`).join("");
+	const body = grid.employees
+		.map(({ employee, employee_name }) => {
+			let total = 0;
+			const cells = grid.months
+				.map((month) => {
+					const key = `${employee}|${month}`;
+					const hours = allocated[key] || 0;
+					const spent = used[key] || 0;
+					total += hours;
+					const value = grid.can_create
+						? `<a href="#" class="opero-new-allocation" data-employee="${esc(
+								employee
+						  )}"
+							data-month="${month}" title="${__("New allocation")}">${fmt(hours)}</a>`
+						: `<div>${fmt(hours)}</div>`;
+					const note = spent
+						? `<div class="small ${spent > hours ? "text-danger" : "text-muted"}">${__(
+								"used"
+						  )} ${fmt(spent)}</div>`
+						: "";
+					return `<td class="text-right">${value}${note}</td>`;
+				})
+				.join("");
+			return `<tr><td>${esc(employee_name)}</td>${cells}<td class="text-right"><strong>${fmt(
+				total
+			)}</strong></td></tr>`;
+		})
+		.join("");
+	const totals = grid.months
+		.map((month) => {
+			const sum = grid.employees.reduce(
+				(s, e) => s + (allocated[`${e.employee}|${month}`] || 0),
+				0
+			);
+			return `<td class="text-right"><strong>${fmt(sum)}</strong></td>`;
+		})
+		.join("");
+	const grand = grid.allocated.reduce((s, row) => s + row[2], 0);
 
-// Function to sum days and update custom_total_days in the parent document
-function update_total_days(frm) {
-    let total_days = 0;
+	field.$wrapper.html(`
+		<div class="opero-allocation-grid" style="overflow-x:auto">
+			<table class="table table-bordered table-sm">
+				<thead><tr><th>${__("Employee")}</th>${header}<th class="text-right">${__(
+		"Total"
+	)}</th></tr></thead>
+				<tbody>${
+					body ||
+					`<tr><td colspan="${grid.months.length + 2}" class="text-muted">${__(
+						"No allocations yet."
+					)}</td></tr>`
+				}</tbody>
+				<tfoot><tr><td><strong>${__("Total")}</strong></td>${totals}<td class="text-right"><strong>${fmt(
+		grand
+	)}</strong></td></tr></tfoot>
+			</table>
+			${
+				grid.can_create
+					? `<button class="btn btn-xs btn-default opero-new-allocation">${__(
+							"New allocation"
+					  )}</button>`
+					: ""
+			}
+			${
+				grid.months.length
+					? ""
+					: `<p class="text-muted small">${__(
+							"Set the task's From and To dates to show months."
+					  )}</p>`
+			}
+		</div>`);
 
-    // Loop through each child row in the Task Time Allocation table
-    frm.doc.custom_time_allocation.forEach(function(row) {
-        total_days += row.days || 0;  // Sum the days, defaulting to 0 if undefined
-    });
-
-    // Update the custom_total_days field in the parent document
-    frm.set_value('custom_total_days', total_days);
-}
-
-// --- Update task_end in TTD ---
-frappe.ui.form.on('Task', {
-    exp_end_date: function(frm) {
-        // Ensure exp_end_date is not empty
-        if (frm.doc.exp_end_date) {
-            // Fetch all Task Time Distribution records linked to this Project Task
-            frappe.call({
-                method: 'frappe.client.get_list',
-                args: {
-                    doctype: 'Task Time Distribution',
-                    filters: {
-                        'project_task': frm.doc.name
-                    },
-                    fields: ['name', 'task_end']
-                },
-                callback: function(response) {
-                    if (response.message && response.message.length > 0) {
-                        let task_time_distributions = response.message;
-                        
-                        // Loop through each Task Time Distribution entry
-                        task_time_distributions.forEach(function(task_time_distribution) {
-                            // Only update if task_end is different from exp_end_date
-                            if (task_time_distribution.task_end !== frm.doc.exp_end_date) {
-                                frappe.call({
-                                    method: 'frappe.client.set_value',
-                                    args: {
-                                        doctype: 'Task Time Distribution',
-                                        name: task_time_distribution.name,
-                                        fieldname: {
-                                            'task_end': frm.doc.exp_end_date
-                                        }
-                                    },
-                                    callback: function(updateResponse) {
-                                        if (!updateResponse.exc) {
-                                            console.log(`Task Time Distribution updated: ${task_time_distribution.name}`);
-                                        } else {
-                                            console.error(`Failed to update Task Time Distribution: ${task_time_distribution.name}`);
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    } else {
-                        console.log('No Task Time Distribution records found.');
-                    }
-                },
-                error: function(err) {
-                    console.error('Error fetching Task Time Distribution records:', err);
-                }
-            });
-        }
-    }
-});
+	field.$wrapper.find(".opero-new-allocation").on("click", function (event) {
+		event.preventDefault();
+		const values = { task: frm.doc.name };
+		if (this.dataset.employee) values.employee = this.dataset.employee;
+		if (this.dataset.month) {
+			const [year, month] = this.dataset.month.split("-");
+			values.year = year;
+			values.month = opero.task_allocation.MONTHS[Number(month) - 1];
+		}
+		frappe.new_doc("Task Allocation", values);
+	});
+};
