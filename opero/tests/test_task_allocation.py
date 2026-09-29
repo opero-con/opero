@@ -5,10 +5,147 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt
 
 from opero.events import task as task_events
 from opero.opero.doctype.task_allocation import task_allocation
 from opero.patches.v0_4 import copy_task_time_distribution_to_task_allocation as copy_patch
+from opero.patches.v0_4 import set_task_budgets_from_allocations as budget_patch
+
+
+class TestTaskBudget(FrappeTestCase):
+	def setUp(self):
+		self.previous_user = frappe.session.user
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, self.previous_user)
+		suffix = frappe.generate_hash(length=12)
+		self.employee = self._record("Employee", first_name="Budget test", employee_name="Budget test")
+		self.project = self._record("Project", project_name="Budget test " + suffix)
+		self.task = self._record("Task", subject="Budget test", project=self.project)
+
+	def _record(self, doctype, **values):
+		doc = frappe.get_doc(
+			dict(doctype=doctype, name="budget-test-" + frappe.generate_hash(length=12), **values)
+		)
+		doc.db_insert()
+		return doc.name
+
+	def _budget(self, hours, employee=None):
+		return self._record(
+			"Task Time Allocation",
+			parent=self.task,
+			parenttype="Task",
+			parentfield="custom_time_allocation",
+			personnel=employee or self.employee,
+			hours=hours,
+		)
+
+	def _submit(self, hours, month="Feb"):
+		doc = frappe.get_doc(
+			dict(
+				doctype="Task Allocation",
+				task=self.task,
+				employee=self.employee,
+				month=month,
+				year="2026",
+				hours=hours,
+			)
+		).insert()
+		doc.submit()
+		return doc
+
+	def _save_task(self, edit):
+		task = frappe.get_doc("Task", self.task)
+		task._doc_before_save = frappe.get_doc("Task", self.task)
+		edit(task)
+		task_events.validate_task(task)
+		return task
+
+	def _row(self):
+		budget = task_allocation.get_budget(self.task, self.employee)
+		return (budget.hours, flt(budget.committed), budget.overrun) if budget else None
+
+	def test_allocation_within_budget_has_no_overrun(self):
+		self._budget(20)
+		self._submit(12)
+		self.assertEqual(self._row(), (20, 12, 0))
+
+	def test_overrun_keeps_the_budget_and_records_the_excess(self):
+		self._budget(20)
+		self._submit(12)
+		frappe.clear_messages()
+		self._submit(10, month="Mar")
+		self.assertEqual(self._row(), (20, 22, 2))
+		self.assertIn("overrun of 2h", " ".join(message["message"] for message in frappe.get_message_log()))
+
+	def test_submit_without_budget_row_is_refused(self):
+		draft = frappe.get_doc(
+			dict(
+				doctype="Task Allocation",
+				task=self.task,
+				employee=self.employee,
+				month="Feb",
+				year="2026",
+				hours=8,
+			)
+		).insert()
+		with self.assertRaises(frappe.ValidationError):
+			draft.submit()
+		self.assertIsNone(self._row())
+
+	def test_zero_budget_row_allows_an_overrun(self):
+		self._budget(0)
+		self._submit(8)
+		self.assertEqual(self._row(), (0, 8, 8))
+
+	def test_cancelling_clears_the_overrun(self):
+		self._budget(20)
+		self._submit(12)
+		second = self._submit(10, month="Mar")
+		second.cancel()
+		self.assertEqual(self._row(), (20, 12, 0))
+
+	def test_task_budget_edits_recalculate_the_overrun(self):
+		self._budget(20)
+		self._submit(12)
+
+		def set_budget(hours):
+			return lambda task: setattr(task.custom_time_allocation[0], "hours", hours)
+
+		lowered = self._save_task(set_budget(10))
+		self.assertEqual(lowered.custom_time_allocation[0].overrun, 2)
+		raised = self._save_task(set_budget(30))
+		row = raised.custom_time_allocation[0]
+		self.assertEqual((row.committed, row.overrun), (12, 0))
+
+	def test_rows_of_people_with_allocations_cannot_be_removed(self):
+		self._budget(20)
+		self._submit(12)
+		with self.assertRaises(frappe.ValidationError):
+			self._save_task(lambda task: task.set("custom_time_allocation", []))
+
+	def test_one_budget_row_per_person(self):
+		self._budget(20)
+
+		def duplicate(task):
+			task.append("custom_time_allocation", {"personnel": self.employee, "hours": 5})
+
+		with self.assertRaises(frappe.ValidationError):
+			self._save_task(duplicate)
+
+	def test_patch_merges_duplicates_and_records_overruns(self):
+		self._budget(1)
+		allocation = self._submit(1)
+		frappe.db.delete("Task Time Allocation", {"parent": self.task})
+		self._budget(3)
+		self._budget(4)
+		other = self._record("Employee", first_name="Budget other", employee_name="Budget other")
+		frappe.db.set_value("Task Allocation", allocation.name, {"employee": other, "hours": 9})
+		with patch.object(budget_patch, "show_hours_budget"):
+			budget_patch.execute()
+		self.assertEqual(self._row(), (7, 0, 0))
+		added = task_allocation.get_budget(self.task, other)
+		self.assertEqual((added.hours, added.committed, added.overrun), (0, 9, 9))
 
 
 class TestTaskAllocation(FrappeTestCase):
@@ -29,6 +166,7 @@ class TestTaskAllocation(FrappeTestCase):
 			exp_start_date="2026-01-15",
 			exp_end_date="2026-03-10",
 		)
+		self._budget(self.task)
 
 	def _record(self, doctype, **values):
 		doc = frappe.get_doc(
@@ -36,6 +174,16 @@ class TestTaskAllocation(FrappeTestCase):
 		)
 		doc.db_insert()
 		return doc.name
+
+	def _budget(self, task):
+		self._record(
+			"Task Time Allocation",
+			parent=task,
+			parenttype="Task",
+			parentfield="custom_time_allocation",
+			personnel=self.employee,
+			hours=1000,
+		)
 
 	def _allocate(self, day, hours, submit=True, task=None):
 		month = task_allocation.get_month_fields(day)
@@ -154,6 +302,7 @@ class TestTaskAllocation(FrappeTestCase):
 	def test_capacity_counts_every_task_but_the_excluded_record(self):
 		mine = self._allocate("2026-02-01", 10)
 		other_task = self._record("Task", subject="Allocation test two", project=self.project)
+		self._budget(other_task)
 		self._allocate("2026-02-01", 6, task=other_task)
 		self._allocate("2026-02-01", 50, submit=False, task=other_task)
 		capacity = task_allocation.get_capacity(self.employee, date(2026, 2, 1), exclude=mine.name)

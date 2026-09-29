@@ -21,7 +21,7 @@ function set_ribbon(frm, lines, color) {
 			frm.layout.wrapper
 		);
 	}
-	ribbon.removeClass("green orange blue").addClass(color).html(lines.join("<br>"));
+	ribbon.removeClass("green orange blue red").addClass(color).html(lines.join("<br>"));
 	ribbon.toggle(lines.length > 0);
 }
 
@@ -42,63 +42,69 @@ function show_ribbon(frm) {
 		})
 		.then((capacity) => {
 			if (request !== frm.allocation_ribbon_request) return;
-			const { lines, color } = describe_capacity(frm, capacity);
+			if (task && !capacity.budget) {
+				const esc = frappe.utils.escape_html;
+				const link = frappe.utils.get_form_link(
+					"Task",
+					task,
+					true,
+					esc(capacity.task_subject || task)
+				);
+				const message = __("No Hours Budget for {0} on task {1}.", [
+					frappe.bold(esc(frm.doc.personnel_name || employee)),
+					link,
+				]);
+				set_ribbon(frm, [message], "red");
+				return;
+			}
+			const { lines, color } = describe_capacity(frm.doc.hours || 0, capacity);
 			set_ribbon(frm, lines, color);
 		});
 }
 
-function describe_capacity(frm, { available, allocated, same_task }) {
-	const who = frm.doc.personnel_name || frm.doc.employee;
-	const period = `${frm.doc.month} ${frm.doc.year}`;
-	const hours = frm.doc.hours || 0;
+function describe_capacity(hours, capacity) {
 	const lines = [];
-	let color = "green";
-
-	if (same_task.length) {
+	const warnings = [];
+	if (capacity.budget) {
+		const committed = flt(capacity.task_allocated + hours, 2);
+		const left = flt(capacity.budget.hours - committed, 2);
+		if (left < 0) {
+			warnings.push(
+				__("Budget: {0}h overrun ({1}h of {2}h).", [
+					-left,
+					committed,
+					capacity.budget.hours,
+				])
+			);
+		} else {
+			lines.push(__("Budget: {0}h left of {1}h.", [left, capacity.budget.hours]));
+		}
+	}
+	if (capacity.same_task.length) {
 		const earlier = flt(
-			same_task.reduce((sum, row) => sum + row.hours, 0),
+			capacity.same_task.reduce((sum, row) => sum + row.hours, 0),
 			2
 		);
-		const names = same_task.map((row) => row.name).join(", ");
-		lines.push(
-			__("{0} already has {1}h on this task for {2} ({3}). With this allocation: {4}h.", [
-				who,
+		warnings.push(
+			__("Already {0}h on this task this month; {1}h with this.", [
 				earlier,
-				period,
-				names,
 				flt(earlier + hours, 2),
 			])
 		);
-		color = "orange";
 	}
-
-	const total = flt(allocated + hours, 2);
-	if (available === null) {
-		lines.push(
-			__("{0}h allocated in {1} across all tasks. Available time is unknown.", [
-				total,
-				period,
-			])
-		);
-		return { lines, color: color === "green" ? "blue" : color };
+	const total = flt(capacity.allocated + hours, 2);
+	if (capacity.available === null) {
+		lines.push(__("Month: {0}h allocated, availability unknown.", [total]));
+	} else {
+		const free = flt(capacity.available - total, 2);
+		if (free < 0) {
+			warnings.push(
+				__("Month: {0}h over capacity ({1}h of {2}h).", [-free, total, capacity.available])
+			);
+		} else {
+			lines.push(__("Month: {0}h free of {1}h.", [free, capacity.available]));
+		}
 	}
-	const free = flt(available - total, 2);
-	lines.push(
-		free < 0
-			? __("{0} is {1}h over in {2}: {3}h available, {4}h allocated across all tasks.", [
-					who,
-					-free,
-					period,
-					available,
-					total,
-			  ])
-			: __("{0} has {1}h free in {2}: {3}h available, {4}h allocated across all tasks.", [
-					who,
-					free,
-					period,
-					available,
-					total,
-			  ])
-	);
-	return { lines, color: free < 0 ? "orange" : color };
+	const color = warnings.length ? "orange" : capacity.available === null ? "blue" : "green";
+	return { lines: [...warnings, ...lines], color };
 }
