@@ -124,6 +124,14 @@ class TestTaskBudget(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self._save_task(lambda task: task.set("custom_time_allocation", []))
 
+	def test_task_save_keeps_budget_days_in_step_with_hours(self):
+		standard_hours = frappe.db.get_single_value("HR Settings", "standard_working_hours")
+		frappe.db.set_single_value("HR Settings", "standard_working_hours", 7)
+		self.addCleanup(frappe.db.set_single_value, "HR Settings", "standard_working_hours", standard_hours)
+		self._budget(21)
+		task = self._save_task(lambda task: None)
+		self.assertEqual(task.custom_time_allocation[0].days, 3)
+
 	def test_one_budget_row_per_person(self):
 		self._budget(20)
 

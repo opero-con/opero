@@ -20,6 +20,7 @@ def before_insert_task(doc, _method=None):
 
 def validate_task(doc, _method=None):
 	_validate_one_budget_row_per_person(doc)
+	_sync_budget_days(doc)
 	_update_budget_usage(doc)
 
 
@@ -44,6 +45,15 @@ def _validate_one_budget_row_per_person(doc):
 		if row.personnel in people:
 			frappe.throw(_("{0} has more than one Hours Budget row.").format(row.personnel))
 		people.add(row.personnel)
+
+
+def _sync_budget_days(doc):
+	"""Budget Hours is stored; Budget Days follows it at the standard working day."""
+	standard_hours = flt(frappe.db.get_single_value("HR Settings", "standard_working_hours"))
+	if not standard_hours:
+		return
+	for row in doc.get("custom_time_allocation") or []:
+		row.days = flt(flt(row.hours) / standard_hours, 2)
 
 
 def _update_budget_usage(doc):

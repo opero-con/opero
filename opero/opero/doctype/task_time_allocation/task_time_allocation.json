@@ -32,14 +32,14 @@
   {
    "idx": 2,
    "fieldname": "days",
-   "label": "Days",
+   "label": "Budget Days",
    "fieldtype": "Float",
    "permlevel": 0,
    "columns": 0,
-   "in_list_view": 0,
-   "precision": "1",
+   "in_list_view": 1,
+   "precision": "2",
    "length": 0,
-   "hidden": 1
+   "non_negative": 1
   },
   {
    "idx": 3,

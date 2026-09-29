@@ -22,5 +22,5 @@ ADR-0005 made Task Allocation the only allocation record and derived the task's 
 
 - Budget changes are in the Task's version history; overruns are visible on the row until the budget is raised or allocations are cancelled.
 - A budget can be lowered below submitted allocations; the difference shows as an overrun.
-- Hours are the budget unit; the old Days column is hidden.
+- Hours are the stored budget unit. **Budget Days** can be typed instead and converts at HR Settings standard working hours; days are recalculated from hours on save.
 - The Time Allocation table is kept in the follow-up cleanup; only Task Time Distribution is removed.

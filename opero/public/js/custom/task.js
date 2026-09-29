@@ -30,7 +30,38 @@ frappe.ui.form.on("Task Time Allocation", {
 	new_allocation(frm, cdt, cdn) {
 		opero.task_allocation.new_for_budget_row(frm, locals[cdt][cdn]);
 	},
+	days(frm, cdt, cdn) {
+		opero.task_allocation.sync_budget(
+			cdt,
+			cdn,
+			"days",
+			"hours",
+			(days, standard) => days * standard
+		);
+	},
+	hours(frm, cdt, cdn) {
+		opero.task_allocation.sync_budget(
+			cdt,
+			cdn,
+			"hours",
+			"days",
+			(hours, standard) => hours / standard
+		);
+	},
 });
+
+opero.task_allocation.sync_budget = function (cdt, cdn, source, target, convert) {
+	opero.task_allocation.standard_hours ||= frappe.db.get_single_value(
+		"HR Settings",
+		"standard_working_hours"
+	);
+	opero.task_allocation.standard_hours.then((standard) => {
+		const row = locals[cdt][cdn];
+		if (!flt(standard) || !row) return;
+		const value = flt(convert(flt(row[source]), flt(standard)), 2);
+		if (flt(row[target]) !== value) frappe.model.set_value(cdt, cdn, target, value);
+	});
+};
 
 opero.task_allocation.row_button = function (css_class, title, icon) {
 	return (value, df, options, doc) =>
