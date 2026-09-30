@@ -374,10 +374,8 @@ frappe.ui.form.on("Timesheet", {
 	},
 });
 
-const refresh_allocation_balances = frappe.utils.debounce(async (frm) => {
-	frm.dashboard.parent.find(".opero-allocation").remove();
-	if (frm.doc.docstatus !== 0 || !frm.doc.employee || !frm.doc.parent_project) return;
-	const snapshot = JSON.stringify({
+function allocation_snapshot(frm) {
+	return JSON.stringify({
 		name: frm.doc.name,
 		employee: frm.doc.employee,
 		project: frm.doc.parent_project,
@@ -385,31 +383,72 @@ const refresh_allocation_balances = frappe.utils.debounce(async (frm) => {
 			task: row.task,
 			from_time: row.from_time,
 			hours: row.hours,
+			project: row.project,
 		})),
 	});
-	const request = JSON.parse(snapshot);
-	const balances = await frappe.xcall("opero.api.timesheet.get_allocation_balances", {
-		employee: request.employee,
-		project: request.project,
-		time_logs: request.rows,
-		timesheet_name: frm.is_new() ? null : frm.doc.name,
-	});
-	const current = JSON.stringify({
-		name: frm.doc.name,
-		employee: frm.doc.employee,
-		project: frm.doc.parent_project,
-		rows: (frm.doc.time_logs || []).map((row) => ({
-			task: row.task,
-			from_time: row.from_time,
-			hours: row.hours,
-		})),
-	});
-	if (snapshot !== current || frm.doc.docstatus !== 0) return;
-	const escape = frappe.utils.escape_html;
+}
+
+function show_allocation_section(frm, body) {
 	frm.dashboard.parent.find(".opero-allocation").remove();
 	frm.dashboard.show();
-	frm.dashboard.add_section(
-		`<table class="table table-bordered"><thead><tr>
+	frm.dashboard.add_section(body, __("Allocations"), "custom opero-allocation");
+}
+
+function allocation_message(message, css_class = "text-muted") {
+	return `<div class="${css_class} small">${frappe.utils.escape_html(message)}</div>`;
+}
+
+const refresh_allocation_balances = frappe.utils.debounce(async (frm) => {
+	const request_id = (frm.__opero_allocation_request_id || 0) + 1;
+	frm.__opero_allocation_request_id = request_id;
+	if (frm.doc.docstatus === 2 || !frm.doc.employee) {
+		frm.dashboard.parent.find(".opero-allocation").remove();
+		return;
+	}
+
+	const snapshot = allocation_snapshot(frm);
+	const request = JSON.parse(snapshot);
+	show_allocation_section(frm, allocation_message(__("Loading allocations…")));
+
+	let balances;
+	try {
+		balances = await frappe.xcall("opero.api.timesheet.get_allocation_balances", {
+			employee: request.employee,
+			project: request.project,
+			time_logs: request.rows,
+			timesheet_name: frm.is_new() ? null : frm.doc.name,
+		});
+	} catch (error) {
+		if (frm.__opero_allocation_request_id !== request_id) return;
+		show_allocation_section(
+			frm,
+			allocation_message(
+				__("Could not load allocations. Change an entry or refresh the form to retry."),
+				"text-danger"
+			)
+		);
+		return;
+	}
+
+	if (
+		frm.__opero_allocation_request_id !== request_id ||
+		snapshot !== allocation_snapshot(frm) ||
+		frm.doc.docstatus === 2
+	)
+		return;
+
+	if (!Array.isArray(balances) || !balances.length) {
+		show_allocation_section(
+			frm,
+			allocation_message(__("Add a task and date to see monthly allocation balances."))
+		);
+		return;
+	}
+
+	const escape = frappe.utils.escape_html;
+	show_allocation_section(
+		frm,
+		`<div class="table-responsive"><table class="table table-bordered"><thead><tr>
         <th>${__("Task / Month")}</th><th>${__("Allocated")}</th><th>${__("Submitted")}</th>
         <th>${__("This sheet")}</th><th>${__("Remaining")}</th></tr></thead><tbody>
         ${balances
@@ -419,9 +458,7 @@ const refresh_allocation_balances = frappe.utils.debounce(async (frm) => {
         <td class="${row.remaining < 0 ? "text-danger" : ""}">${row.remaining}</td></tr>`
 			)
 			.join("")}
-        </tbody></table>`,
-		__("Allocations"),
-		"custom opero-allocation"
+		</tbody></table></div>`
 	);
 }, 300);
 

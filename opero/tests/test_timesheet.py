@@ -181,6 +181,13 @@ class TestTimesheetBalances(FrappeTestCase):
 		)
 		timesheet._validate_allocated_hours(doc)
 
+
+	def test_live_balance_preview_accepts_row_level_projects(self):
+		from opero.api.timesheet import get_allocation_balances
+
+		doc = self._draft([2])
+		balance = get_allocation_balances(employee=self.employee, time_logs=doc.time_logs)[0]
+		self.assertEqual(balance["task"], self.task)
 	def test_submission_blocked_after_cutoff_day(self):
 		doc = self._draft([2], date="2026-01-15")
 		with patch.object(frappe, "get_roles", return_value=["Projects User"]):
