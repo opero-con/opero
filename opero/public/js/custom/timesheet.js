@@ -471,11 +471,34 @@ frappe.ui.form.on("Timesheet", {
 	parent_project: refresh_allocation_balances,
 });
 frappe.ui.form.on("Timesheet Detail", {
-	task: refresh_allocation_balances,
+	task(frm, cdt, cdn) {
+		refresh_allocation_balances(frm);
+		return append_task_to_notes(frm, cdt, cdn);
+	},
 	from_time: refresh_allocation_balances,
 	hours: refresh_allocation_balances,
 	time_logs_remove: refresh_allocation_balances,
 });
+
+async function append_task_to_notes(frm, cdt, cdn) {
+	if (frm.doc.docstatus !== 0) return;
+	const row = frappe.get_doc(cdt, cdn);
+	const task = row?.task;
+	if (!task) return;
+
+	let label = row.custom_project_task;
+	if (!label) {
+		const result = await frappe.db.get_value("Task", task, "subject");
+		if (frappe.get_doc(cdt, cdn)?.task !== task) return;
+		label = result?.message?.subject || task;
+	}
+
+	const escaped_label = frappe.utils.escape_html(label);
+	const heading = `${escaped_label}:`;
+	const note = frm.doc.note || "";
+	if (note.includes(heading)) return;
+	await frm.set_value("note", `${note}<p>${heading} </p>`);
+}
 
 function update_row_week_of_month(frm, cdt, cdn) {
 	if (frm.doc.docstatus !== 0) return;

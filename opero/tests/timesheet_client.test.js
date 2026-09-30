@@ -14,6 +14,12 @@ function loadForm(allocationBalances = [], allocationRequest = null) {
 	const frappe = {
 		ui: { form: { on: (doctype, events) => handlers.push({ doctype, events }) } },
 		utils: { debounce: (fn) => fn, escape_html: (value) => String(value || "") },
+		db: {
+			get_value: async (doctype, name, fieldname) => ({
+				message: { [fieldname]: `Subject ${name}` },
+			}),
+			get_list: async () => [],
+		},
 		get_meta: () => ({
 			fields: [
 				"task",
@@ -69,7 +75,9 @@ function loadForm(allocationBalances = [], allocationRequest = null) {
 		},
 		refresh_field() {},
 		dirty() {},
-		set_value: async () => {},
+		set_value: async (fieldname, value) => {
+			frm.doc[fieldname] = value;
+		},
 		is_new: () => true,
 	};
 	return {
@@ -95,6 +103,42 @@ test("Timesheet hides report-only and unused fields on the form", async () => {
 	assert.equal(linksAreaHidden(), true);
 });
 
+test("selecting a task appends its subject to Notes once", async () => {
+	const { handlers, rows, frm } = loadForm();
+	frm.doc.note = "<p>Existing note</p>";
+	const row = {
+		doctype: "Timesheet Detail",
+		name: "task-note-row",
+		task: "TASK-1",
+		custom_project_task: "Design",
+	};
+	frm.doc.time_logs.push(row);
+	rows.set(row.name, row);
+	const taskHandler = handlers.find(
+		({ doctype, events }) =>
+			doctype === "Timesheet Detail" && String(events.task).includes("append_task_to_notes")
+	);
+
+	await taskHandler.events.task(frm, row.doctype, row.name);
+	await taskHandler.events.task(frm, row.doctype, row.name);
+
+	assert.equal(frm.doc.note, "<p>Existing note</p><p>Design: </p>");
+});
+
+test("task Notes fallback uses the Task subject", async () => {
+	const { handlers, rows, frm } = loadForm();
+	const row = { doctype: "Timesheet Detail", name: "task-note-fallback", task: "TASK-2" };
+	frm.doc.time_logs.push(row);
+	rows.set(row.name, row);
+	const taskHandler = handlers.find(
+		({ doctype, events }) =>
+			doctype === "Timesheet Detail" && String(events.task).includes("append_task_to_notes")
+	);
+
+	await taskHandler.events.task(frm, row.doctype, row.name);
+
+	assert.equal(frm.doc.note, "<p>Subject TASK-2: </p>");
+});
 test("allocation summary uses concise labels", async () => {
 	const { handlers, frm, dashboardSections } = loadForm([
 		{
