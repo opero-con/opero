@@ -148,3 +148,5 @@ opero.patches.v0_4.copy_task_time_distribution_to_task_allocation
 opero.patches.v0_4.point_allocation_reports_at_task_allocation
 opero.patches.v0_4.set_task_budgets_from_allocations
 opero.patches.v0_4.restore_task_label
+
+opero.patches.v0_4.set_timesheet_log_grid_columns

@@ -10,6 +10,7 @@ function loadForm(allocationBalances = [], allocationRequest = null) {
 	const handlers = [];
 	const rows = new Map();
 	const dashboardSections = [];
+	let linksAreaHidden = false;
 	const frappe = {
 		ui: { form: { on: (doctype, events) => handlers.push({ doctype, events }) } },
 		utils: { debounce: (fn) => fn, escape_html: (value) => String(value || "") },
@@ -51,6 +52,7 @@ function loadForm(allocationBalances = [], allocationRequest = null) {
 	const frm = {
 		doc: { docstatus: 0, time_logs: [] },
 		dashboard: {
+			links_area: { hide: () => (linksAreaHidden = true) },
 			parent: { find: () => ({ remove() {} }) },
 			show() {},
 			add_section: (...args) => dashboardSections.push(args),
@@ -70,16 +72,27 @@ function loadForm(allocationBalances = [], allocationRequest = null) {
 		set_value: async () => {},
 		is_new: () => true,
 	};
-	return { handlers, rows, frm, buttons, hiddenFields, dashboardSections };
+	return {
+		handlers,
+		rows,
+		frm,
+		buttons,
+		hiddenFields,
+		dashboardSections,
+		linksAreaHidden: () => linksAreaHidden,
+	};
 }
 
 test("Timesheet hides report-only and unused fields on the form", async () => {
-	const { handlers, frm, hiddenFields } = loadForm();
+	const { handlers, frm, hiddenFields, linksAreaHidden } = loadForm();
 	for (const { doctype, events } of handlers)
 		if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
 	assert.equal(hiddenFields.has("employee_name"), true);
 	assert.equal(hiddenFields.has("workflow_state"), true);
-	assert.equal(hiddenFields.has("connections_tab"), true);
+	assert.equal(hiddenFields.has("department"), true);
+	assert.equal(hiddenFields.has("custom_total_spent_hours"), true);
+	assert.equal(hiddenFields.has("custom_pm_name"), true);
+	assert.equal(linksAreaHidden(), true);
 });
 
 test("allocation summary uses concise labels", async () => {

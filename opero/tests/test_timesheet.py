@@ -26,6 +26,12 @@ class TestTimesheetBalances(FrappeTestCase):
 		self.assertEqual(field.default, "TS.YY.WW.##")
 		self.assertEqual(field.options, "TS.YY.WW.##")
 
+
+	def test_time_log_grid_has_three_ordered_columns(self):
+		meta = frappe.get_meta("Timesheet Detail")
+		visible = [field for field in meta.fields if field.in_list_view]
+		self.assertEqual([field.fieldname for field in visible], ["task", "from_time", "hours"])
+		self.assertEqual([field.columns for field in visible], [5, 4, 1])
 	def test_allocated_hours_is_not_a_grid_column(self):
 		self.assertFalse(frappe.get_meta("Timesheet Detail").get_field("custom_a_hrs").in_list_view)
 
