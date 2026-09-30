@@ -17,12 +17,13 @@ def get_total_spent_hours(employee, project):
 
 
 @frappe.whitelist()
-def get_allocation_balances(employee, project, time_logs, timesheet_name=None):
+def get_allocation_balances(employee, project=None, time_logs=None, timesheet_name=None):
 	from frappe.utils import get_datetime
 
 	from opero.events.timesheet import get_monthly_balances
 
-	frappe.get_doc("Project", project).check_permission("read")
+	if project:
+		frappe.get_doc("Project", project).check_permission("read")
 	frappe.get_doc("Employee", employee).check_permission("read")
 	if timesheet_name and frappe.db.exists("Timesheet", timesheet_name):
 		frappe.get_doc("Timesheet", timesheet_name).check_permission("read")
@@ -32,15 +33,18 @@ def get_allocation_balances(employee, project, time_logs, timesheet_name=None):
 	if not rows:
 		return []
 	tasks = {row.task for row in rows}
+	filters = {"name": ["in", list(tasks)]}
+	if project:
+		filters["project"] = project
 	visible = frappe.get_list(
 		"Task",
-		filters={"name": ["in", list(tasks)], "project": project},
+		filters=filters,
 		fields=["name", "subject"],
 		limit_page_length=0,
 	)
 	task_names = {row.name: row.subject or row.name for row in visible}
 	if tasks != set(task_names):
-		frappe.throw("Every task must be an accessible task in this project.", frappe.PermissionError)
+		frappe.throw("Every task must be accessible and belong to the selected project.", frappe.PermissionError)
 	allocation, usage = get_monthly_balances(employee, rows, timesheet_name)
 	current = {}
 	for row in rows:

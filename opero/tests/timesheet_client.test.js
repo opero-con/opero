@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const test = require("node:test");
 const moment = require("../../../frappe/node_modules/moment");
 
-function loadForm(allocationBalances = []) {
+function loadForm(allocationBalances = [], allocationRequest = null) {
 	const handlers = [];
 	const rows = new Map();
 	const dashboardSections = [];
@@ -34,7 +34,11 @@ function loadForm(allocationBalances = []) {
 				),
 		},
 		xcall: async (method) =>
-			method === "opero.api.timesheet.get_allocation_balances" ? allocationBalances : 0,
+			method === "opero.api.timesheet.get_allocation_balances"
+				? allocationRequest
+					? allocationRequest()
+					: allocationBalances
+				: 0,
 	};
 	const context = { frappe, moment, __: (value) => value, document: {}, setTimeout };
 	vm.createContext(context);
@@ -80,7 +84,15 @@ test("Timesheet hides report-only and unused fields on the form", async () => {
 
 test("allocation summary uses concise labels", async () => {
 	const { handlers, frm, dashboardSections } = loadForm([
-		{ task: "TASK-1", task_name: "Design", month: "Sep 2026", allocated: 10, submitted: 3, current: 2, remaining: 5 },
+		{
+			task: "TASK-1",
+			task_name: "Design",
+			month: "Sep 2026",
+			allocated: 10,
+			submitted: 3,
+			current: 2,
+			remaining: 5,
+		},
 	]);
 	Object.assign(frm.doc, { employee: "EMP-1", parent_project: "PROJ-1" });
 	const handler = handlers.find(
@@ -90,8 +102,9 @@ test("allocation summary uses concise labels", async () => {
 
 	await handler.events.refresh(frm);
 
-	assert.equal(dashboardSections.length, 1);
-	const [html, title] = dashboardSections[0];
+	assert.equal(dashboardSections.length, 2);
+	assert.match(dashboardSections[0][0], /Loading allocations/);
+	const [html, title] = dashboardSections.at(-1);
 	assert.equal(title, "Allocations");
 	for (const heading of ["Task / Month", "Allocated", "Submitted", "This sheet", "Remaining"]) {
 		assert.match(html, new RegExp(`<th>${heading}</th>`));
@@ -99,6 +112,104 @@ test("allocation summary uses concise labels", async () => {
 	assert.doesNotMatch(html, /Remaining after this timesheet|This timesheet/);
 });
 
+test("allocation summary is available on submitted sheets without a parent project", async () => {
+	const { handlers, frm, dashboardSections } = loadForm([
+		{
+			task: "TASK-1",
+			task_name: "Design",
+			month: "Sep 2026",
+			allocated: 10,
+			submitted: 3,
+			current: 2,
+			remaining: 5,
+		},
+	]);
+	Object.assign(frm.doc, {
+		docstatus: 1,
+		employee: "EMP-1",
+		parent_project: null,
+		time_logs: [{ task: "TASK-1", project: "PROJ-1", from_time: "2026-09-10", hours: 2 }],
+	});
+	const handler = handlers.find(
+		({ doctype, events }) =>
+			doctype === "Timesheet" && String(events.refresh).includes("get_allocation_balances")
+	);
+
+	await handler.events.refresh(frm);
+
+	assert.match(dashboardSections.at(-1)[0], /Design/);
+});
+test("allocation summary shows an empty state for incomplete rows", async () => {
+	const { handlers, frm, dashboardSections } = loadForm();
+	Object.assign(frm.doc, { employee: "EMP-1", parent_project: "PROJ-1" });
+	const handler = handlers.find(
+		({ doctype, events }) =>
+			doctype === "Timesheet" && String(events.refresh).includes("get_allocation_balances")
+	);
+
+	await handler.events.refresh(frm);
+
+	assert.match(dashboardSections.at(-1)[0], /Add a task and date/);
+});
+
+test("allocation summary replaces loading with a recoverable error", async () => {
+	const { handlers, frm, dashboardSections } = loadForm([], async () => {
+		throw new Error("offline");
+	});
+	Object.assign(frm.doc, { employee: "EMP-1", parent_project: "PROJ-1" });
+	const handler = handlers.find(
+		({ doctype, events }) =>
+			doctype === "Timesheet" && String(events.refresh).includes("get_allocation_balances")
+	);
+
+	await handler.events.refresh(frm);
+
+	assert.match(dashboardSections.at(-1)[0], /Could not load allocations/);
+	assert.match(dashboardSections.at(-1)[0], /text-danger/);
+});
+
+test("allocation summary ignores an older response", async () => {
+	const pending = [];
+	const { handlers, frm, dashboardSections } = loadForm(
+		[],
+		() => new Promise((resolve) => pending.push(resolve))
+	);
+	Object.assign(frm.doc, { employee: "EMP-1", parent_project: "PROJ-1" });
+	const handler = handlers.find(
+		({ doctype, events }) =>
+			doctype === "Timesheet" && String(events.refresh).includes("get_allocation_balances")
+	);
+
+	const first = handler.events.refresh(frm);
+	const second = handler.events.refresh(frm);
+	pending[1]([
+		{
+			task: "NEW",
+			task_name: "Newest",
+			month: "Sep 2026",
+			allocated: 8,
+			submitted: 1,
+			current: 2,
+			remaining: 5,
+		},
+	]);
+	await second;
+	pending[0]([
+		{
+			task: "OLD",
+			task_name: "Stale",
+			month: "Sep 2026",
+			allocated: 8,
+			submitted: 1,
+			current: 2,
+			remaining: 5,
+		},
+	]);
+	await first;
+
+	assert.match(dashboardSections.at(-1)[0], /Newest/);
+	assert.doesNotMatch(dashboardSections.at(-1)[0], /Stale/);
+});
 for (const [start, hours] of [
 	["2026-01-31 23:00:00", 3],
 	["2026-01-31 23:00:00", 50],
