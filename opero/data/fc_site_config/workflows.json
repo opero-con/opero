@@ -524,6 +524,20 @@
     "doctype": "Workflow Transition"
    },
    {
+    "idx": 5,
+    "state": "Approved",
+    "action": "Cancel",
+    "next_state": "Cancelled",
+    "allowed": "System Manager",
+    "allow_self_approval": 1,
+    "condition": null,
+    "workflow_builder_id": null,
+    "parentfield": "transitions",
+    "parenttype": "Workflow",
+    "send_email_to_creator": 0,
+    "doctype": "Workflow Transition"
+   },
+   {
     "idx": 2,
     "state": "Submitted",
     "action": "Approve",
