@@ -12,7 +12,7 @@ from opero.opero_site.utils import paragraphs as split_paragraphs
 
 _FRONTMATTER = re.compile(r"^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?$")
 # Plain YAML scalars may contain spaces ("cover: /media/publications/Workshop 2 - 8 (1).jpg"),
-# so a reference runs to end of line. The site build validates references the same way.
+# so a reference runs to the end of its value or line, not to the first whitespace.
 _MEDIA_REFERENCE = re.compile(r"/media/[^\r\n]+")
 
 
@@ -32,8 +32,31 @@ def to_markdown(frontmatter: dict, body: str = "") -> str:
 	return text
 
 
-def media_references(text: str) -> set[str]:
+def media_reference_lines(text: str) -> set[str]:
+	"""Raw `/media/...` lines, as the content repo CI scans them."""
 	return {match.strip().strip("\"'").lstrip("/") for match in _MEDIA_REFERENCE.findall(text)}
+
+
+def media_references(text: str) -> set[str]:
+	"""Repo paths of `/media/...` files a Markdown file uses, reading folded frontmatter values whole."""
+	try:
+		data, body = split_markdown(text)
+	except ValueError:
+		return media_reference_lines(text)
+	return media_reference_lines(body) | {
+		reference for value in _strings_in(data) for reference in media_reference_lines(value)
+	}
+
+
+def _strings_in(value):
+	if isinstance(value, str):
+		yield value
+	elif isinstance(value, dict):
+		for item in value.values():
+			yield from _strings_in(item)
+	elif isinstance(value, list):
+		for item in value:
+			yield from _strings_in(item)
 
 
 def parse_frontmatter(text: str) -> dict:

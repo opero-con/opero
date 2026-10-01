@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import difflib
+from urllib.parse import unquote
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import escape_html, now_datetime
 
 from opero.opero.doctype.enterprise.enterprise import enterprise_content_slug
 from opero.opero_site.cover_focal_point import fill_missing_cover_framing
@@ -390,6 +391,12 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 		if blobs.get(path) != git_blob_sha(content):
 			files.append((path, content))
 
+	remaining = list(merged)
+	if keep:
+		remaining.extend(repo.existing_files(keep, repo.base_branch).items())
+	references = {path: media_references(content) for path, content in remaining}
+	require_media_present(references, set(blobs) | set(media_paths))
+
 	# A media file is still wanted if it was freshly re-exported this pass,
 	# OR if any content file that will remain in the repo after this deploy
 	# still references it. Without the latter, any doc whose media field
@@ -397,15 +404,26 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 	# state for publications and team members, and the fallback for
 	# enterprises whenever the logo re-download fails) looks orphaned and
 	# gets pruned on the very next publish, even though nothing changed.
-	referenced_media = set(media_paths)
-	for _path, content in merged:
-		referenced_media.update(media_references(content))
-	if keep:
-		for content in repo.existing_files(keep, repo.base_branch).values():
-			referenced_media.update(media_references(content))
-
+	referenced_media = set(media_paths).union(*references.values())
 	files.extend(deleted_managed_files(list(referenced_media), list(blobs), MEDIA_DELETE_PREFIXES))
 	return files
+
+
+def require_media_present(references: dict[str, set[str]], available: set[str]) -> None:
+	"""Refuse a deploy the website build would reject for a missing `/media/...` file."""
+	missing = [
+		_("{0} uses {1}").format(content_label_for(path)["title"], reference)
+		for path, paths in sorted(references.items())
+		for reference in sorted(paths)
+		if unquote(reference) not in available
+	]
+	if missing:
+		frappe.throw(
+			_("The website would fail to build because these media files are not in the content repository:")
+			+ "<br>"
+			+ "<br>".join(escape_html(line) for line in missing),
+			title=_("Missing media"),
+		)
 
 
 def pending_entries(files: list[tuple[str, str | None]]) -> list[dict]:
