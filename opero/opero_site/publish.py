@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import difflib
-import re
 
 import frappe
 from frappe import _
@@ -11,7 +10,7 @@ from opero.opero.doctype.enterprise.enterprise import enterprise_content_slug
 from opero.opero_site.cover_focal_point import fill_missing_cover_framing
 from opero.opero_site.doctype.partner.partner import partner_content_slug
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
-from opero.opero_site.markdown import preserve_unmanaged_frontmatter, to_markdown
+from opero.opero_site.markdown import media_references, preserve_unmanaged_frontmatter, to_markdown
 from opero.opero_site.media import export_planned_media, git_blob_sha
 from opero.opero_site.publish_status import (
 	ALWAYS_ON_SITE,
@@ -363,19 +362,6 @@ def content_repo_from_conf() -> ContentRepo:
 	return ContentRepo(token=token, repo=repo, base_branch=base_branch)
 
 
-# Frontmatter is plain YAML scalars, which may contain unescaped spaces
-# (e.g. "cover: /media/publications/Workshop 2 - 8 (1).jpg"), so a
-# reference runs to end of line, not to the first whitespace.
-_MEDIA_REFERENCE_PATTERN = re.compile(r"/media/[^\r\n]+")
-
-
-def _media_refs_in_text(text: str) -> set[str]:
-	refs = set()
-	for match in _MEDIA_REFERENCE_PATTERN.findall(text):
-		refs.add(match.strip().strip("\"'").lstrip("/"))
-	return refs
-
-
 def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | bytes | None]]:
 	fill_missing_cover_framing(repo)
 	planned, keep = collect_content_plan()
@@ -413,10 +399,10 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 	# gets pruned on the very next publish, even though nothing changed.
 	referenced_media = set(media_paths)
 	for _path, content in merged:
-		referenced_media.update(_media_refs_in_text(content))
+		referenced_media.update(media_references(content))
 	if keep:
 		for content in repo.existing_files(keep, repo.base_branch).values():
-			referenced_media.update(_media_refs_in_text(content))
+			referenced_media.update(media_references(content))
 
 	files.extend(deleted_managed_files(list(referenced_media), list(blobs), MEDIA_DELETE_PREFIXES))
 	return files
