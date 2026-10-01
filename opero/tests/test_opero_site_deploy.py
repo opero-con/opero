@@ -9,7 +9,12 @@ from PIL import Image, ImageDraw
 
 from opero.opero_site.github import ContentRepo, GithubError, changed_files, deleted_managed_files
 from opero.opero_site.load import load_files
-from opero.opero_site.markdown import parse_frontmatter, preserve_unmanaged_frontmatter, to_markdown
+from opero.opero_site.markdown import (
+	media_references,
+	parse_frontmatter,
+	preserve_unmanaged_frontmatter,
+	to_markdown,
+)
 from opero.opero_site.media import export_markdown_media, export_planned_media, git_blob_sha
 from opero.opero_site.publish import (
 	clear_pending_cache,
@@ -217,6 +222,19 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertTrue(text.endswith("---\n"))
 		self.assertIn("name: Anita Onyango", text)
 		self.assertIn("active: true", text)
+
+	def test_markdown_keeps_long_media_paths_on_one_line(self):
+		path = "/media/publications/Delegated Management in Practice- Lessons from KIWASCO\u2019s Master Operators Report 27.07.26  (1).pdf"
+		text = to_markdown({"slug": "dmm", "fileUrl": path})
+		self.assertIn(f"fileUrl: {path}\n", text)
+		self.assertEqual(media_references(text), {path.lstrip("/")})
+
+	def test_changed_files_rewrites_wrapped_media_paths(self):
+		path = "content/publications/dmm.md"
+		wrapped = "---\nslug: dmm\nfileUrl: /media/publications/Long Report\n  Name (1).pdf\n---\n"
+		planned = to_markdown({"slug": "dmm", "fileUrl": "/media/publications/Long Report Name (1).pdf"})
+		self.assertEqual(parse_frontmatter(wrapped), parse_frontmatter(planned))
+		self.assertEqual(changed_files({path: wrapped}, [(path, planned)]), [(path, planned)])
 
 	def test_changed_files_skips_identical_content(self):
 		planned = [("content/team/a.md", "one"), ("content/team/b.md", "two")]

@@ -11,6 +11,9 @@ from opero.opero_site.utils import lines as split_lines
 from opero.opero_site.utils import paragraphs as split_paragraphs
 
 _FRONTMATTER = re.compile(r"^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?$")
+# Plain YAML scalars may contain spaces ("cover: /media/publications/Workshop 2 - 8 (1).jpg"),
+# so a reference runs to end of line. The site build validates references the same way.
+_MEDIA_REFERENCE = re.compile(r"/media/[^\r\n]+")
 
 
 def to_markdown(frontmatter: dict, body: str = "") -> str:
@@ -19,6 +22,7 @@ def to_markdown(frontmatter: dict, body: str = "") -> str:
 		sort_keys=False,
 		allow_unicode=True,
 		default_flow_style=False,
+		width=float("inf"),
 	)
 	text = f"---\n{payload}---\n"
 	if body and body.strip():
@@ -26,6 +30,10 @@ def to_markdown(frontmatter: dict, body: str = "") -> str:
 			body += "\n"
 		text += body
 	return text
+
+
+def media_references(text: str) -> set[str]:
+	return {match.strip().strip("\"'").lstrip("/") for match in _MEDIA_REFERENCE.findall(text)}
 
 
 def parse_frontmatter(text: str) -> dict:

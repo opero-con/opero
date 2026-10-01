@@ -8,7 +8,7 @@ import frappe
 import requests
 from frappe import _
 
-from opero.opero_site.markdown import same_managed_content
+from opero.opero_site.markdown import media_references, same_managed_content
 
 MAX_CONCURRENT_REQUESTS = 8
 BLOB_CACHE_PREFIX = "opero_content_blob"
@@ -52,6 +52,8 @@ def changed_files(existing: dict[str, str], planned: list[tuple[str, str]]) -> l
 		if current is None:
 			out.append((path, content))
 		elif not same_managed_content(path, current, content):
+			out.append((path, content))
+		elif media_references(current) != media_references(content):
 			out.append((path, content))
 	return out
 
