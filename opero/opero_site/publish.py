@@ -30,6 +30,16 @@ DEFAULT_BRANCH = "main"
 MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/", "content/enterprises/", "content/partners/")
 MEDIA_DELETE_PREFIXES = ("media/publications/", "media/team/", "media/enterprises/", "media/partners/")
 DEPLOY_LOG_LIMIT = 10
+DEPLOY_LOG_FIELDS = (
+	"deployed_on",
+	"deployed_by",
+	"commit_url",
+	"sha",
+	"file_count",
+	"paths",
+	"website_status",
+	"build_url",
+)
 CONTENT_DOCTYPES = ("Publication", "Employee", "Enterprise", "Partner")
 CONTENT_SINGLES = ("Home Page", "Privacy policy", "Site Settings")
 SITE_CONTENT_DOCTYPES = CONTENT_DOCTYPES + CONTENT_SINGLES
@@ -444,19 +454,10 @@ def record_deploy(commit_url: str, sha: str, files: list[tuple[str, str | None]]
 			"sha": sha,
 			"file_count": len(files),
 			"paths": ", ".join(path for path, _content in files),
+			"website_status": "Building",
 		}
 	]
-	for row in doc.deploy_log:
-		entries.append(
-			{
-				"deployed_on": row.deployed_on,
-				"deployed_by": row.deployed_by,
-				"commit_url": row.commit_url,
-				"sha": row.sha,
-				"file_count": row.file_count,
-				"paths": row.paths,
-			}
-		)
+	entries.extend({field: row.get(field) for field in DEPLOY_LOG_FIELDS} for row in doc.deploy_log)
 	doc.set("deploy_log", [])
 	for entry in entries[:DEPLOY_LOG_LIMIT]:
 		doc.append("deploy_log", entry)

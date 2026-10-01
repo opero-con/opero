@@ -10,7 +10,9 @@
   "commit_url",
   "sha",
   "file_count",
-  "paths"
+  "paths",
+  "website_status",
+  "build_url"
  ],
  "fields": [
   {
@@ -48,6 +50,21 @@
    "fieldname": "paths",
    "fieldtype": "Small Text",
    "label": "Paths"
+  },
+  {
+   "default": "",
+   "fieldname": "website_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Website",
+   "options": "\nBuilding\nLive\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "build_url",
+   "fieldtype": "Small Text",
+   "label": "Build",
+   "read_only": 1
   }
  ],
  "istable": 1,
@@ -57,7 +74,7 @@
  "name": "Deploy Log",
  "owner": "Administrator",
  "permissions": [],
- "modified": "2026-08-26 23:20:00.000000",
+ "modified": "2026-10-01 12:00:00.000000",
  "modified_by": "Administrator",
  "track_changes": 0,
  "has_web_view": 0
