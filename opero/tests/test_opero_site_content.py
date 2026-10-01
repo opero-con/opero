@@ -292,6 +292,57 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(doc.to_site_frontmatter()["year"], 2024)
 		self.assertEqual(doc.to_site_frontmatter()["publishedAt"], "2024-06-15")
 
+	def test_publication_moves_multi_paragraph_summary_into_empty_body(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Long Summary",
+				"published_on": "2026-10-01",
+				"publication_type": "Case study",
+				"summary": "First paragraph.\n\nSecond & third.\n  \nLast one.",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		frontmatter = doc.to_site_frontmatter()
+		self.assertEqual(frontmatter["summary"], "First paragraph.")
+		self.assertEqual(
+			frontmatter["body"],
+			[{"paragraphs": ["First paragraph.", "Second & third.", "Last one."]}],
+		)
+
+	def test_publication_keeps_summary_when_body_is_filled(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Summary With Body",
+				"published_on": "2026-10-01",
+				"publication_type": "Case study",
+				"summary": "First paragraph.\n\nSecond paragraph.",
+				"body": "<p>The real body.</p>",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.assertEqual(doc.summary, "First paragraph.\n\nSecond paragraph.")
+		self.assertEqual(doc.to_site_frontmatter()["body"], [{"paragraphs": ["The real body."]}])
+
+	def test_publication_load_keeps_multi_paragraph_summary(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Publication",
+				"title": "Loaded Summary",
+				"published_on": "2026-10-01",
+				"publication_type": "Case study",
+				"summary": "First paragraph.\n\nSecond paragraph.",
+			}
+		)
+		frappe.flags.opero_site_syncing = True
+		try:
+			doc.insert(ignore_permissions=True)
+		finally:
+			frappe.flags.opero_site_syncing = False
+		self.assertEqual(doc.summary, "First paragraph.\n\nSecond paragraph.")
+		self.assertNotIn("body", doc.to_site_frontmatter())
+
 	def test_publication_rejects_invalid_file_url(self):
 		doc = frappe.get_doc(
 			{
