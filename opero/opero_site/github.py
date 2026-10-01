@@ -115,6 +115,12 @@ class ContentRepo:
 			return None
 		return base64.b64decode(encoded.replace("\n", ""))
 
+	def get_check_run(self, sha: str, name: str) -> dict | None:
+		"""Latest check run called `name` on commit `sha`, or None before it starts."""
+		payload = self._api("GET", f"/repos/{self.repo}/commits/{sha}/check-runs?check_name={quote(name)}")
+		runs = payload.get("check_runs") or []
+		return runs[0] if runs else None
+
 	def get_blob_bytes(self, path: str, ref: str) -> bytes | None:
 		"""File content at any size; `get_bytes` returns nothing above 1 MB."""
 		sha = self.tree_blobs(ref).get(path)

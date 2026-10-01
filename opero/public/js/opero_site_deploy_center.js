@@ -35,10 +35,40 @@ function renderHistory(frm) {
 			}
 			parts.push(frappe.utils.escape_html(files));
 			parts.push(commitLink(row.commit_url, row.sha));
+			const status = websiteStatusPill(row);
+			if (status) {
+				parts.push(status);
+			}
 			return `<li>${parts.join(" · ")}</li>`;
 		})
 		.join("");
-	wrap.html(`<ol>${items}</ol>`);
+	wrap.html(`${failedDeployWarning(rows[0])}<ol>${items}</ol>`);
+}
+
+const WEBSITE_STATUS_COLORS = { Building: "orange", Live: "green", Failed: "red" };
+
+function websiteStatusPill(row) {
+	const color = WEBSITE_STATUS_COLORS[row.website_status];
+	if (!color) {
+		return "";
+	}
+	const label = frappe.utils.escape_html(__(row.website_status));
+	const pill = `<span class="indicator-pill ${color}">${label}</span>`;
+	if (!row.build_url) {
+		return pill;
+	}
+	const href = frappe.utils.escape_html(row.build_url);
+	return `<a href="${href}" target="_blank" rel="noopener">${pill}</a>`;
+}
+
+function failedDeployWarning(latest) {
+	if (latest.website_status !== "Failed") {
+		return "";
+	}
+	const message = __(
+		"The last deploy did not reach the website. The site still shows the previous version; open the build log for the reason."
+	);
+	return `<div class="alert alert-danger">${frappe.utils.escape_html(message)}</div>`;
 }
 
 function deployedByLabel(user) {
@@ -362,9 +392,11 @@ function deployWebsite(frm) {
 			const payload = r.message || {};
 			if (payload.commit_url) {
 				frappe.msgprint({
-					title: __("Deployed to website"),
+					title: __("Sent to website"),
 					indicator: "green",
-					message: commitLink(payload.commit_url, payload.sha),
+					message: `${commitLink(payload.commit_url, payload.sha)}<br>${frappe.utils.escape_html(
+						__("The website is building. Deploy Center shows when it is live, usually within a few minutes.")
+					)}`,
 				});
 				frm.reload_doc();
 				return;

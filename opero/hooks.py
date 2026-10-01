@@ -350,6 +350,12 @@ doc_events = {
 # 	],
 # }
 
+scheduler_events = {
+	"cron": {
+		"*/5 * * * *": ["opero.opero_site.build_status.refresh_build_statuses"],
+	},
+}
+
 # Testing
 # -------
 
