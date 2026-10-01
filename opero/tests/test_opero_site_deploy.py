@@ -2,6 +2,7 @@
 
 import base64
 import io
+from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -1026,6 +1027,27 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		).insert(ignore_permissions=True)
 		repo_path = "media/publications/honey-dipper.webp"
 		files = planned_content_changes(_FakeContentRepo(blobs={repo_path: "deadbeef"}))
+		self.assertNotIn((repo_path, None), files)
+
+	def test_planned_changes_refuse_a_reference_to_missing_media(self):
+		planned = [
+			(
+				"content/publications/lost-report.md",
+				to_markdown({"slug": "lost-report", "fileUrl": "/media/publications/Lost Report (1).pdf"}),
+			)
+		]
+		with patch("opero.opero_site.publish.collect_content_plan", return_value=(planned, [])):
+			with self.assertRaises(frappe.ValidationError) as raised:
+				planned_content_changes(_FakeContentRepo())
+		self.assertIn("media/publications/Lost Report (1).pdf", str(raised.exception))
+
+	def test_planned_changes_resolve_folded_media_in_kept_files(self):
+		draft = "content/publications/draft.md"
+		folded = "---\nslug: draft\nfileUrl: /media/publications/Long Report\n  Name (1).pdf\n---\n"
+		repo_path = "media/publications/Long Report Name (1).pdf"
+		repo = _FakeContentRepo(existing={draft: folded}, blobs={repo_path: "deadbeef", draft: "cafe"})
+		with patch("opero.opero_site.publish.collect_content_plan", return_value=([], [draft])):
+			files = planned_content_changes(repo)
 		self.assertNotIn((repo_path, None), files)
 
 	def test_planned_changes_frame_a_cover_that_lives_only_in_the_content_repo(self):
