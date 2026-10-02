@@ -44,7 +44,7 @@ CONTENT_DOCTYPES = ("Publication", "Employee", "Enterprise", "Partner")
 CONTENT_SINGLES = ("Home Page", "Privacy policy", "Site Settings")
 SITE_CONTENT_DOCTYPES = CONTENT_DOCTYPES + CONTENT_SINGLES
 PENDING_EVENT = "opero_site_pending"
-PENDING_CACHE_KEY = "opero_site_pending_files"
+PENDING_CACHE_KEY = "opero_site_pending_rows"
 
 CONTENT_PATHS = {
 	"Site Settings": "content/settings/general.md",
@@ -171,14 +171,15 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 		old_path = content_path_for(previous)
 		new_path = content_path_for(doc)
 		renamed = bool(old_path and new_path and old_path != new_path)
+		rename = {"path": old_path, "action": "delete", "source": [doc.doctype, doc.name]}
 		if renamed and doc.doctype == "Publication" and (
 			is_on_site(previous) or is_to_unpublish(previous) or is_on_site(doc) or is_to_unpublish(doc)
 		):
-			entries.append({"path": old_path, "action": "delete"})
+			entries.append(rename)
 		elif renamed and doc.doctype in ("Employee", "Enterprise", "Partner") and (
 			is_on_site(previous) or is_to_unpublish(previous)
 		):
-			entries.append({"path": old_path, "action": "delete"})
+			entries.append(rename)
 
 	path = content_path_for(doc)
 	if not path:
@@ -210,30 +211,41 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 
 
 def _unique_pending(entries: list[dict]) -> list[dict]:
-	by_path: dict[str, str] = {}
-	for row in entries:
-		by_path[row["path"]] = row["action"]
-	return [{"path": path, "action": action} for path, action in by_path.items()]
+	return list({row["path"]: row for row in entries}.values())
 
 
-def _pending_cache() -> dict[str, str]:
+def _pending_row(row: dict) -> dict:
+	"""Cached pending row: its action, plus the record a rename's old file belongs to."""
+	cached = {"path": row["path"], "action": row["action"]}
+	if row.get("source"):
+		cached["source"] = list(row["source"])
+	return cached
+
+
+def _pending_cache() -> dict[str, dict]:
 	return dict(frappe.cache.get_value(PENDING_CACHE_KEY) or {})
 
 
-def _set_pending_cache(by_path: dict[str, str]) -> None:
+def _set_pending_cache(by_path: dict[str, dict]) -> None:
 	frappe.cache.set_value(PENDING_CACHE_KEY, by_path)
 
 
 def merge_pending_cache(files: list[dict]) -> list[dict]:
 	by_path = _pending_cache()
 	for row in files:
-		by_path[row["path"]] = row["action"]
+		by_path[row["path"]] = _pending_row(row)
 	_set_pending_cache(by_path)
-	return [{"path": path, "action": action} for path, action in sorted(by_path.items())]
+	return [by_path[path] for path in sorted(by_path)]
 
 
 def replace_pending_cache(files: list[dict]) -> None:
-	_set_pending_cache({row["path"]: row["action"] for row in files})
+	"""Replace the pending list with a GitHub compare, keeping known rename owners."""
+	previous = _pending_cache()
+	by_path = {}
+	for row in files:
+		source = row.get("source") or previous.get(row["path"], {}).get("source")
+		by_path[row["path"]] = _pending_row({**row, "source": source})
+	_set_pending_cache(by_path)
 
 
 def clear_pending_cache() -> None:
@@ -241,8 +253,12 @@ def clear_pending_cache() -> None:
 
 
 def drop_pending_path(path: str) -> None:
+	drop_pending_paths([path])
+
+
+def drop_pending_paths(paths: list[str]) -> None:
 	by_path = _pending_cache()
-	if by_path.pop(path, None) is not None:
+	if any([by_path.pop(path, None) for path in paths]):
 		_set_pending_cache(by_path)
 
 
@@ -280,10 +296,19 @@ def pending_from_status() -> list[dict]:
 
 
 def desk_pending_entries() -> list[dict]:
-	by_path = {row["path"]: row["action"] for row in pending_from_status()}
+	by_path = {row["path"]: row for row in pending_from_status()}
 	by_path.update(_pending_cache())
-	rows = [{"path": path, "action": action} for path, action in sorted(by_path.items())]
-	return _enrich_pending(rows)
+	return _enrich_pending([by_path[path] for path in sorted(by_path)])
+
+
+def document_deploy_paths(doc) -> list[str]:
+	"""This record's content file plus any old file a rename left on the website."""
+	source = [doc.doctype, doc.name]
+	paths = [path for path, row in sorted(_pending_cache().items()) if row.get("source") == source]
+	path = content_path_for(doc)
+	if path and path not in paths:
+		paths.append(path)
+	return paths
 
 
 def queue_home_page_deploy(doc=None, method: str | None = None) -> None:
@@ -373,9 +398,19 @@ def content_repo_from_conf() -> ContentRepo:
 	return ContentRepo(token=token, repo=repo, base_branch=base_branch)
 
 
-def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[str, str | bytes | None]]:
+def planned_content_changes(
+	repo: ContentRepo, on_progress=None, paths: list[str] | None = None
+) -> list[tuple[str, str | bytes | None]]:
+	"""GitHub changes that make the website match Desk, limited to `paths` when given.
+
+	Pending changes outside `paths` keep their current GitHub version.
+	"""
 	fill_missing_cover_framing(repo)
 	planned, keep = collect_content_plan()
+	selected = None if paths is None else set(paths)
+	if selected is not None:
+		keep = keep + [path for path, _content in planned if path not in selected]
+		planned = [(path, content) for path, content in planned if path in selected]
 	planned, media = export_planned_media(planned)
 	write_paths = [path for path, _content in planned]
 	existing = (
@@ -388,13 +423,15 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 			content = preserve_unmanaged_frontmatter(current, content)
 		merged.append((path, content))
 	files = changed_files(existing, merged)
-	files.extend(
-		deleted_managed_files(
-			write_paths + keep,
-			repo.list_markdown("content/", repo.base_branch),
-			MANAGED_DELETE_PREFIXES,
-		)
+	deletes = deleted_managed_files(
+		write_paths + keep,
+		repo.list_markdown("content/", repo.base_branch),
+		MANAGED_DELETE_PREFIXES,
 	)
+	if selected is not None:
+		keep = keep + [path for path, _content in deletes if path not in selected]
+		deletes = [(path, content) for path, content in deletes if path in selected]
+	files.extend(deletes)
 	blobs = repo.tree_blobs(repo.base_branch)
 	media_paths = [path for path, _content in media]
 	for path, content in media:
@@ -415,8 +452,16 @@ def planned_content_changes(repo: ContentRepo, on_progress=None) -> list[tuple[s
 	# enterprises whenever the logo re-download fails) looks orphaned and
 	# gets pruned on the very next publish, even though nothing changed.
 	referenced_media = set(media_paths).union(*references.values())
-	files.extend(deleted_managed_files(list(referenced_media), list(blobs), MEDIA_DELETE_PREFIXES))
+	prunable = list(blobs) if selected is None else selected_media(repo, selected, blobs)
+	files.extend(deleted_managed_files(list(referenced_media), prunable, MEDIA_DELETE_PREFIXES))
 	return files
+
+
+def selected_media(repo: ContentRepo, selected: set[str], blobs: dict[str, str]) -> list[str]:
+	"""Media the selected files use on GitHub now; only these may be pruned by a selective deploy."""
+	current = repo.existing_files(sorted(selected), repo.base_branch)
+	used = {unquote(reference) for content in current.values() for reference in media_references(content)}
+	return [path for path in blobs if path in used]
 
 
 def require_media_present(references: dict[str, set[str]], available: set[str]) -> None:
@@ -525,26 +570,64 @@ def preview_deploy() -> dict:
 	return {"files": rows, "message": None}
 
 
-@frappe.whitelist()
-def deploy_to_website() -> dict:
-	_require_deploy_permission()
-	repo = content_repo_from_conf()
-	files = planned_content_changes(repo, on_progress=_emit_progress)
+def commit_planned_changes(repo: ContentRepo, paths: list[str] | None = None, message: str = "") -> dict:
+	files = planned_content_changes(repo, on_progress=_emit_progress, paths=paths)
 	if not files:
-		settle_publish_statuses()
-		clear_pending_cache()
 		return {"commit_url": None, "message": _("Public site content is already up to date.")}
-
 	try:
 		commit = repo.commit_files(
-			files, message="content: update public site from desk", on_progress=_emit_progress
+			files, message=message or "content: update public site from desk", on_progress=_emit_progress
 		)
 	except GithubError as exc:
 		frappe.throw(str(exc))
 	record_deploy(commit["html_url"], commit["sha"], files)
+	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}
+
+
+@frappe.whitelist()
+def deploy_to_website() -> dict:
+	_require_deploy_permission()
+	result = commit_planned_changes(content_repo_from_conf())
 	settle_publish_statuses()
 	clear_pending_cache()
-	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}
+	return result
+
+
+def get_site_document(doctype: str, name: str):
+	if doctype not in SITE_CONTENT_DOCTYPES:
+		frappe.throw(_("{0} is not website content.").format(doctype))
+	doc = frappe.get_doc(doctype, name)
+	doc.check_permission("read")
+	return doc
+
+
+@frappe.whitelist()
+def preview_document_deploy(doctype: str, name: str) -> dict:
+	"""What deploying only this record would change on the website."""
+	_require_deploy_permission()
+	doc = get_site_document(doctype, name)
+	try:
+		files = planned_content_changes(
+			content_repo_from_conf(), on_progress=_emit_progress, paths=document_deploy_paths(doc)
+		)
+	except GithubError as exc:
+		frappe.throw(str(exc))
+	return {"files": pending_entries(files)}
+
+
+@frappe.whitelist()
+def deploy_document(doctype: str, name: str) -> dict:
+	"""Deploy this record alone; other pending changes stay queued."""
+	_require_deploy_permission()
+	doc = get_site_document(doctype, name)
+	paths = document_deploy_paths(doc)
+	result = commit_planned_changes(
+		content_repo_from_conf(), paths, message=f"content: update {doctype} {name} from desk"
+	)
+	if is_queued(doc):
+		_settle_doc(doc)
+	drop_pending_paths(paths)
+	return result
 
 
 def content_diff(repo: ContentRepo, path: str) -> dict:

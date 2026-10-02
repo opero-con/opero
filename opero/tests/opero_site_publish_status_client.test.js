@@ -5,7 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const test = require("node:test");
 
-function loadPublishStatus(status) {
+function loadPublishStatus(status, { canDeploy = true } = {}) {
 	const handlers = new Map();
 	const singleValueCalls = [];
 	const frappe = {
@@ -17,9 +17,13 @@ function loadPublishStatus(status) {
 		},
 		get_indicator() {},
 		listview_settings: {},
+		model: { can_write: (doctype) => canDeploy && doctype === "Site Settings" },
 		provide() {},
 		ui: { form: { on: (doctype, events) => handlers.set(doctype, events) } },
-		utils: { get_form_link: () => '<a href="/app/deploy-center">Deploy Center</a>' },
+		utils: {
+			escape_html: (text) => String(text).replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+			get_form_link: () => '<a href="/app/deploy-center">Deploy Center</a>',
+		},
 	};
 	const context = {
 		cint: Number,
@@ -39,13 +43,17 @@ function loadPublishStatus(status) {
 
 function makeForm(doctype, doc = {}) {
 	const messages = [];
+	const buttons = [];
 	return {
 		frm: {
 			doctype,
 			doc,
+			add_custom_button: (label) => buttons.push(label),
 			is_dirty: () => false,
+			is_new: () => false,
 			layout: { show_message: (...args) => messages.push(args) },
 		},
+		buttons,
 		messages,
 	};
 }
@@ -129,4 +137,42 @@ test("status pills use the agreed colors", () => {
 		assert.equal(label, status);
 		assert.equal(indicator, color);
 	}
+});
+
+test("queued site records offer a Deploy button to deployers", async () => {
+	const { handlers } = loadPublishStatus("Published");
+	for (const [doctype, doc] of [
+		["Publication", { status: "To publish" }],
+		["Partner", { website_status: "To unpublish" }],
+		["Privacy policy", { status: "To update" }],
+	]) {
+		const { frm, buttons } = makeForm(doctype, doc);
+		await handlers.get(doctype).refresh(frm);
+		assert.deepEqual(buttons, ["Deploy"], doctype);
+	}
+});
+
+test("Deploy is hidden when nothing is queued or the user cannot deploy", async () => {
+	for (const [status, canDeploy] of [
+		["Draft", true],
+		["Published", true],
+		["To publish", false],
+	]) {
+		const { handlers } = loadPublishStatus("Published", { canDeploy });
+		const { frm, buttons } = makeForm("Publication", { status });
+		await handlers.get("Publication").refresh(frm);
+		assert.deepEqual(buttons, [], `${status} ${canDeploy}`);
+	}
+});
+
+test("the deploy review lists each change and escapes paths", () => {
+	const { context } = loadPublishStatus("Published");
+	const message = context.deployReviewMessage([
+		{ path: "content/partners/practica.md", action: "delete" },
+		{ path: "content/partners/<b>.md", action: "update" },
+	]);
+	assert.match(message, /Other pending changes stay queued/);
+	assert.match(message, /<li>Remove: content\/partners\/practica.md<\/li>/);
+	assert.match(message, /<li>Update: content\/partners\/&lt;b&gt;.md<\/li>/);
+	assert.match(context.deployReviewMessage([]), /already matches/);
 });

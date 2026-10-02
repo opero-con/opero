@@ -1,6 +1,6 @@
 # ADR-0004: Publish checkbox and five website statuses
 
-- **Status:** Accepted
+- **Status:** Accepted; batch-only Deploy superseded by [ADR-0007](0007-per-record-deploy.md)
 - **Date:** 2026-09-25
 - **Affects:** Opero Site DocTypes, Employee, Enterprise, Partner, Deploy Center
 - **Supersedes:** the status names in [ADR-0001](0001-always-on-site-singles.md)
