@@ -39,6 +39,32 @@ class TestTimesheetBalances(FrappeTestCase):
 		self.assertTrue(field.read_only)
 		self.assertFalse(field.in_list_view)
 
+	def test_backfill_fills_only_empty_task_names(self):
+		from opero.patches.v0_4 import backfill_timesheet_task_names
+
+		task = frappe.get_doc({"doctype": "Task", "subject": "Backfill Design"}).insert(
+			ignore_permissions=True, ignore_mandatory=True
+		)
+		rows = []
+		for task_name in ("", "Kept Name"):
+			row = frappe.get_doc(
+				{
+					"doctype": "Timesheet Detail",
+					"parent": "TS-BACKFILL",
+					"parenttype": "Timesheet",
+					"parentfield": "time_logs",
+					"task": task.name,
+					"custom_project_task": task_name,
+				}
+			)
+			row.db_insert()
+			rows.append(row.name)
+
+		backfill_timesheet_task_names.execute()
+
+		names = [frappe.db.get_value("Timesheet Detail", row, "custom_project_task") for row in rows]
+		self.assertEqual(names, ["Backfill Design", "Kept Name"])
+
 	def test_allocated_hours_is_not_a_grid_column(self):
 		self.assertFalse(frappe.get_meta("Timesheet Detail").get_field("custom_a_hrs").in_list_view)
 
