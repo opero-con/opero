@@ -112,3 +112,74 @@ test("loading one file removes only that row", () => {
 	assert.match(html, /Anita/);
 	assert.equal(alerts[0].message, "Loaded Privacy policy from the website.");
 });
+
+function pendingForm(files, selected = []) {
+	let html = "";
+	const frm = {
+		page: {},
+		_opero_selected: new Set(selected),
+		get_field: () => ({ $wrapper: { html: (value) => (html = value), find: () => ({ on() {} }) } }),
+	};
+	return { frm, files, html: () => html };
+}
+
+test("pending rows start unchecked and keep a selection that is still pending", () => {
+	const { renderPending } = loadDeployCenter();
+	const rows = [
+		{ action: "update", path: "content/publications/finished.md", title: "Finished", group: "Publications" },
+		{ action: "update", path: "content/publications/trainee.md", title: "Trainee", group: "Publications" },
+	];
+	const form = pendingForm(rows, ["content/publications/finished.md", "content/publications/gone.md"]);
+
+	renderPending(form.frm, form.frm.get_field().$wrapper, { files: rows });
+
+	assert.match(form.html(), /data-path="content\/publications\/finished.md" checked>/);
+	assert.match(form.html(), /data-path="content\/publications\/trainee.md">/);
+	assert.deepEqual([...form.frm._opero_selected], ["content/publications/finished.md"]);
+});
+
+test("Deploy selected asks for a selection before calling the server", () => {
+	const calls = [];
+	const messages = [];
+	const context = loadDeployCenter({ call: (options) => calls.push(options), msgprint: (text) => messages.push(text) });
+
+	context.reviewSelectedDeploy({ _opero_selected: new Set() });
+
+	assert.equal(calls.length, 0);
+	assert.match(messages[0], /Select the changes to deploy/);
+});
+
+test("Deploy selected reviews the server's paths and deploys exactly those", () => {
+	const calls = [];
+	const confirms = [];
+	const context = loadDeployCenter({
+		call: (options) => {
+			calls.push(options);
+			if (options.method.endsWith("preview_selected_deploy")) {
+				options.callback({
+					message: {
+						paths: ["content/partners/new.md", "content/partners/old.md"],
+						files: [
+							{ action: "update", path: "content/partners/new.md", title: "New Name" },
+							{ action: "delete", path: "content/partners/old.md", title: "Old Name" },
+						],
+					},
+				});
+			}
+		},
+		confirm: (message, yes) => {
+			confirms.push(message);
+			yes();
+		},
+	});
+	const form = pendingForm([], ["content/partners/new.md"]);
+	form.frm.page = {};
+
+	context.reviewSelectedDeploy(form.frm);
+
+	assert.deepEqual([...calls[0].args.paths], ["content/partners/new.md"]);
+	assert.match(confirms[0], /Unselected changes stay queued/);
+	assert.match(confirms[0], /<li>Update: New Name<\/li><li>Remove: Old Name<\/li>/);
+	assert.equal(calls[1].method, "opero.opero_site.publish.deploy_selected");
+	assert.deepEqual(calls[1].args.paths, ["content/partners/new.md", "content/partners/old.md"]);
+});

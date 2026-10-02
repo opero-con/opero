@@ -7,10 +7,12 @@ from opero.opero_site.markdown import to_markdown
 from opero.opero_site.publish import (
 	clear_pending_cache,
 	deploy_document,
+	deploy_selected,
 	desk_pending_entries,
 	document_deploy_paths,
 	notify_pending_website_changes,
 	planned_content_changes,
+	selection_paths,
 	settle_publish_statuses,
 )
 from opero.tests.test_opero_site_deploy import _FakeContentRepo
@@ -130,7 +132,8 @@ class TestSelectiveDeploy(FrappeTestCase):
 		repo = _FakeContentRepo(existing={old_path: "---\nname: Practica\n---\n"}, blobs={old_path: "a1"})
 		files = dict(planned_content_changes(repo, paths=paths))
 
-		self.assertEqual(paths, [old_path, new_path])
+		self.assertCountEqual(paths, [old_path, new_path])
+		self.assertCountEqual(selection_paths([old_path]), [old_path, new_path])
 		self.assertIsNone(files[old_path])
 		self.assertIn(new_path, files)
 
@@ -146,10 +149,30 @@ class TestSelectiveDeploy(FrappeTestCase):
 		self.assertEqual([path for path, _content in files], ["content/publications/finished-article.md"])
 		self.assertEqual(result["sha"], "abc123")
 		self.assertEqual(frappe.db.get_value("Publication", finished.name, "status"), "Published")
-		self.assertEqual(frappe.db.get_value("Publication", "trainee-draft", "status"), "To publish")
+		self.assertEqual(
+			frappe.db.get_value("Publication", {"slug": "trainee-draft"}, "status"), "To publish"
+		)
 		pending = {row["path"] for row in desk_pending_entries() if row["group"] == "Publications"}
 		self.assertEqual(pending, {"content/publications/trainee-draft.md"})
 
 	def test_deploy_document_refuses_non_content_doctypes(self):
 		with self.assertRaises(frappe.ValidationError):
 			deploy_document("ToDo", "anything")
+
+	def test_deploy_selected_deploys_and_settles_only_the_selected_rows(self):
+		finished = make_publication("Finished Article")
+		trainee = make_publication("Trainee Draft")
+		repo = _CommittingRepo()
+
+		with patch("opero.opero_site.publish.content_repo_from_conf", return_value=repo):
+			deploy_selected('["content/publications/finished-article.md"]')
+
+		[(files, _message)] = repo.commits
+		self.assertEqual([path for path, _content in files], ["content/publications/finished-article.md"])
+		self.assertEqual(frappe.db.get_value("Publication", finished.name, "status"), "Published")
+		self.assertEqual(frappe.db.get_value("Publication", trainee.name, "status"), "To publish")
+
+	def test_deploy_selected_requires_website_content_paths(self):
+		for paths in ("[]", '["media/publications/cover.png"]', '["apps.txt"]'):
+			with self.assertRaises(frappe.ValidationError):
+				deploy_selected(paths)

@@ -1,6 +1,6 @@
 # ADR-0007: Deploy one record at a time
 
-- **Status:** Accepted
+- **Status:** Accepted; batch Deploy to website superseded by [ADR-0008](0008-deploy-center-selection.md)
 - **Date:** 2026-10-02
 - **Affects:** Opero Site DocTypes, Employee, Enterprise, Partner, Deploy Center
 - **Supersedes:** the batch-only Deploy in [ADR-0004](0004-publish-checkbox-and-statuses.md)
