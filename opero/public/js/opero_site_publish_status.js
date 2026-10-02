@@ -70,6 +70,7 @@ function bindPublishStatus(doctype) {
 				setPublishStatusPill(frm);
 			}
 			setDeployRibbon(frm);
+			addDeployButton(frm);
 		},
 	};
 	if (OPTIONAL_SITE_DOCTYPES.includes(doctype)) {
@@ -137,6 +138,64 @@ function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)])
 			? __("Will be removed on the next deploy. {0}", [link])
 			: __("Will be published on the next deploy. {0}", [link]);
 	frm.layout.show_message(`<span>${text}</span>`, STATUS_COLORS[status], true);
+}
+
+function addDeployButton(frm) {
+	const status = frm.doc[publishStatusField(frm.doctype)];
+	if (frm.is_new() || !QUEUED_STATUSES.includes(status) || !frappe.model.can_write("Site Settings")) {
+		return;
+	}
+	frm.add_custom_button(__("Deploy"), () => reviewDocumentDeploy(frm));
+}
+
+function reviewDocumentDeploy(frm) {
+	if (frm.is_dirty()) {
+		frappe.msgprint(__("Save this record before deploying it."));
+		return;
+	}
+	const args = { doctype: frm.doctype, name: frm.doc.name };
+	frappe.call({
+		method: "opero.opero_site.publish.preview_document_deploy",
+		args,
+		freeze: true,
+		freeze_message: __("Checking the public site repository..."),
+		callback(r) {
+			const files = (r.message || {}).files || [];
+			frappe.confirm(deployReviewMessage(files), () => deployDocument(frm, args));
+		},
+	});
+}
+
+function deployReviewMessage(files) {
+	if (!files.length) {
+		return __("The website already matches this record. Deploying marks it up to date.");
+	}
+	const rows = files
+		.map((row) => {
+			const action = row.action === "delete" ? __("Remove") : __("Update");
+			return `<li>${action}: ${frappe.utils.escape_html(row.path)}</li>`;
+		})
+		.join("");
+	return `${__("Deploy only these changes to the website? Other pending changes stay queued.")}<ul>${rows}</ul>`;
+}
+
+function deployDocument(frm, args) {
+	frappe.call({
+		method: "opero.opero_site.publish.deploy_document",
+		args,
+		freeze: true,
+		freeze_message: __("Deploying to the public site..."),
+		callback(r) {
+			const payload = r.message || {};
+			frappe.show_alert({
+				message: payload.commit_url
+					? __("Sent to website. Deploy Center shows when it is live.")
+					: payload.message,
+				indicator: "green",
+			});
+			frm.reload_doc();
+		},
+	});
 }
 
 function bindStatusPill(doctype) {
