@@ -75,10 +75,10 @@ def content_path_for(doc) -> str | None:
 
 _FIXED_PATH_LABELS = {path: (doctype, "Site pages") for doctype, path in CONTENT_PATHS.items()}
 _CONTENT_PATH_GROUPS = (
-	("content/publications/", "Publication", "Publications", "title"),
-	("content/team/", "Employee", "Team", "employee_name"),
-	("content/enterprises/", "Enterprise", "Enterprises", None),
-	("content/partners/", "Partner", "Partners", None),
+	("content/publications/", "Publication", "Publications"),
+	("content/team/", "Employee", "Team"),
+	("content/enterprises/", "Enterprise", "Enterprises"),
+	("content/partners/", "Partner", "Partners"),
 )
 
 
@@ -104,6 +104,11 @@ def _live_partner(slug: str) -> tuple[str, str] | None:
 	return None
 
 
+def _live_publication(slug: str) -> tuple[str, str] | None:
+	row = frappe.db.get_value("Publication", {"slug": slug}, ["title", "name"], as_dict=True)
+	return (row.title, row.name) if row else None
+
+
 def _live_employee(slug: str) -> tuple[str, str] | None:
 	row = frappe.db.get_value("Employee", {"slug": slug}, ["employee_name", "name"], as_dict=True)
 	return (row.employee_name, row.name) if row else None
@@ -116,7 +121,7 @@ def content_label_for(path: str) -> dict:
 		doctype, group = fixed
 		return {"title": doctype, "group": group, "doctype": doctype, "docname": None, "is_single": True}
 
-	for prefix, doctype, group, title_field in _CONTENT_PATH_GROUPS:
+	for prefix, doctype, group in _CONTENT_PATH_GROUPS:
 		if not path.startswith(prefix):
 			continue
 		slug = _slug_from_path(path)
@@ -130,8 +135,8 @@ def content_label_for(path: str) -> dict:
 			found = _live_partner(slug)
 			title, docname = found if found else (None, None)
 		else:
-			title = frappe.db.get_value(doctype, slug, title_field)
-			docname = slug if title else None
+			found = _live_publication(slug)
+			title, docname = found if found else (None, None)
 		return {
 			"title": title or _prettify_slug(slug),
 			"group": group,

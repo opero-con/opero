@@ -10,7 +10,7 @@ from frappe.utils import cint, cstr, getdate
 from opero.opero_site.body_html import body_sections_to_html, html_to_body_sections
 from opero.opero_site.cover_focal_point import CONTAIN, compute_cover_framing
 from opero.opero_site.media import desk_file_url, read_desk_file
-from opero.opero_site.publish_status import apply_publish_status
+from opero.opero_site.publish_status import LIVE, apply_publish_status, get_publish_status
 from opero.opero_site.utils import (
 	normalize_publication_type,
 	optional_url,
@@ -28,12 +28,6 @@ class Publication(Document):
 				_ensure_publication_topic(title)
 		super()._validate_links()
 
-	def before_naming(self):
-		self.title = cstr(self.title).strip()
-		self.slug = slugify(self.slug or self.title)
-		if not self.slug:
-			frappe.throw(_("Slug must contain at least one letter or number."))
-
 	def validate(self):
 		apply_publish_status(self)
 		# The site bumps `views` with a bare UPDATE, so a form opened before a
@@ -41,9 +35,7 @@ class Publication(Document):
 		if not self.is_new():
 			self.views = cint(frappe.db.get_value("Publication", self.name, "views"))
 		self.title = cstr(self.title).strip()
-		self.slug = slugify(self.slug or self.title)
-		if not self.slug:
-			frappe.throw(_("Slug must contain at least one letter or number."))
+		self.set_slug()
 		self.file_url = optional_url(self.file_url, "File URL")
 		self.page_url = optional_url(self.page_url, "Page URL")
 		self.external_url = optional_url(self.external_url, "External URL")
@@ -55,6 +47,34 @@ class Publication(Document):
 		self.move_long_summary_to_body()
 		html_to_body_sections(self.body)
 		self._set_cover_framing()
+
+	def set_slug(self):
+		"""Unique website slug; a blank one comes from the title, numbered when another publication has it."""
+		typed = cstr(self.slug).strip()
+		self.slug = slugify(typed or self.title)
+		if not self.slug:
+			frappe.throw(_("Slug must contain at least one letter or number."))
+		if not typed:
+			self.slug = self.get_free_slug(self.slug)
+		elif self.is_slug_taken(self.slug):
+			frappe.throw(_("Another publication already uses the slug {0}.").format(self.slug))
+		self.validate_live_slug()
+
+	def get_free_slug(self, base: str) -> str:
+		slug, number = base, 1
+		while self.is_slug_taken(slug):
+			number += 1
+			slug = f"{base}-{number}"
+		return slug
+
+	def is_slug_taken(self, slug: str) -> bool:
+		return bool(frappe.db.exists("Publication", {"slug": slug, "name": ["!=", self.name or ""]}))
+
+	def validate_live_slug(self):
+		"""A live publication keeps its URL; unpublish and deploy it before changing the slug."""
+		previous = None if self.is_new() else self.get_doc_before_save()
+		if previous and previous.slug != self.slug and get_publish_status(previous) in LIVE:
+			frappe.throw(_("{0} is on the website, so its slug can't change.").format(self.title))
 
 	def move_long_summary_to_body(self):
 		"""Move a multi-paragraph summary into an empty body, keeping its first paragraph."""

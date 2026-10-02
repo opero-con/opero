@@ -444,10 +444,8 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 				counts["privacy"] += 1
 			elif path.startswith("content/publications/") and path.endswith(".md"):
 				slug = slug_from_path(path)
-				if frappe.db.exists("Publication", slug):
-					doc = frappe.get_doc("Publication", slug)
-				else:
-					doc = frappe.new_doc("Publication")
+				name = frappe.db.get_value("Publication", {"slug": slug})
+				doc = frappe.get_doc("Publication", name) if name else frappe.new_doc("Publication")
 				if matches_website(doc, path, text):
 					continue
 				apply_publication(doc, parse_frontmatter(text), slug)

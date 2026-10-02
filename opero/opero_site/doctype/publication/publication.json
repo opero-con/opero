@@ -2,7 +2,7 @@
  "actions": [],
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "field:slug",
+ "autoname": "PUB-.#####",
  "creation": "2026-08-25 12:35:00",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -51,11 +51,12 @@
    "reqd": 1
   },
   {
-   "description": "URL id; leave blank to generate from the title.",
+   "description": "URL id; leave blank to generate from the title. Fixed while the publication is on the website.",
    "fieldname": "slug",
    "fieldtype": "Data",
    "label": "Slug",
-   "unique": 1
+   "unique": 1,
+   "read_only_depends_on": "eval:['To update','Published','To unpublish'].includes(doc.status)"
   },
   {
    "fieldname": "column_break_publish",
@@ -244,11 +245,11 @@
   }
  ],
  "links": [],
- "modified": "2026-09-27 12:00:00.000000",
+ "modified": "2026-10-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Publication",
- "naming_rule": "By fieldname",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
