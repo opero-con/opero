@@ -32,6 +32,13 @@ class TestTimesheetBalances(FrappeTestCase):
 		visible = [field for field in meta.fields if field.in_list_view]
 		self.assertEqual([field.fieldname for field in visible], ["task", "from_time", "hours"])
 		self.assertEqual([field.columns for field in visible], [5, 4, 1])
+	def test_task_name_is_available_to_report_view(self):
+		field = frappe.get_meta("Timesheet Detail").get_field("custom_project_task")
+		self.assertEqual(field.fetch_from, "task.subject")
+		self.assertFalse(field.hidden)
+		self.assertTrue(field.read_only)
+		self.assertFalse(field.in_list_view)
+
 	def test_allocated_hours_is_not_a_grid_column(self):
 		self.assertFalse(frappe.get_meta("Timesheet Detail").get_field("custom_a_hrs").in_list_view)
 
