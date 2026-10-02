@@ -18,3 +18,4 @@ that the commit message already explains.
 | [0005](0005-task-allocation.md) | Task Allocation is the monthly allocation record | Accepted; Time Allocation removal superseded by ADR-0006 |
 | [0006](0006-task-hours-budget.md) | The Task's Hours Budget caps each person's allocations | Accepted |
 | [0007](0007-per-record-deploy.md) | Deploy one record at a time | Accepted |
+| [0008](0008-deploy-center-selection.md) | Deploy Center deploys only the selected changes | Accepted |

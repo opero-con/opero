@@ -40,6 +40,16 @@
   margin-top: 12px;
 }
 
+.opero-pending-group ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.opero-pending-group label {
+  display: inline;
+  margin: 0;
+}
+
 .opero-pending-group__title {
   margin: 0 0 4px;
   font-size: var(--text-xs);

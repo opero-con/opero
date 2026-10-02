@@ -135,8 +135,8 @@ function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)])
 	);
 	const text =
 		status === "To unpublish"
-			? __("Will be removed on the next deploy. {0}", [link])
-			: __("Will be published on the next deploy. {0}", [link]);
+			? __("Will be removed from the website when deployed. {0}", [link])
+			: __("Will be published when deployed. {0}", [link]);
 	frm.layout.show_message(`<span>${text}</span>`, STATUS_COLORS[status], true);
 }
 

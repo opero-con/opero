@@ -301,14 +301,42 @@ def desk_pending_entries() -> list[dict]:
 	return _enrich_pending([by_path[path] for path in sorted(by_path)])
 
 
+def selection_paths(paths: list[str]) -> list[str]:
+	"""Selected content files plus the other half of any rename they belong to."""
+	selected = list(dict.fromkeys(paths))
+	for path in selected:
+		if not path.startswith("content/") or not path.endswith(".md"):
+			frappe.throw(_("{0} is not a website content file.").format(path))
+	for old_path, row in sorted(_pending_cache().items()):
+		source = row.get("source")
+		if not source or not frappe.db.exists(*source):
+			continue
+		pair = [old_path, content_path_for(frappe.get_doc(*source))]
+		if set(pair) & set(selected):
+			selected.extend(path for path in pair if path and path not in selected)
+	return selected
+
+
 def document_deploy_paths(doc) -> list[str]:
 	"""This record's content file plus any old file a rename left on the website."""
-	source = [doc.doctype, doc.name]
-	paths = [path for path, row in sorted(_pending_cache().items()) if row.get("source") == source]
 	path = content_path_for(doc)
-	if path and path not in paths:
-		paths.append(path)
-	return paths
+	return selection_paths([path]) if path else []
+
+
+def documents_for_paths(paths: list[str]) -> list:
+	"""Desk records behind content paths, including the owner of a rename's old file."""
+	cache = _pending_cache()
+	refs = []
+	for path in paths:
+		label = content_label_for(path)
+		if label["is_single"]:
+			refs.append((label["doctype"], label["doctype"]))
+		elif label["docname"]:
+			refs.append((label["doctype"], label["docname"]))
+		source = cache.get(path, {}).get("source")
+		if source and frappe.db.exists(*source):
+			refs.append(tuple(source))
+	return [frappe.get_doc(*ref) for ref in dict.fromkeys(refs)]
 
 
 def queue_home_page_deploy(doc=None, method: str | None = None) -> None:
@@ -339,7 +367,7 @@ def notify_pending_website_changes(doc, method: str | None = None) -> None:
 def collect_content_plan() -> tuple[list[tuple[str, str]], list[str]]:
 	"""On-site writes plus draft paths that must stay untouched on GitHub.
 
-	Publications to unpublish are omitted so the next deploy deletes them.
+	Publications to unpublish are omitted so a deploy that selects them deletes them.
 	Team members, enterprises, and partners to unpublish are written with `active: false`.
 	"""
 	files = []
@@ -525,6 +553,12 @@ def settle_publish_statuses() -> None:
 			_settle_doc(doc)
 
 
+def settle_documents(docs: list) -> None:
+	for doc in docs:
+		if is_queued(doc):
+			_settle_doc(doc)
+
+
 def _settle_doc(doc) -> None:
 	field = publish_status_field(doc)
 	if doc.doctype in ALWAYS_ON_SITE:
@@ -570,7 +604,7 @@ def preview_deploy() -> dict:
 	return {"files": rows, "message": None}
 
 
-def commit_planned_changes(repo: ContentRepo, paths: list[str] | None = None, message: str = "") -> dict:
+def commit_planned_changes(repo: ContentRepo, paths: list[str], message: str = "") -> dict:
 	files = planned_content_changes(repo, on_progress=_emit_progress, paths=paths)
 	if not files:
 		return {"commit_url": None, "message": _("Public site content is already up to date.")}
@@ -584,13 +618,42 @@ def commit_planned_changes(repo: ContentRepo, paths: list[str] | None = None, me
 	return {"commit_url": commit["html_url"], "sha": commit["sha"], "files": len(files)}
 
 
-@frappe.whitelist()
-def deploy_to_website() -> dict:
-	_require_deploy_permission()
-	result = commit_planned_changes(content_repo_from_conf())
-	settle_publish_statuses()
-	clear_pending_cache()
+def deploy_paths(paths: list[str], message: str = "") -> dict:
+	"""Deploy only these content files; every other pending change stays queued."""
+	docs = documents_for_paths(paths)
+	result = commit_planned_changes(content_repo_from_conf(), paths, message)
+	settle_documents(docs)
+	drop_pending_paths(paths)
 	return result
+
+
+def preview_paths(paths: list[str]) -> dict:
+	try:
+		files = planned_content_changes(content_repo_from_conf(), on_progress=_emit_progress, paths=paths)
+	except GithubError as exc:
+		frappe.throw(str(exc))
+	return {"paths": paths, "files": pending_entries(files)}
+
+
+def get_selected_paths(paths) -> list[str]:
+	selected = frappe.parse_json(paths) if isinstance(paths, str) else paths
+	if not selected:
+		frappe.throw(_("Select the changes to deploy."))
+	return selection_paths(selected)
+
+
+@frappe.whitelist()
+def preview_selected_deploy(paths) -> dict:
+	"""What deploying only the selected Deploy Center rows would change on the website."""
+	_require_deploy_permission()
+	return preview_paths(get_selected_paths(paths))
+
+
+@frappe.whitelist()
+def deploy_selected(paths) -> dict:
+	"""Deploy the selected Deploy Center rows alone; other pending changes stay queued."""
+	_require_deploy_permission()
+	return deploy_paths(get_selected_paths(paths))
 
 
 def get_site_document(doctype: str, name: str):
@@ -605,14 +668,7 @@ def get_site_document(doctype: str, name: str):
 def preview_document_deploy(doctype: str, name: str) -> dict:
 	"""What deploying only this record would change on the website."""
 	_require_deploy_permission()
-	doc = get_site_document(doctype, name)
-	try:
-		files = planned_content_changes(
-			content_repo_from_conf(), on_progress=_emit_progress, paths=document_deploy_paths(doc)
-		)
-	except GithubError as exc:
-		frappe.throw(str(exc))
-	return {"files": pending_entries(files)}
+	return preview_paths(document_deploy_paths(get_site_document(doctype, name)))
 
 
 @frappe.whitelist()
@@ -620,14 +676,7 @@ def deploy_document(doctype: str, name: str) -> dict:
 	"""Deploy this record alone; other pending changes stay queued."""
 	_require_deploy_permission()
 	doc = get_site_document(doctype, name)
-	paths = document_deploy_paths(doc)
-	result = commit_planned_changes(
-		content_repo_from_conf(), paths, message=f"content: update {doctype} {name} from desk"
-	)
-	if is_queued(doc):
-		_settle_doc(doc)
-	drop_pending_paths(paths)
-	return result
+	return deploy_paths(document_deploy_paths(doc), message=f"content: update {doctype} {name} from desk")
 
 
 def content_diff(repo: ContentRepo, path: str) -> dict:

@@ -7,7 +7,7 @@ frappe.ui.form.on("Deploy Center", {
 			return;
 		}
 		loadPending(frm);
-		frm.page.set_primary_action(__("Deploy to website"), () => deployWebsite(frm));
+		frm.page.set_primary_action(__("Deploy selected"), () => reviewSelectedDeploy(frm));
 		frm.page.set_secondary_action(__("Refresh"), () => syncPending(frm), "refresh");
 		frm.add_custom_button(__("Load all from website"), () => loadAllFromWebsite(frm));
 	},
@@ -148,6 +148,8 @@ const GROUP_ORDER = ["Site pages", "Publications", "Team", "Enterprises", "Other
 
 function renderPending(frm, wrap, payload) {
 	const files = (payload && payload.files) || [];
+	const pending = new Set(files.map((row) => row.path));
+	frm._opero_selected = new Set([...(frm._opero_selected || [])].filter((path) => pending.has(path)));
 	if (!files.length) {
 		wrap.html(`<p class="text-muted">${frappe.utils.escape_html(payload.message || __("Nothing due."))}</p>`);
 		return;
@@ -163,7 +165,7 @@ function renderPending(frm, wrap, payload) {
 			const items = groups[name]
 				.slice()
 				.sort((a, b) => (a.title || a.path).localeCompare(b.title || b.path))
-				.map((row) => `<li>${pendingRowHtml(row)}</li>`)
+				.map((row) => `<li>${pendingRowHtml(row, frm._opero_selected.has(row.path))}</li>`)
 				.join("");
 			return `<div class="opero-pending-group">
 				<p class="opero-pending-group__title">${frappe.utils.escape_html(__(name))}</p>
@@ -175,7 +177,7 @@ function renderPending(frm, wrap, payload) {
 	bindPendingRowClicks(frm, wrap);
 }
 
-function pendingRowHtml(row) {
+function pendingRowHtml(row, isSelected = false) {
 	const action = row.action === "delete" ? __("Remove") : __("Update");
 	const title = frappe.utils.escape_html(row.title || row.path);
 	const path = frappe.utils.escape_html(row.path);
@@ -193,10 +195,20 @@ function pendingRowHtml(row) {
 	if (row.path.startsWith("content/") && row.path.endsWith(".md")) {
 		loadLink = ` <a href="#" class="small opero-pending-load" data-path="${path}" data-title="${title}">${__("Load from website")}</a>`;
 	}
-	return `<strong>${frappe.utils.escape_html(action)}</strong> ${diffLink}${openLink}${loadLink}`;
+	const checked = isSelected ? " checked" : "";
+	const checkbox = `<input type="checkbox" class="opero-pending-select" data-path="${path}"${checked}>`;
+	return `<label>${checkbox} <strong>${frappe.utils.escape_html(action)}</strong></label> ${diffLink}${openLink}${loadLink}`;
 }
 
 function bindPendingRowClicks(frm, wrap) {
+	wrap.find(".opero-pending-select").on("change", (e) => {
+		const el = $(e.currentTarget);
+		if (el.prop("checked")) {
+			frm._opero_selected.add(el.data("path"));
+		} else {
+			frm._opero_selected.delete(el.data("path"));
+		}
+	});
 	wrap.find(".opero-pending-diff").on("click", (e) => {
 		e.preventDefault();
 		showContentDiff($(e.currentTarget).data("path"));
@@ -376,19 +388,52 @@ function syncPending(frm) {
 	});
 }
 
-function deployWebsite(frm) {
+function reviewSelectedDeploy(frm) {
+	const paths = [...(frm._opero_selected || [])];
 	if (frm._opero_busy) {
 		return;
 	}
+	if (!paths.length) {
+		frappe.msgprint(__("Select the changes to deploy."));
+		return;
+	}
+	frappe.call({
+		method: "opero.opero_site.publish.preview_selected_deploy",
+		args: { paths },
+		freeze: true,
+		freeze_message: __("Checking the public site repository..."),
+		callback(r) {
+			const payload = r.message || {};
+			frappe.confirm(selectedDeployMessage(payload.files || []), () => deploySelected(frm, payload.paths));
+		},
+	});
+}
+
+function selectedDeployMessage(files) {
+	if (!files.length) {
+		return __("The website already matches the selected records. Deploying marks them up to date.");
+	}
+	const rows = files
+		.map((row) => {
+			const action = row.action === "delete" ? __("Remove") : __("Update");
+			return `<li>${action}: ${frappe.utils.escape_html(row.title || row.path)}</li>`;
+		})
+		.join("");
+	return `${__("Deploy only these changes to the website? Unselected changes stay queued.")}<ul>${rows}</ul>`;
+}
+
+function deploySelected(frm, paths) {
 	const wrap = frm.get_field("pending_html").$wrapper;
 	showProgress(wrap, __("Deploying to the public site..."));
 	const stop = bindProgress(wrap);
 	setBusy(frm, true);
 	frappe.call({
-		method: "opero.opero_site.publish.deploy_to_website",
+		method: "opero.opero_site.publish.deploy_selected",
+		args: { paths },
 		callback(r) {
 			stop();
 			setBusy(frm, false);
+			frm._opero_selected = new Set();
 			const payload = r.message || {};
 			if (payload.commit_url) {
 				frappe.msgprint({
@@ -407,7 +452,7 @@ function deployWebsite(frm) {
 		error() {
 			stop();
 			setBusy(frm, false);
-			wrap.html(`<p class="text-danger">${__("Could not deploy to GitHub.")}</p>`);
+			loadPending(frm);
 		},
 	});
 }

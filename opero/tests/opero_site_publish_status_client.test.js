@@ -67,7 +67,7 @@ test("every homepage section displays the shared Home Page deploy ribbon", async
 		await handlers.get(doctype).refresh(frm);
 
 		assert.equal(messages.length, 2);
-		assert.match(messages[1][0], /Will be published on the next deploy/);
+		assert.match(messages[1][0], /Will be published when deployed/);
 		assert.equal(messages[1][1], "blue");
 	}
 	assert.deepEqual(singleValueCalls, sections.map(() => ["Home Page", "status"]));
