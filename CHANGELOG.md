@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.3 — 2026-10-03
+
+### Added
+
+- Deploy Center lists each pending change with a checkbox, unchecked by default; Deploy selected deploys only the checked changes after a review, and unselected changes stay queued
+
+### Changed
+
+- Publications get `PUB-#####` IDs independent of their titles, so titles may repeat; the slug stays the unique website URL, numbered -2, -3 for duplicate titles, and is fixed while the publication is live
+
+### Fixed
+
+- Timesheet report view's Task Name column is filled for rows saved before it was fetched, including submitted timesheets
+
 ## 0.3.2 — 2026-10-02
 
 ### Added
