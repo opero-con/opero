@@ -86,9 +86,9 @@ def fill_missing_cover_framing(repo) -> None:
 	rows = frappe.get_all(
 		"Publication",
 		filters={"cover": ["like", "/media/%"], "cover_position": ["in", ("", None)]},
-		fields=["name", "cover"],
+		fields=["name", "slug", "cover"],
 	)
-	paths = [f"content/publications/{row.name}.md" for row in rows]
+	paths = [f"content/publications/{row.slug}.md" for row in rows]
 	existing = repo.existing_files(paths, repo.base_branch) if paths else {}
 	for row, path in zip(rows, paths, strict=True):
 		framing = _framing_from_frontmatter(existing.get(path)) or _framing_from_image(repo, row.cover)

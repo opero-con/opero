@@ -28,8 +28,8 @@ def _make_publication(title: str, status: str):
 class TestPublicationViews(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
-		for name in (LIVE, DRAFT):
-			frappe.db.delete("Publication", {"name": name})
+		for slug in (LIVE, DRAFT):
+			frappe.db.delete("Publication", {"slug": slug})
 		self.live = _make_publication("View count live", "Published")
 		self.draft = _make_publication("View count draft", "Draft")
 
@@ -52,20 +52,20 @@ class TestPublicationViews(FrappeTestCase):
 	def test_record_view_adds_one_and_returns_the_total(self):
 		self.assertEqual(record_view(LIVE), {"views": 1})
 		self.assertEqual(record_view(LIVE), {"views": 2})
-		self.assertEqual(frappe.db.get_value("Publication", LIVE, "views"), 2)
+		self.assertEqual(frappe.db.get_value("Publication", self.live, "views"), 2)
 
 	def test_record_view_does_not_touch_modified_or_version_history(self):
-		before = frappe.db.get_value("Publication", LIVE, "modified")
-		versions = frappe.db.count("Version", {"docname": LIVE})
+		before = frappe.db.get_value("Publication", self.live, "modified")
+		versions = frappe.db.count("Version", {"docname": self.live})
 		record_view(LIVE)
-		self.assertEqual(frappe.db.get_value("Publication", LIVE, "modified"), before)
-		self.assertEqual(frappe.db.count("Version", {"docname": LIVE}), versions)
+		self.assertEqual(frappe.db.get_value("Publication", self.live, "modified"), before)
+		self.assertEqual(frappe.db.count("Version", {"docname": self.live}), versions)
 
 	def test_record_view_rejects_drafts_unknown_slugs_and_blanks(self):
 		for slug in (DRAFT, "no-such-publication", "", "   "):
 			with self.assertRaises(DoesNotExistError):
 				record_view(slug)
-		self.assertEqual(frappe.db.get_value("Publication", DRAFT, "views"), 0)
+		self.assertEqual(frappe.db.get_value("Publication", self.draft, "views"), 0)
 
 	def test_guests_cannot_record_or_read_views(self):
 		frappe.set_user("Guest")
@@ -73,6 +73,13 @@ class TestPublicationViews(FrappeTestCase):
 			record_view(LIVE)
 		with self.assertRaises(PermissionError):
 			get_views()
+
+	def test_views_are_keyed_by_slug_not_record_name(self):
+		record_view(LIVE)
+		views = get_views()["views"]
+		self.assertTrue(self.live.startswith("PUB-"))
+		self.assertEqual(views[LIVE], 1)
+		self.assertNotIn(self.live, views)
 
 	def test_get_views_lists_published_publications_only(self):
 		record_view(LIVE)
@@ -82,14 +89,14 @@ class TestPublicationViews(FrappeTestCase):
 		self.assertNotIn(DRAFT, views)
 
 	def test_saving_a_stale_form_does_not_reset_the_count(self):
-		stale = frappe.get_doc("Publication", LIVE)
+		stale = frappe.get_doc("Publication", self.live)
 		record_view(LIVE)
 		record_view(LIVE)
 		stale.summary = "Edited while visitors were reading."
 		stale.save(ignore_permissions=True)
-		self.assertEqual(frappe.db.get_value("Publication", LIVE, "views"), 2)
+		self.assertEqual(frappe.db.get_value("Publication", self.live, "views"), 2)
 
 	def test_views_is_not_published_to_the_content_repository(self):
 		record_view(LIVE)
-		doc = frappe.get_doc("Publication", LIVE)
+		doc = frappe.get_doc("Publication", self.live)
 		self.assertNotIn("views", doc.to_site_frontmatter())

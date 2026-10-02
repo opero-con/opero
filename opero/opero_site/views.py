@@ -21,8 +21,9 @@ def record_view(slug: str) -> dict:
 	"""Add one view to a published publication and return the new total."""
 	_require_user()
 
-	name = cstr(slug).replace("\x00", "").strip()[:MAX_SLUG]
-	if not name or frappe.db.get_value("Publication", name, "status") != PUBLISHED:
+	slug = cstr(slug).replace("\x00", "").strip()[:MAX_SLUG]
+	name = slug and frappe.db.get_value("Publication", {"slug": slug, "status": PUBLISHED})
+	if not name:
 		frappe.throw(_("Unknown publication."), frappe.DoesNotExistError)
 
 	# A single UPDATE keeps the increment atomic. Saving the document instead
@@ -37,8 +38,8 @@ def get_views() -> dict:
 	"""Return the view count of every published publication, by slug."""
 	_require_user()
 
-	rows = frappe.get_all("Publication", filters={"status": PUBLISHED}, fields=["name", "views"])
-	return {"views": {row.name: cint(row.views) for row in rows}}
+	rows = frappe.get_all("Publication", filters={"status": PUBLISHED}, fields=["slug", "views"])
+	return {"views": {row.slug: cint(row.views) for row in rows}}
 
 
 def _require_user() -> None:

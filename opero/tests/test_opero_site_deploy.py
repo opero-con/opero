@@ -181,7 +181,7 @@ class TestOperoSitePublish(FrappeTestCase):
 			"title": "Cached Pending",
 			"group": "Publications",
 			"doctype": "Publication",
-			"docname": "cached-pending",
+			"docname": doc.name,
 			"is_single": False,
 		}
 		self.assertIn(expected, desk_pending_entries())
@@ -769,7 +769,7 @@ class TestOperoSitePublish(FrappeTestCase):
 				"title": "Q1 Newsletter",
 				"group": "Publications",
 				"doctype": "Publication",
-				"docname": "q1-newsletter",
+				"docname": doc.name,
 				"is_single": False,
 			},
 		)
@@ -1074,7 +1074,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 		files = dict(planned_content_changes(repo))
 
-		self.assertEqual(frappe.db.get_value("Publication", "wide-slide", "cover_fit"), "contain")
+		self.assertEqual(frappe.db.get_value("Publication", {"slug": "wide-slide"}, "cover_fit"), "contain")
 		self.assertIn("coverFit: contain", files["content/publications/wide-slide.md"])
 
 	def test_planned_changes_keep_framing_already_set_on_github(self):
@@ -1095,7 +1095,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 		planned_content_changes(repo)
 
-		self.assertEqual(frappe.db.get_value("Publication", "tuned-cover", "cover_position"), "center 40%")
+		self.assertEqual(frappe.db.get_value("Publication", {"slug": "tuned-cover"}, "cover_position"), "center 40%")
 
 	def test_planned_changes_leave_framing_alone_when_the_cover_is_not_in_the_repo(self):
 		frappe.get_doc(
@@ -1113,7 +1113,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 
 		planned_content_changes(_FakeContentRepo())
 
-		self.assertFalse(frappe.db.get_value("Publication", "missing-cover", "cover_position"))
+		self.assertFalse(frappe.db.get_value("Publication", {"slug": "missing-cover"}, "cover_position"))
 
 	def test_planned_changes_still_prunes_media_for_deleted_publication(self):
 		"""The fix must not defeat the original point of a865eb9: media for a

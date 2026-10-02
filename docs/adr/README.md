@@ -19,3 +19,4 @@ that the commit message already explains.
 | [0006](0006-task-hours-budget.md) | The Task's Hours Budget caps each person's allocations | Accepted |
 | [0007](0007-per-record-deploy.md) | Deploy one record at a time | Accepted |
 | [0008](0008-deploy-center-selection.md) | Deploy Center deploys only the selected changes | Accepted |
+| [0009](0009-publication-ids.md) | Publication IDs are independent of slugs | Accepted |

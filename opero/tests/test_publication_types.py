@@ -103,4 +103,4 @@ class TestPublicationTypes(FrappeTestCase):
 	def test_load_adds_a_type_the_content_repository_uses(self):
 		load_files({"content/publications/test-deck-talk.md": DECK_MD})
 		self.assertTrue(frappe.db.exists("Publication Type", DECK))
-		self.assertEqual(frappe.db.get_value("Publication", "test-deck-talk", "publication_type"), DECK)
+		self.assertEqual(frappe.db.get_value("Publication", {"slug": "test-deck-talk"}, "publication_type"), DECK)

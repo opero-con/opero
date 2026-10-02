@@ -288,7 +288,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 			"content/team/anita-onyango.md": TEAM_MD,
 		}
 		load_files(files)
-		publication = frappe.get_doc("Publication", "january-2025-update")
+		publication = frappe.get_doc("Publication", {"slug": "january-2025-update"})
 		self.assertEqual(
 			canonical_frontmatter("content/publications/january-2025-update.md", parse_frontmatter(PUBLICATION_MD)),
 			canonical_frontmatter("content/publications/january-2025-update.md", publication.to_site_frontmatter()),
@@ -299,7 +299,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 	def test_cover_framing_round_trips_through_load_and_deploy_comparison(self):
 		path = "content/publications/january-2025-update.md"
 		load_files({path: COVER_FRAMING_MD})
-		publication = frappe.get_doc("Publication", "january-2025-update")
+		publication = frappe.get_doc("Publication", {"slug": "january-2025-update"})
 		self.assertEqual((publication.cover_position, publication.cover_fit), ("48% center", "contain"))
 		planned = to_markdown(publication.to_site_frontmatter())
 		self.assertTrue(same_managed_content(path, COVER_FRAMING_MD, planned))
@@ -412,7 +412,7 @@ active: true
 		self.assertIn("https://opero-services.com/privacy", privacy.body)
 		self.assertIn("Deliver the website", privacy.body)
 
-		publication = frappe.get_doc("Publication", "january-2025-update")
+		publication = frappe.get_doc("Publication", {"slug": "january-2025-update"})
 		self.assertEqual(str(publication.published_on), "2025-01-30")
 		self.assertEqual(publication.year, 2025)
 		self.assertEqual(publication.publication_type, "Newsletter")
@@ -445,13 +445,13 @@ active: true
 
 	def test_load_maps_portfolio_type_to_overview(self):
 		load_files({"content/publications/opero-project-portfolio.md": PORTFOLIO_MD})
-		doc = frappe.get_doc("Publication", "opero-project-portfolio")
+		doc = frappe.get_doc("Publication", {"slug": "opero-project-portfolio"})
 		self.assertEqual(doc.publication_type, "Overview")
 		self.assertEqual(doc.to_site_frontmatter()["type"], "Overview")
 
 	def test_load_maps_overview_page_url(self):
 		load_files({"content/publications/pupu-pump.md": OVERVIEW_PAGE_MD})
-		doc = frappe.get_doc("Publication", "pupu-pump")
+		doc = frappe.get_doc("Publication", {"slug": "pupu-pump"})
 		self.assertEqual(doc.publication_type, "Overview")
 		self.assertEqual(doc.page_url, "/pupu-pump.html")
 		self.assertEqual(doc.to_site_frontmatter()["pageUrl"], "/pupu-pump.html")
@@ -522,7 +522,7 @@ draft: true
 """
 			}
 		)
-		doc = frappe.get_doc("Publication", "still-writing")
+		doc = frappe.get_doc("Publication", {"slug": "still-writing"})
 		self.assertEqual(doc.status, "Draft")
 		self.assertFalse(doc.show_on_website)
 
