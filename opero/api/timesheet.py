@@ -93,3 +93,32 @@ def preview_daily_times(employee, time_logs, timesheet_name=None):
 		{"name": source.get("name"), "from_time": str(row.from_time), "to_time": str(row.to_time)}
 		for source, row in zip(complete, doc.time_logs, strict=True)
 	]
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_personnel_projects(doctype, txt, searchfield, start, page_len, filters):
+	"""Permission-aware Project link choices backed by personnel allocations."""
+	from opero.events.timesheet import get_budgeted_projects
+
+	filters = frappe.parse_json(filters) or {}
+	employee = filters.get("employee")
+	if not employee:
+		return []
+	frappe.get_doc("Employee", employee).check_permission("read")
+	projects = get_budgeted_projects(employee)
+	if not projects:
+		return []
+	project_filters = {"name": ["in", projects], "status": "Open"}
+	if filters.get("customer"):
+		project_filters["customer"] = filters["customer"]
+	rows = frappe.get_list(
+		"Project",
+		filters=project_filters,
+		or_filters={"name": ["like", f"%{txt}%"], "project_name": ["like", f"%{txt}%"]},
+		fields=["name", "project_name"],
+		order_by="project_name asc, name asc",
+		limit_start=start,
+		limit_page_length=page_len,
+	)
+	return [[row.name, row.project_name] for row in rows]
