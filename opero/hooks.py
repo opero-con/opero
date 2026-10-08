@@ -248,6 +248,7 @@ doc_events = {
 		"on_update": "opero.todo_enhancements.on_update_todo",
 	},
 	"Timesheet": {
+		"before_validate": "opero.events.timesheet.generate_daily_times",
 		"validate": [
 			"opero.events.project.copy_project_manager",
 			"opero.events.timesheet.validate_timesheet",

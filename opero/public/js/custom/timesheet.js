@@ -280,46 +280,10 @@ async function update_total_spent_hours(frm) {
 frappe.ui.form.on("Timesheet", {
 	refresh(frm) {
 		update_total_spent_hours(frm);
-		if (frm.doc.docstatus === 0) {
-			frm.add_custom_button(__("Split at midnight"), async () => {
-				for (const row of [...(frm.doc.time_logs || [])]) {
-					if (!row.from_time || !row.hours || row.hours <= 0) continue;
-					// Use local wall-clock arithmetic, matching Frappe's stored datetimes.
-					const start = moment(row.from_time);
-					const end = start.clone().add(row.hours, "hours");
-					let boundary = start.clone().startOf("day").add(1, "day");
-					if (!end.isAfter(boundary)) continue;
-					const template = {};
-					for (const field of frappe.get_meta("Timesheet Detail").fields) {
-						if (
-							!["from_time", "to_time", "hours", "custom_week_of_month"].includes(
-								field.fieldname
-							) &&
-							!field.fieldname.startsWith("zoho_") &&
-							!field.fieldname.startsWith("custom_zoho_")
-						) {
-							template[field.fieldname] = row[field.fieldname];
-						}
-					}
-					await frappe.model.set_value(row.doctype, row.name, {
-						hours: boundary.diff(start, "seconds") / 3600,
-						to_time: boundary.format("YYYY-MM-DD HH:mm:ss"),
-					});
-					while (boundary.isBefore(end)) {
-						const segmentStart = boundary.clone();
-						boundary = moment.min(boundary.clone().add(1, "day"), end);
-						const segment = frm.add_child("time_logs", {
-							...template,
-							from_time: segmentStart.format("YYYY-MM-DD HH:mm:ss"),
-							to_time: boundary.format("YYYY-MM-DD HH:mm:ss"),
-							hours: boundary.diff(segmentStart, "seconds") / 3600,
-						});
-						await update_row_week_of_month(frm, segment.doctype, segment.name);
-					}
-				}
-				frm.refresh_field("time_logs");
-				frm.dirty();
-			});
+		const grid = frm.fields_dict?.time_logs?.grid;
+		if (frm.doc.docstatus === 0 && grid?.update_docfield_property) {
+			grid.update_docfield_property("from_time", "description", __("Choose the work date. Clock times are generated from 08:00."));
+			grid.update_docfield_property("to_time", "read_only", 1);
 		}
 		if (
 			frm.doc.docstatus > 0 &&
@@ -514,4 +478,56 @@ function update_row_week_of_month(frm, cdt, cdn) {
 frappe.ui.form.on("Timesheet Detail", {
 	from_time: update_row_week_of_month,
 	time_logs_add: update_row_week_of_month,
+});
+
+
+function daily_times_input(frm) {
+	return JSON.stringify({
+		employee: frm.doc.employee,
+		time_logs: (frm.doc.time_logs || []).map((row) => ({
+			name: row.name, from_time: row.from_time, hours: row.hours,
+		})),
+	});
+}
+
+async function preview_daily_times(frm) {
+	if (frm.doc.docstatus !== 0 || !frm.doc.employee || frm._updating_daily_times) return;
+	const input = daily_times_input(frm);
+	if (frm._daily_times_input === input) return;
+	frm._daily_times_input = input;
+	const request = (frm._daily_times_request || 0) + 1;
+	frm._daily_times_request = request;
+	let schedule;
+	try {
+		schedule = await frappe.xcall("opero.api.timesheet.preview_daily_times", {
+			...JSON.parse(input), timesheet_name: frm.is_new?.() ? null : frm.doc.name,
+		});
+	} catch (error) {
+		if (request === frm._daily_times_request) frm._daily_times_input = null;
+		return; // Frappe displays the server validation message.
+	}
+	if (request !== frm._daily_times_request || daily_times_input(frm) !== input) return;
+	frm._updating_daily_times = true;
+	try {
+		for (const generated of schedule) {
+			const row = frm.doc.time_logs.find((entry) => entry.name === generated.name);
+			if (!row) continue;
+			await frappe.model.set_value(row.doctype, row.name, "from_time", generated.from_time);
+			await frappe.model.set_value(row.doctype, row.name, "to_time", generated.to_time);
+		}
+		frm.refresh_field("time_logs");
+		frm._daily_times_input = daily_times_input(frm);
+	} finally {
+		frm._updating_daily_times = false;
+	}
+}
+
+const schedule_daily_times = frappe.utils.debounce(preview_daily_times, 250);
+frappe.ui.form.on("Timesheet Detail", {
+	from_time: (frm) => { if (!frm._updating_daily_times) schedule_daily_times(frm); },
+	hours: (frm) => { if (!frm._updating_daily_times) schedule_daily_times(frm); },
+	time_logs_remove: (frm) => schedule_daily_times(frm),
+});
+frappe.ui.form.on("Timesheet", {
+	employee: (frm) => schedule_daily_times(frm),
 });
