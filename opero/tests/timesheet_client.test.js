@@ -74,6 +74,7 @@ function loadForm(allocationBalances = [], allocationRequest = null, dailyReques
 		toggle_display: (fieldname, show) => {
 			if (!show) hiddenFields.add(fieldname);
 		},
+		set_query() {},
 		refresh_field() {},
 		dirty() {},
 		set_value: async (fieldname, value) => {
@@ -354,4 +355,21 @@ test("scheduling preview ignores an older response after hours change", async ()
 	await new Promise((resolve) => setImmediate(resolve));
 	assert.equal(row.to_time, "2026-10-09 10:00:00");
 	assert.equal(row.hours, 2);
+});
+
+
+test("Project choices follow the selected personnel and customer", async () => {
+	const { handlers, frm } = loadForm();
+	let query;
+	frm.set_query = (field, handler) => { if (field === "parent_project") query = handler; };
+	for (const { doctype, events } of handlers)
+		if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
+	assert.equal(query().filters.employee, undefined);
+	frm.doc.employee = "EMP-1";
+	frm.doc.customer = "CUSTOMER-1";
+	assert.equal(query().query, "opero.api.timesheet.get_personnel_projects");
+	assert.equal(query().filters.employee, "EMP-1");
+	assert.equal(query().filters.customer, "CUSTOMER-1");
+	frm.doc.employee = "EMP-2";
+	assert.equal(query().filters.employee, "EMP-2");
 });

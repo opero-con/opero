@@ -531,3 +531,16 @@ frappe.ui.form.on("Timesheet Detail", {
 frappe.ui.form.on("Timesheet", {
 	employee: (frm) => schedule_daily_times(frm),
 });
+
+
+function set_personnel_project_query(frm) {
+	frm.set_query("parent_project", () => ({
+		query: "opero.api.timesheet.get_personnel_projects",
+		filters: { employee: frm.doc.employee, customer: frm.doc.customer },
+	}));
+}
+frappe.ui.form.on("Timesheet", {
+	setup: set_personnel_project_query,
+	refresh: set_personnel_project_query,
+	employee: set_personnel_project_query,
+});

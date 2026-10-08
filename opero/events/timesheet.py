@@ -13,9 +13,40 @@ SUBMISSION_CUTOFF_BYPASS_ROLES = {"Projects Manager"}
 
 
 def validate_timesheet(doc, _method=None):
+	_validate_budgeted_project(doc)
 	_set_week_of_month(doc)
 	_anti_spill(doc)
 	_validate_allocated_hours(doc)
+
+
+def get_budgeted_projects(employee):
+	"""Projects with a positive submitted Task Allocation in any month."""
+	if not employee:
+		return []
+	return [
+		row.project
+		for row in frappe.db.sql(
+			"""
+			SELECT DISTINCT task.project
+			FROM `tabTask Allocation` allocation
+			JOIN `tabTask` task ON task.name = allocation.task
+			WHERE allocation.employee = %s AND allocation.docstatus = 1
+			  AND allocation.hours > 0 AND COALESCE(task.project, '') != ''
+			""",
+			(employee,),
+			as_dict=True,
+		)
+	]
+
+
+def _validate_budgeted_project(doc):
+	if not doc.parent_project:
+		frappe.throw("Select a Project.", title="Project required")
+	if doc.employee and doc.parent_project not in get_budgeted_projects(doc.employee):
+		frappe.throw(
+			"Select a project with a submitted Task Allocation for this personnel.",
+			title="No project allocation",
+		)
 
 
 def generate_daily_times(doc, _method=None):
