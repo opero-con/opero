@@ -169,8 +169,9 @@ def _validate_allocated_hours(doc):
 		budget = allocation.get((task, month), 0)
 		posted = usage.get((task, month), 0)
 		if budget <= 0 or posted + hours > budget + 0.000001:
+			task_name = frappe.db.get_value("Task", task, "subject") or task
 			frappe.throw(
-				f"Task <b>{_safe_html(task)}</b>, {_safe_html(month)}: allocated {budget:g}h, "
+				f"Task <b>{_safe_html(task_name)}</b>, {_safe_html(month)}: allocated {budget:g}h, "
 				f"submitted {posted:g}h, this timesheet {hours:g}h. "
 				f"Please contact the PM, <b>{pm}</b>, for review.",
 				title="Exceeds monthly allocation" if budget > 0 else "No monthly allocation",
