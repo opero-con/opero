@@ -4,9 +4,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const test = require("node:test");
-const moment = require("../../../frappe/node_modules/moment");
+const moment = require(process.env.FRAPPE_MOMENT_PATH || "../../../frappe/node_modules/moment");
 
-function loadForm(allocationBalances = [], allocationRequest = null) {
+function loadForm(allocationBalances = [], allocationRequest = null, dailyRequest = async () => []) {
 	const handlers = [];
 	const rows = new Map();
 	const dashboardSections = [];
@@ -40,7 +40,8 @@ function loadForm(allocationBalances = [], allocationRequest = null) {
 					typeof values === "string" ? { [values]: value } : values
 				),
 		},
-		xcall: async (method) =>
+		xcall: async (method, args) =>
+			method === "opero.api.timesheet.preview_daily_times" ? dailyRequest(args) :
 			method === "opero.api.timesheet.get_allocation_balances"
 				? allocationRequest
 					? allocationRequest()
@@ -267,63 +268,12 @@ test("allocation summary ignores an older response", async () => {
 	assert.match(dashboardSections.at(-1)[0], /Newest/);
 	assert.doesNotMatch(dashboardSections.at(-1)[0], /Stale/);
 });
-for (const [start, hours] of [
-	["2026-01-31 23:00:00", 3],
-	["2026-01-31 23:00:00", 50],
-]) {
-	test(`split preserves timestamps and ${hours} hours across midnight`, async () => {
-		const { handlers, rows, frm, buttons } = loadForm();
-		const row = {
-			doctype: "Timesheet Detail",
-			name: "original",
-			from_time: start,
-			hours,
-			task: "task",
-			project: "project",
-			description: "Work",
-			is_billable: 1,
-			activity_type: "rate",
-			zoho_entry_id: "remote",
-			custom_zoho_sync_uncertain: 1,
-			custom_week_of_month: "Week 5",
-		};
-		frm.doc.time_logs.push(row);
-		rows.set(row.name, row);
-		for (const { doctype, events } of handlers)
-			if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
-		await buttons.get("Split at midnight")();
-		assert.equal(frm.doc.time_logs[0].from_time, start);
-		assert.equal(
-			frm.doc.time_logs.reduce((sum, entry) => sum + entry.hours, 0),
-			hours
-		);
-		const last = frm.doc.time_logs.at(-1);
-		assert.equal(
-			last.to_time,
-			moment(start).add(hours, "hours").format("YYYY-MM-DD HH:mm:ss")
-		);
-		for (let i = 1; i < frm.doc.time_logs.length; i++) {
-			const entry = frm.doc.time_logs[i];
-			assert.equal(entry.from_time, frm.doc.time_logs[i - 1].to_time);
-			assert.equal(entry.activity_type, "rate");
-			assert.equal(entry.description, "Work");
-			assert.equal(entry.zoho_entry_id, undefined);
-			assert.equal(entry.custom_zoho_sync_uncertain, undefined);
-			assert.equal(
-				entry.custom_week_of_month,
-				"Week " +
-					(Math.floor(
-						(moment(entry.from_time).date() -
-							1 +
-							moment(entry.from_time).startOf("month").isoWeekday() -
-							1) /
-							7
-					) +
-						1)
-			);
-		}
-	});
-}
+test("draft forms do not offer midnight splitting", async () => {
+	const { handlers, frm, buttons } = loadForm();
+	for (const { doctype, events } of handlers)
+		if (doctype === "Timesheet" && events.refresh) await events.refresh(frm);
+	assert.equal(buttons.has("Split at midnight"), false);
+});
 
 test("submitted forms do not offer splitting", async () => {
 	const { handlers, frm, buttons } = loadForm();
@@ -363,4 +313,45 @@ test("week updates from From Time and clears when the date is removed", async ()
 			}
 		assert.equal(row.custom_week_of_month, week);
 	}
+});
+
+
+test("hours edit replaces the overnight preview with the generated daytime slot", async () => {
+	let request;
+	const { handlers, frm, rows } = loadForm([], null, async (args) => {
+		request = args;
+		return [{ name: "late-entry", from_time: "2026-10-09 08:00:00", to_time: "2026-10-09 13:00:00" }];
+	});
+	frm.doc.employee = "EMP-1";
+	frm.doc.name = "TS264001";
+	frm.is_new = () => false;
+	const row = { name: "late-entry", doctype: "Timesheet Detail", from_time: "2026-10-09 22:00:00", to_time: "2026-10-10 03:00:00", hours: 5 };
+	frm.doc.time_logs.push(row);
+	rows.set(row.name, row);
+	const handler = handlers.find(({ doctype, events }) => doctype === "Timesheet Detail" && String(events.hours).includes("schedule_daily_times"));
+	handler.events.hours(frm);
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(row.from_time, "2026-10-09 08:00:00");
+	assert.equal(row.to_time, "2026-10-09 13:00:00");
+	assert.equal(row.hours, 5);
+	assert.equal(request.timesheet_name, "TS264001");
+});
+
+test("scheduling preview ignores an older response after hours change", async () => {
+	const pending = [];
+	const { handlers, frm, rows } = loadForm([], null, () => new Promise((resolve) => pending.push(resolve)));
+	frm.doc.employee = "EMP-1";
+	const row = { name: "entry", doctype: "Timesheet Detail", from_time: "2026-10-09 22:00:00", hours: 5 };
+	frm.doc.time_logs.push(row);
+	rows.set(row.name, row);
+	const handler = handlers.find(({ doctype, events }) => doctype === "Timesheet Detail" && String(events.hours).includes("schedule_daily_times"));
+	handler.events.hours(frm);
+	row.hours = 2;
+	handler.events.hours(frm);
+	pending[1]([{ name: "entry", from_time: "2026-10-09 08:00:00", to_time: "2026-10-09 10:00:00" }]);
+	await new Promise((resolve) => setImmediate(resolve));
+	pending[0]([{ name: "entry", from_time: "2026-10-09 08:00:00", to_time: "2026-10-09 13:00:00" }]);
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(row.to_time, "2026-10-09 10:00:00");
+	assert.equal(row.hours, 2);
 });

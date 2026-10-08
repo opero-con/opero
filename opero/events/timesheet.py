@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from math import isfinite
 
 import frappe
 from frappe.utils import add_to_date, escape_html, get_datetime, get_first_day, getdate, nowdate
@@ -15,6 +16,79 @@ def validate_timesheet(doc, _method=None):
 	_set_week_of_month(doc)
 	_anti_spill(doc)
 	_validate_allocated_hours(doc)
+
+
+def generate_daily_times(doc, _method=None):
+	"""Place retrospective hours in free intervals from 08:00 on the selected date."""
+	previous = doc.get_doc_before_save()
+	if doc.docstatus == 2 or (previous and previous.docstatus == 1):
+		return
+	rows = list(doc.time_logs or [])
+	if not rows:
+		return
+	if not doc.employee:
+		frappe.throw("Select Personnel before recording working hours.")
+	if any(not row.from_time for row in rows):
+		frappe.throw("Select a work date in From Time for every entry.")
+	dates = {getdate(row.from_time) for row in rows}
+	if len(dates) != 1:
+		frappe.throw("All entries must use the same work date. Use a separate timesheet for another day.")
+	day = get_datetime(next(iter(dates)))
+	limit = float(frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0)
+	if not isfinite(limit) or limit <= 0:
+		frappe.throw("Set a positive Standard Working Hours value in HR Settings.")
+	for row in rows:
+		hours = float(row.hours or 0)
+		if not isfinite(hours) or hours <= 0:
+			frappe.throw(f"Row {row.idx}: Hours must be greater than zero.")
+	# Serialize all of this employee's saves, including drafts, before reading reservations.
+	frappe.db.sql("SELECT name FROM `tabEmployee` WHERE name = %s FOR UPDATE", (doc.employee,))
+	end = day + timedelta(days=1)
+	occupied = frappe.db.sql(
+		"""
+		SELECT tl.from_time, tl.to_time, tl.hours
+		FROM `tabTimesheet` ts JOIN `tabTimesheet Detail` tl ON tl.parent = ts.name
+		WHERE ts.employee = %(employee)s AND ts.docstatus < 2 AND ts.name != %(name)s
+		  AND tl.from_time < %(end)s AND tl.to_time > %(start)s
+		ORDER BY tl.from_time FOR UPDATE
+		""",
+		{"employee": doc.employee, "name": doc.name or "", "start": day, "end": end},
+		as_dict=True,
+	)
+	used = sum(
+		(
+			max(
+				min(get_datetime(r.to_time), end) - max(get_datetime(r.from_time), day), timedelta()
+			).total_seconds()
+			/ 3600
+		)
+		for r in occupied
+	)
+	requested = sum(float(row.hours) for row in rows)
+	if used + requested > limit + 0.000001:
+		frappe.throw(
+			f"{day.date()}: {used + requested:g}h total exceeds the {limit:g}h daily limit.",
+			title="Daily limit exceeded",
+		)
+	intervals = [(get_datetime(r.from_time), get_datetime(r.to_time)) for r in occupied]
+	cursor = day + timedelta(hours=8)
+	for row in rows:
+		duration = timedelta(seconds=round(float(row.hours) * 3600))
+		if duration <= timedelta():
+			frappe.throw(f"Row {row.idx}: Hours must represent at least one second.")
+		for start, finish in intervals:
+			if finish <= cursor:
+				continue
+			if cursor + duration <= start:
+				break
+			cursor = max(cursor, finish)
+		if cursor + duration > end:
+			frappe.throw(
+				"These hours cannot fit after 08:00 on the selected date. Correct the hours or work date."
+			)
+		row.from_time = cursor
+		row.to_time = cursor + duration
+		cursor = row.to_time
 
 
 def week_of_month(from_time):
@@ -72,8 +146,8 @@ def _anti_spill(doc):
 		if end_dt.time().isoformat() == "00:00:00" and (end_dt.date() - ft.date()).days == 1:
 			continue
 		frappe.throw(
-			f"Row {row.idx}: this entry crosses midnight. Use Split at midnight to preserve its times.",
-			title="Split time entry",
+			f"Row {row.idx}: this entry crosses midnight. Correct the hours or work date.",
+			title="Entry exceeds work date",
 		)
 
 

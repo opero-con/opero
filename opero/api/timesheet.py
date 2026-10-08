@@ -44,7 +44,9 @@ def get_allocation_balances(employee, project=None, time_logs=None, timesheet_na
 	)
 	task_names = {row.name: row.subject or row.name for row in visible}
 	if tasks != set(task_names):
-		frappe.throw("Every task must be accessible and belong to the selected project.", frappe.PermissionError)
+		frappe.throw(
+			"Every task must be accessible and belong to the selected project.", frappe.PermissionError
+		)
 	allocation, usage = get_monthly_balances(employee, rows, timesheet_name)
 	current = {}
 	for row in rows:
@@ -61,4 +63,33 @@ def get_allocation_balances(employee, project=None, time_logs=None, timesheet_na
 			remaining=allocation.get((task, month), 0) - usage.get((task, month), 0) - hours,
 		)
 		for (task, month), hours in sorted(current.items())
+	]
+
+
+@frappe.whitelist()
+def preview_daily_times(employee, time_logs, timesheet_name=None):
+	"""Preview the save-time schedule without writing or saving a document."""
+	from opero.events.timesheet import generate_daily_times
+
+	frappe.get_doc("Employee", employee).check_permission("read")
+	if timesheet_name and frappe.db.exists("Timesheet", timesheet_name):
+		existing = frappe.get_doc("Timesheet", timesheet_name)
+		existing.check_permission("write")
+		if existing.docstatus != 0:
+			frappe.throw("Only unapproved timesheets can be rescheduled.")
+	else:
+		frappe.has_permission("Timesheet", "create", throw=True)
+		timesheet_name = None
+	rows = frappe.parse_json(time_logs)
+	if not isinstance(rows, list):
+		frappe.throw("Time entries must be a list.")
+	complete = [row for row in rows if row.get("from_time") and float(row.get("hours") or 0) > 0]
+	if not complete:
+		return []
+	doc = frappe.get_doc({"doctype": "Timesheet", "employee": employee, "time_logs": complete})
+	doc.name = timesheet_name
+	generate_daily_times(doc)
+	return [
+		{"name": source.get("name"), "from_time": str(row.from_time), "to_time": str(row.to_time)}
+		for source, row in zip(complete, doc.time_logs, strict=True)
 	]
