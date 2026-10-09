@@ -8,6 +8,8 @@ frappe.ui.form.on("Timesheet", {
 	refresh: function (frm) {
 		frm.toggle_display("employee_name", false);
 		frm.toggle_display("workflow_state", false);
+		frm.toggle_display("start_date", false);
+		frm.toggle_display("end_date", false);
 		frm.toggle_display("department", false);
 		frm.toggle_display("custom_total_spent_hours", false);
 		frm.toggle_display("custom_pm_name", false);
