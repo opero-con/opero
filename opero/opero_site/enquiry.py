@@ -60,9 +60,7 @@ def _clean(value, limit: int) -> str:
 	return cstr(value).replace("\x00", "").strip()[:limit]
 
 
-def _enquiry_body(
-	sender_name: str, sender: str, org: str, subject: str, message: str
-) -> tuple[str, str]:
+def _enquiry_body(sender_name: str, sender: str, org: str, subject: str, message: str) -> tuple[str, str]:
 	org_display = org or "Not provided"
 	text = "\n".join(
 		[
@@ -119,6 +117,8 @@ def communication_permission_query(user=None) -> str | None:
 		return None
 	if "Website Manager" in roles:
 		return "`tabCommunication`.`custom_source` = 'Website'"
+	if "Website Publication Publisher" in roles:
+		return "1=0"
 	return None
 
 
@@ -128,7 +128,7 @@ def communication_has_permission(doc, ptype=None, user=None) -> bool | None:
 	if roles & {"System Manager", "Inbox User"}:
 		return None
 	if "Website Manager" not in roles:
-		return None
+		return False if "Website Publication Publisher" in roles else None
 	is_website = cstr(getattr(doc, "custom_source", None)) == SOURCE_WEBSITE
 	if ptype in (None, "read", "write", "print", "email"):
 		return is_website

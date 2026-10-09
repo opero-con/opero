@@ -5,7 +5,10 @@ const path = require("node:path");
 const vm = require("node:vm");
 const test = require("node:test");
 
-function loadPublishStatus(status, { canDeploy = true } = {}) {
+function loadPublishStatus(
+	status,
+	{ canDeploy = true, publisher = false, publicationWrite = true } = {}
+) {
 	const handlers = new Map();
 	const singleValueCalls = [];
 	const frappe = {
@@ -17,7 +20,13 @@ function loadPublishStatus(status, { canDeploy = true } = {}) {
 		},
 		get_indicator() {},
 		listview_settings: {},
-		model: { can_write: (doctype) => canDeploy && doctype === "Site Settings" },
+		user_roles: publisher ? ["Website Publication Publisher"] : [],
+		model: {
+			can_write: (doctype) =>
+				(canDeploy && doctype === "Site Settings") ||
+				(publisher && publicationWrite && doctype === "Publication"),
+			can_read: () => canDeploy,
+		},
 		provide() {},
 		ui: { form: { on: (doctype, events) => handlers.set(doctype, events) } },
 		utils: {
@@ -31,7 +40,8 @@ function loadPublishStatus(status, { canDeploy = true } = {}) {
 		frappe,
 		window: {},
 		$: () => ({ on() {} }),
-		__: (text, values = []) => values.reduce((result, value, index) => result.replace(`{${index}}`, value), text),
+		__: (text, values = []) =>
+			values.reduce((result, value, index) => result.replace(`{${index}}`, value), text),
 	};
 	vm.createContext(context);
 	vm.runInContext(
@@ -70,7 +80,10 @@ test("every homepage section displays the shared Home Page deploy ribbon", async
 		assert.match(messages[1][0], /Will be published when deployed/);
 		assert.equal(messages[1][1], "blue");
 	}
-	assert.deepEqual(singleValueCalls, sections.map(() => ["Home Page", "status"]));
+	assert.deepEqual(
+		singleValueCalls,
+		sections.map(() => ["Home Page", "status"])
+	);
 });
 
 test("every site DocType displays its own pending ribbon", async () => {
@@ -133,7 +146,10 @@ test("status pills use the agreed colors", () => {
 		"To unpublish": "orange",
 	};
 	for (const [status, color] of Object.entries(colors)) {
-		const [label, indicator] = context.getPublishStatusIndicator({ website_status: status }, "Partner");
+		const [label, indicator] = context.getPublishStatusIndicator(
+			{ website_status: status },
+			"Partner"
+		);
 		assert.equal(label, status);
 		assert.equal(indicator, color);
 	}
@@ -175,4 +191,29 @@ test("the deploy review lists each change and escapes paths", () => {
 	assert.match(message, /<li>Remove: content\/partners\/practica.md<\/li>/);
 	assert.match(message, /<li>Update: content\/partners\/&lt;b&gt;.md<\/li>/);
 	assert.match(context.deployReviewMessage([]), /already matches/);
+});
+
+test("publication publisher sees only publication deployment and no Deploy Center link", async () => {
+	const { handlers } = loadPublishStatus("Published", { canDeploy: false, publisher: true });
+	for (const [doctype, doc] of [
+		["Publication", { status: "To publish" }],
+		["Partner", { website_status: "To publish" }],
+		["Privacy policy", { status: "To update" }],
+	]) {
+		const { frm, buttons, messages } = makeForm(doctype, doc);
+		await handlers.get(doctype).refresh(frm);
+		assert.deepEqual(buttons, doctype === "Publication" ? ["Deploy"] : []);
+		assert.ok(messages.every((args) => !String(args[0]).includes("deploy-center")));
+	}
+});
+
+test("publication publishing also requires publication write permission", async () => {
+	const { handlers } = loadPublishStatus("Published", {
+		canDeploy: false,
+		publisher: true,
+		publicationWrite: false,
+	});
+	const { frm, buttons } = makeForm("Publication", { status: "To publish" });
+	await handlers.get("Publication").refresh(frm);
+	assert.deepEqual(buttons, []);
 });

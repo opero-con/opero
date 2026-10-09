@@ -205,11 +205,17 @@ extend_bootinfo = "opero.boot.boot_session"
 permission_query_conditions = {
 	"ToDo": "opero.todo_enhancements.get_permission_query_conditions",
 	"Communication": "opero.opero_site.enquiry.communication_permission_query",
+	"Email Group": "opero.opero_site.access.mailing_permission_query",
+	"Email Group Member": "opero.opero_site.access.mailing_permission_query",
+	"Newsletter": "opero.opero_site.access.mailing_permission_query",
 }
 
 has_permission = {
 	"ToDo": "opero.todo_enhancements.has_permission",
 	"Communication": "opero.opero_site.enquiry.communication_has_permission",
+	"Email Group": "opero.opero_site.access.mailing_has_permission",
+	"Email Group Member": "opero.opero_site.access.mailing_has_permission",
+	"Newsletter": "opero.opero_site.access.mailing_has_permission",
 }
 
 override_doctype_class = {

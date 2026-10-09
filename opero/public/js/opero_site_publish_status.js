@@ -127,12 +127,9 @@ function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)])
 	if (!QUEUED_STATUSES.includes(status)) {
 		return;
 	}
-	const link = frappe.utils.get_form_link(
-		"Deploy Center",
-		"Deploy Center",
-		true,
-		__("Deploy Center")
-	);
+	const link = frappe.model.can_read("Deploy Center")
+		? frappe.utils.get_form_link("Deploy Center", "Deploy Center", true, __("Deploy Center"))
+		: "";
 	const text =
 		status === "To unpublish"
 			? __("Will be removed from the website when deployed. {0}", [link])
@@ -140,9 +137,18 @@ function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)])
 	frm.layout.show_message(`<span>${text}</span>`, STATUS_COLORS[status], true);
 }
 
+function canDeployDocument(frm) {
+	return (
+		frappe.model.can_write("Site Settings") ||
+		(frm.doctype === "Publication" &&
+			frappe.user_roles.includes("Website Publication Publisher") &&
+			frappe.model.can_write("Publication"))
+	);
+}
+
 function addDeployButton(frm) {
 	const status = frm.doc[publishStatusField(frm.doctype)];
-	if (frm.is_new() || !QUEUED_STATUSES.includes(status) || !frappe.model.can_write("Site Settings")) {
+	if (frm.is_new() || !QUEUED_STATUSES.includes(status) || !canDeployDocument(frm)) {
 		return;
 	}
 	frm.add_custom_button(__("Deploy"), () => reviewDocumentDeploy(frm));
@@ -176,7 +182,9 @@ function deployReviewMessage(files) {
 			return `<li>${action}: ${frappe.utils.escape_html(row.path)}</li>`;
 		})
 		.join("");
-	return `${__("Deploy only these changes to the website? Other pending changes stay queued.")}<ul>${rows}</ul>`;
+	return `${__(
+		"Deploy only these changes to the website? Other pending changes stay queued."
+	)}<ul>${rows}</ul>`;
 }
 
 function deployDocument(frm, args) {
@@ -189,7 +197,7 @@ function deployDocument(frm, args) {
 			const payload = r.message || {};
 			frappe.show_alert({
 				message: payload.commit_url
-					? __("Sent to website. Deploy Center shows when it is live.")
+					? __("Sent to website. You will be notified if the build fails.")
 					: payload.message,
 				indicator: "green",
 			});

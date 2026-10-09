@@ -275,6 +275,12 @@
    "role": "Website Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "Website Publication Publisher",
+   "read": 1,
+   "create": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
