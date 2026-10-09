@@ -54,7 +54,9 @@ def export_markdown_media(path: str, text: str) -> tuple[str, list[tuple[str, by
 	return to_markdown(rewritten, body), attachments
 
 
-def export_planned_media(planned: list[tuple[str, str]]) -> tuple[list[tuple[str, str]], list[tuple[str, bytes]]]:
+def export_planned_media(
+	planned: list[tuple[str, str]],
+) -> tuple[list[tuple[str, str]], list[tuple[str, bytes]]]:
 	rewritten = []
 	media: list[tuple[str, bytes]] = []
 	seen: dict[str, bytes] = {}
@@ -67,7 +69,9 @@ def export_planned_media(planned: list[tuple[str, str]]) -> tuple[list[tuple[str
 				seen[repo_path] = blob
 				media.append((repo_path, blob))
 			elif existing != blob:
-				frappe.throw(_("Two attachments would publish to {0} with different contents.").format(repo_path))
+				frappe.throw(
+					_("Two attachments would publish to {0} with different contents.").format(repo_path)
+				)
 	return rewritten, media
 
 
@@ -101,6 +105,12 @@ def _safe_filename(file_url: str) -> str:
 def read_desk_file(file_url: str) -> bytes:
 	relative = _relative_files_path(file_url)
 	is_private = file_url.startswith("/private/files/")
+	if (
+		is_private
+		and "Website Publication Publisher" in frappe.get_roles()
+		and not frappe.has_permission("Site Settings", "write")
+	):
+		frappe.get_doc("File", {"file_url": file_url}).check_permission("read")
 	disk_path = get_files_path(*relative.split("/"), is_private=1 if is_private else 0)
 	if not is_safe_path(disk_path) or not os.path.isfile(disk_path):
 		frappe.throw(_("Cannot publish {0}: the file is not on this site.").format(file_url))

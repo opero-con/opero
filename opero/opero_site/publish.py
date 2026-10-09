@@ -27,7 +27,12 @@ from opero.opero_site.publish_status import (
 
 DEFAULT_REPO = "opero-con/opero-content"
 DEFAULT_BRANCH = "main"
-MANAGED_DELETE_PREFIXES = ("content/publications/", "content/team/", "content/enterprises/", "content/partners/")
+MANAGED_DELETE_PREFIXES = (
+	"content/publications/",
+	"content/team/",
+	"content/enterprises/",
+	"content/partners/",
+)
 MEDIA_DELETE_PREFIXES = ("media/publications/", "media/team/", "media/enterprises/", "media/partners/")
 DEPLOY_LOG_LIMIT = 10
 DEPLOY_LOG_FIELDS = (
@@ -177,12 +182,16 @@ def pending_push_for_doc(doc, *, deleted: bool = False) -> list[dict]:
 		new_path = content_path_for(doc)
 		renamed = bool(old_path and new_path and old_path != new_path)
 		rename = {"path": old_path, "action": "delete", "source": [doc.doctype, doc.name]}
-		if renamed and doc.doctype == "Publication" and (
-			is_on_site(previous) or is_to_unpublish(previous) or is_on_site(doc) or is_to_unpublish(doc)
+		if (
+			renamed
+			and doc.doctype == "Publication"
+			and (is_on_site(previous) or is_to_unpublish(previous) or is_on_site(doc) or is_to_unpublish(doc))
 		):
 			entries.append(rename)
-		elif renamed and doc.doctype in ("Employee", "Enterprise", "Partner") and (
-			is_on_site(previous) or is_to_unpublish(previous)
+		elif (
+			renamed
+			and doc.doctype in ("Employee", "Enterprise", "Partner")
+			and (is_on_site(previous) or is_to_unpublish(previous))
 		):
 			entries.append(rename)
 
@@ -515,10 +524,7 @@ def require_media_present(references: dict[str, set[str]], available: set[str]) 
 
 
 def pending_entries(files: list[tuple[str, str | None]]) -> list[dict]:
-	rows = [
-		{"path": path, "action": "delete" if content is None else "update"}
-		for path, content in files
-	]
+	rows = [{"path": path, "action": "delete" if content is None else "update"} for path, content in files]
 	return _enrich_pending(rows)
 
 
@@ -575,6 +581,15 @@ def _settle_doc(doc) -> None:
 def _require_deploy_permission() -> None:
 	if not frappe.has_permission("Site Settings", "write"):
 		frappe.throw(_("Not permitted to deploy Opero Site content."))
+
+
+def _require_document_deploy_permission(doc) -> None:
+	if frappe.has_permission("Site Settings", "write"):
+		return
+	if doc.doctype == "Publication" and "Website Publication Publisher" in frappe.get_roles():
+		doc.check_permission("write")
+		return
+	frappe.throw(_("Not permitted to deploy this website record."), frappe.PermissionError)
 
 
 def _emit_progress(done: int, total: int, path: str = "") -> None:
@@ -672,15 +687,16 @@ def get_site_document(doctype: str, name: str):
 @frappe.whitelist()
 def preview_document_deploy(doctype: str, name: str) -> dict:
 	"""What deploying only this record would change on the website."""
-	_require_deploy_permission()
-	return preview_paths(document_deploy_paths(get_site_document(doctype, name)))
+	doc = get_site_document(doctype, name)
+	_require_document_deploy_permission(doc)
+	return preview_paths(document_deploy_paths(doc))
 
 
 @frappe.whitelist()
 def deploy_document(doctype: str, name: str) -> dict:
 	"""Deploy this record alone; other pending changes stay queued."""
-	_require_deploy_permission()
 	doc = get_site_document(doctype, name)
+	_require_document_deploy_permission(doc)
 	return deploy_paths(document_deploy_paths(doc), message=f"content: update {doctype} {name} from desk")
 
 
@@ -690,7 +706,12 @@ def content_diff(repo: ContentRepo, path: str) -> dict:
 	label = content_label_for(path)
 	match = next(((p, content) for p, content in files if p == path), None)
 	if not match:
-		return {"path": path, **label, "diff": [], "message": _("Nothing pending for {0}.").format(label["title"])}
+		return {
+			"path": path,
+			**label,
+			"diff": [],
+			"message": _("Nothing pending for {0}.").format(label["title"]),
+		}
 
 	_path, planned_content = match
 	if planned_content is not None and not isinstance(planned_content, str):

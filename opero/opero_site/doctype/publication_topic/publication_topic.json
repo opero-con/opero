@@ -55,6 +55,10 @@
    "role": "Website Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "Website Publication Publisher",
+   "read": 1
   }
  ],
  "quick_entry": 1,
