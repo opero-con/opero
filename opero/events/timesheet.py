@@ -6,7 +6,15 @@ from datetime import timedelta
 from math import isfinite
 
 import frappe
-from frappe.utils import add_to_date, escape_html, get_datetime, get_first_day, getdate, nowdate
+from frappe.utils import (
+	add_to_date,
+	escape_html,
+	get_datetime,
+	get_first_day,
+	get_timedelta,
+	getdate,
+	nowdate,
+)
 
 SUBMISSION_CUTOFF_DAY = 3
 SUBMISSION_CUTOFF_BYPASS_ROLES = {"Projects Manager"}
@@ -50,7 +58,7 @@ def _validate_budgeted_project(doc):
 
 
 def generate_daily_times(doc, _method=None):
-	"""Place retrospective hours in free intervals from 08:00 on the selected date."""
+	"""Place retrospective hours in free intervals from the configured day start."""
 	previous = doc.get_doc_before_save()
 	if doc.docstatus == 2 or (previous and previous.docstatus == 1):
 		return
@@ -102,7 +110,13 @@ def generate_daily_times(doc, _method=None):
 			title="Daily limit exceeded",
 		)
 	intervals = [(get_datetime(r.from_time), get_datetime(r.to_time)) for r in occupied]
-	cursor = day + timedelta(hours=8)
+	start_time = frappe.db.get_single_value("HR Settings", "custom_work_day_starts_at")
+	if start_time is None or start_time == "":
+		frappe.throw("Set Timesheet starts at in HR Settings.")
+	start_offset = get_timedelta(start_time)
+	if not timedelta() <= start_offset < timedelta(days=1):
+		frappe.throw("Timesheet starts at must be within the day.")
+	cursor = day + start_offset
 	for row in rows:
 		duration = timedelta(seconds=round(float(row.hours) * 3600))
 		if duration <= timedelta():
@@ -114,9 +128,7 @@ def generate_daily_times(doc, _method=None):
 				break
 			cursor = max(cursor, finish)
 		if cursor + duration > end:
-			frappe.throw(
-				"These hours cannot fit after 08:00 on the selected date. Correct the hours or work date."
-			)
+			frappe.throw("These hours cannot fit on the work date. Correct the hours or start time.")
 		row.from_time = cursor
 		row.to_time = cursor + duration
 		cursor = row.to_time
