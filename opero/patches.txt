@@ -156,3 +156,4 @@ opero.patches.v0_4.backfill_timesheet_task_names
 
 opero.patches.v0_4.require_timesheet_project
 opero.patches.v0_4.set_timesheet_list_columns
+opero.patches.v0_4.add_hr_work_day_start

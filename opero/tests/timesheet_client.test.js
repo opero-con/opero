@@ -317,24 +317,27 @@ test("week updates from From Time and clears when the date is removed", async ()
 });
 
 
-test("hours edit replaces the overnight preview with the generated daytime slot", async () => {
+test("seven-hour preview keeps one task row and its billing hours", async () => {
 	let request;
 	const { handlers, frm, rows } = loadForm([], null, async (args) => {
 		request = args;
-		return [{ name: "late-entry", from_time: "2026-10-09 08:00:00", to_time: "2026-10-09 13:00:00" }];
+		return [{ name: "late-entry", from_time: "2026-10-09 08:30:00", to_time: "2026-10-09 15:30:00" }];
 	});
 	frm.doc.employee = "EMP-1";
 	frm.doc.name = "TS264001";
 	frm.is_new = () => false;
-	const row = { name: "late-entry", doctype: "Timesheet Detail", from_time: "2026-10-09 22:00:00", to_time: "2026-10-10 03:00:00", hours: 5 };
+	const row = { name: "late-entry", doctype: "Timesheet Detail", from_time: "2026-10-09 22:00:00", to_time: "2026-10-10 05:00:00", hours: 7, billing_hours: 7, task: "TASK-1" };
 	frm.doc.time_logs.push(row);
 	rows.set(row.name, row);
 	const handler = handlers.find(({ doctype, events }) => doctype === "Timesheet Detail" && String(events.hours).includes("schedule_daily_times"));
 	handler.events.hours(frm);
 	await new Promise((resolve) => setImmediate(resolve));
-	assert.equal(row.from_time, "2026-10-09 08:00:00");
-	assert.equal(row.to_time, "2026-10-09 13:00:00");
-	assert.equal(row.hours, 5);
+	assert.equal(row.from_time, "2026-10-09 08:30:00");
+	assert.equal(row.to_time, "2026-10-09 15:30:00");
+	assert.equal(row.hours, 7);
+	assert.equal(row.billing_hours, 7);
+	assert.equal(frm.doc.time_logs.length, 1);
+	assert.equal(row.task, "TASK-1");
 	assert.equal(request.timesheet_name, "TS264001");
 });
 

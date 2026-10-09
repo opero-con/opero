@@ -284,7 +284,7 @@ frappe.ui.form.on("Timesheet", {
 		update_total_spent_hours(frm);
 		const grid = frm.fields_dict?.time_logs?.grid;
 		if (frm.doc.docstatus === 0 && grid?.update_docfield_property) {
-			grid.update_docfield_property("from_time", "description", __("Choose the work date. Clock times are generated from 08:00."));
+			grid.update_docfield_property("from_time", "description", __("Choose the work date."));
 			grid.update_docfield_property("to_time", "read_only", 1);
 		}
 		if (

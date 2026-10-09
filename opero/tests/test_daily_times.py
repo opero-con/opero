@@ -21,7 +21,11 @@ class TestDailyTimes(TestCase):
 		self.frappe = self.frappe_patch.start()
 		self.addCleanup(self.frappe_patch.stop)
 		self.db = self.frappe.db
-		self.db.get_single_value.return_value = 8
+		self.limit = 8
+		self.start_time = "08:00:00"
+		self.db.get_single_value.side_effect = lambda dt, field: (
+			self.limit if field == "standard_working_hours" else self.start_time
+		)
 		self.db.sql.return_value = []
 
 		def throw(message, **kwargs):
@@ -58,7 +62,7 @@ class TestDailyTimes(TestCase):
 		self.db.sql.return_value = [
 			frappe._dict(from_time="2026-09-30 09:00:00", to_time="2026-09-30 23:00:00", hours=14)
 		]
-		self.db.get_single_value.return_value = 24
+		self.limit = 24
 		with self.assertRaisesRegex(ValueError, "cannot fit"):
 			generate_daily_times(self.doc)
 
@@ -68,7 +72,7 @@ class TestDailyTimes(TestCase):
 			generate_daily_times(self.doc)
 
 	def test_missing_hr_limit_blocks(self):
-		self.db.get_single_value.return_value = 0
+		self.limit = 0
 		with self.assertRaisesRegex(ValueError, "HR Settings"):
 			generate_daily_times(self.doc)
 
@@ -106,7 +110,25 @@ class TestDailyTimes(TestCase):
 		self.db.sql.assert_not_called()
 
 	def test_exact_midnight_is_allowed(self):
-		self.db.get_single_value.return_value = 16
+		self.limit = 16
 		self.doc.time_logs[0].hours = 16
 		generate_daily_times(self.doc)
 		self.assertEqual(self.doc.time_logs[0].to_time, datetime(2026, 10, 1))
+
+	def test_seven_hours_stay_in_one_row_at_configured_start(self):
+		self.start_time = "08:30:00"
+		self.limit = 7
+		row = self.doc.time_logs[0]
+		row.update(hours=7, task="TASK-1", billing_hours=7)
+		generate_daily_times(self.doc)
+		generate_daily_times(self.doc)
+		self.assertEqual(self.doc.time_logs, [row])
+		self.assertEqual(row.from_time, datetime(2026, 9, 30, 8, 30))
+		self.assertEqual(row.to_time, datetime(2026, 9, 30, 15, 30))
+		self.assertEqual((row.hours, row.billing_hours, row.task), (7, 7, "TASK-1"))
+		self.doc.append.assert_not_called()
+
+	def test_missing_day_start_blocks(self):
+		self.start_time = None
+		with self.assertRaisesRegex(ValueError, "Timesheet starts at in HR Settings"):
+			generate_daily_times(self.doc)
