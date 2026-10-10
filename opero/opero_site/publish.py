@@ -586,7 +586,7 @@ def _require_deploy_permission() -> None:
 def _require_document_deploy_permission(doc) -> None:
 	if frappe.has_permission("Site Settings", "write"):
 		return
-	if doc.doctype == "Publication" and "Website Publication Publisher" in frappe.get_roles():
+	if doc.doctype == "Publication":
 		doc.check_permission("write")
 		return
 	frappe.throw(_("Not permitted to deploy this website record."), frappe.PermissionError)

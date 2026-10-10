@@ -159,3 +159,7 @@ opero.patches.v0_4.set_timesheet_list_columns
 opero.patches.v0_4.add_hr_work_day_start
 
 opero.patches.v0_4.add_website_publication_publisher
+
+opero.patches.v0_4.use_blogger_for_publication_publisher
+opero.patches.v0_4.remove_website_publication_publisher_role
+opero.patches.v0_4.rename_publication_publisher_profile

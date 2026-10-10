@@ -4,6 +4,8 @@ import frappe
 from frappe import _
 from frappe.utils import cstr, escape_html, validate_email_address
 
+from opero.opero_site.access import has_explicit_permission, is_publication_editor
+
 SOURCE_WEBSITE = "Website"
 MAX_NAME = 100
 MAX_EMAIL = 254
@@ -117,7 +119,7 @@ def communication_permission_query(user=None) -> str | None:
 		return None
 	if "Website Manager" in roles:
 		return "`tabCommunication`.`custom_source` = 'Website'"
-	if "Website Publication Publisher" in roles:
+	if is_publication_editor(user) and not has_explicit_permission("Communication", user=user):
 		return "1=0"
 	return None
 
@@ -128,7 +130,11 @@ def communication_has_permission(doc, ptype=None, user=None) -> bool | None:
 	if roles & {"System Manager", "Inbox User"}:
 		return None
 	if "Website Manager" not in roles:
-		return False if "Website Publication Publisher" in roles else None
+		if is_publication_editor(user) and not has_explicit_permission(
+			"Communication", ptype or "read", user
+		):
+			return False
+		return None
 	is_website = cstr(getattr(doc, "custom_source", None)) == SOURCE_WEBSITE
 	if ptype in (None, "read", "write", "print", "email"):
 		return is_website

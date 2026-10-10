@@ -206,8 +206,8 @@ permission_query_conditions = {
 	"ToDo": "opero.todo_enhancements.get_permission_query_conditions",
 	"Communication": "opero.opero_site.enquiry.communication_permission_query",
 	"Email Group": "opero.opero_site.access.mailing_permission_query",
-	"Email Group Member": "opero.opero_site.access.mailing_permission_query",
-	"Newsletter": "opero.opero_site.access.mailing_permission_query",
+	"Email Group Member": "opero.opero_site.access.mailing_member_permission_query",
+	"Newsletter": "opero.opero_site.access.newsletter_permission_query",
 }
 
 has_permission = {

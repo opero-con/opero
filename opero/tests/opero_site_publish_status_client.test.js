@@ -20,7 +20,7 @@ function loadPublishStatus(
 		},
 		get_indicator() {},
 		listview_settings: {},
-		user_roles: publisher ? ["Website Publication Publisher"] : [],
+		user_roles: publisher ? ["Blogger"] : [],
 		model: {
 			can_write: (doctype) =>
 				(canDeploy && doctype === "Site Settings") ||
