@@ -105,11 +105,7 @@ def _safe_filename(file_url: str) -> str:
 def read_desk_file(file_url: str) -> bytes:
 	relative = _relative_files_path(file_url)
 	is_private = file_url.startswith("/private/files/")
-	if (
-		is_private
-		and "Website Publication Publisher" in frappe.get_roles()
-		and not frappe.has_permission("Site Settings", "write")
-	):
+	if is_private and not frappe.has_permission("Site Settings", "write"):
 		frappe.get_doc("File", {"file_url": file_url}).check_permission("read")
 	disk_path = get_files_path(*relative.split("/"), is_private=1 if is_private else 0)
 	if not is_safe_path(disk_path) or not os.path.isfile(disk_path):

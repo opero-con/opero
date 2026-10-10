@@ -140,9 +140,7 @@ function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)])
 function canDeployDocument(frm) {
 	return (
 		frappe.model.can_write("Site Settings") ||
-		(frm.doctype === "Publication" &&
-			frappe.user_roles.includes("Website Publication Publisher") &&
-			frappe.model.can_write("Publication"))
+		(frm.doctype === "Publication" && frappe.model.can_write("Publication"))
 	);
 }
 
