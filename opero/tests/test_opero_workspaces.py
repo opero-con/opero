@@ -31,6 +31,7 @@ class TestOperoWorkspaces(FrappeTestCase):
 			"Consultant Tasks": ("Consultant Task", "Open", "pm_email"),
 			"Travel Requests": ("Travel Request", "Pending PM's Approval", "custom_pm_email"),
 		}
+		expected["Leave Applications"] = ("Leave Application", "Open", "leave_approver")
 		self.assertEqual(set(queues), set(expected))
 		widths = {
 			block["data"]["shortcut_name"]: block["data"]["col"]
@@ -44,7 +45,8 @@ class TestOperoWorkspaces(FrappeTestCase):
 			self.assertEqual(row.link_to, doctype)
 			if frappe.db.exists("DocType", doctype):
 				self.assertTrue(frappe.get_meta(doctype).has_field(pm_field), doctype)
-			self.assertIn(f'["{doctype}","workflow_state","=","{state}"]', row.stats_filter)
+			state_field = "status" if doctype == "Leave Application" else "workflow_state"
+			self.assertIn(f'["{doctype}","{state_field}","=","{state}"]', row.stats_filter)
 			self.assertIn(f'["{doctype}","{pm_field}","=",frappe.session.user]', row.stats_filter)
 
 	def test_approvals_keeps_the_todo_hub_reports(self):
