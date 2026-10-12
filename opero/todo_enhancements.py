@@ -6,10 +6,8 @@ from collections.abc import Iterable
 import frappe
 from frappe.model.document import Document
 from frappe.permissions import AUTOMATIC_ROLES
-from frappe.utils.data import now_datetime
-from frappe.utils.data import strip_html
+from frappe.utils.data import now_datetime, strip_html
 from frappe.utils.html_utils import unescape_html
-
 
 USER_TOKEN_SPLIT = re.compile(r"[\n,;]+")
 
@@ -56,7 +54,9 @@ def has_permission(doc: Document, ptype: str = "read", user: str | None = None) 
 	if doc.owner == user or doc.allocated_to == user or doc.assigned_by == user:
 		return True
 
-	assignees = [row.user for row in (getattr(doc, "custom_assignees", None) or []) if getattr(row, "user", None)]
+	assignees = [
+		row.user for row in (getattr(doc, "custom_assignees", None) or []) if getattr(row, "user", None)
+	]
 	return user in assignees
 
 
@@ -75,11 +75,7 @@ def _autofill_title_from_reference(doc: Document):
 	if reference_type and reference_name:
 		try:
 			ref_doc = frappe.get_doc(reference_type, reference_name)
-			title = (
-				getattr(ref_doc, "title", None)
-				or getattr(ref_doc, "subject", None)
-				or ref_doc.name
-			)
+			title = getattr(ref_doc, "title", None) or getattr(ref_doc, "subject", None) or ref_doc.name
 			doc.custom_title = f"{reference_type}: {title}"
 		except Exception:
 			doc.custom_title = f"{reference_type}: {reference_name}"
@@ -102,7 +98,7 @@ def _sync_title_and_description(doc: Document):
 
 
 def _send_assignment_email(doc: Document):
-	"""Ported from FC Server Script ToDo Email Notification."""
+	"""Notify new assignees by email and Desk alert without repeating the email."""
 	if getattr(doc, "status", None) != "Open":
 		return
 
@@ -120,7 +116,22 @@ def _send_assignment_email(doc: Document):
 	if not emails:
 		return
 
+	from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+
 	todo_link = frappe.utils.get_url_to_form("ToDo", doc.name)
+	enqueue_create_notification(
+		emails,
+		{
+			"type": "Alert",
+			"app": "opero",
+			"document_type": "ToDo",
+			"document_name": doc.name,
+			"from_user": frappe.session.user,
+			"subject": "You've been assigned a ToDo: "
+			+ frappe.utils.escape_html(doc.custom_title or doc.name),
+			"link": todo_link,
+		},
+	)
 	message = (
 		f"You've been assigned a ToDo: <b>{doc.custom_title or doc.name}</b><br><br>"
 		f'<a href="{todo_link}">Open the ToDo</a>'
@@ -249,7 +260,7 @@ def _validate_assignees_exist(users: Iterable[str]) -> list[str]:
 	invalid_users = [user for user in users if user not in existing_users]
 	if invalid_users:
 		frappe.throw(
-			"Unknown or disabled user(s): {0}. Use valid existing user IDs from this site.".format(
+			"Unknown or disabled user(s): {}. Use valid existing user IDs from this site.".format(
 				", ".join(invalid_users)
 			)
 		)

@@ -4,8 +4,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from opero import todo_dashboard
-from opero import todo_enhancements
+from opero import todo_dashboard, todo_enhancements
 from opero.opero.report.todo_assignee_load_and_risk import todo_assignee_load_and_risk
 from opero.opero.report.todo_created_vs_closed import todo_created_vs_closed
 from opero.opero.report.todo_explorer import todo_explorer
@@ -71,6 +70,9 @@ class TestTodoAssignmentNotifications(FrappeTestCase):
 		with (
 			patch.object(frappe, "get_all", return_value=["new@example.test"]) as get_all,
 			patch.object(frappe, "sendmail") as sendmail,
+			patch(
+				"frappe.desk.doctype.notification_log.notification_log.enqueue_create_notification"
+			) as notify,
 			patch.object(frappe.utils, "get_url_to_form", return_value="https://example.test/todo/TODO-1"),
 		):
 			todo_enhancements._send_assignment_email(doc)
@@ -79,6 +81,9 @@ class TestTodoAssignmentNotifications(FrappeTestCase):
 		self.assertEqual(get_all.call_args.kwargs["filters"]["name"], ("in", ["new@example.test"]))
 		sendmail.assert_called_once()
 		self.assertEqual(sendmail.call_args.kwargs["recipients"], ["new@example.test"])
+		notify.assert_called_once()
+		self.assertEqual(notify.call_args.args[0], ["new@example.test"])
+		self.assertEqual(notify.call_args.args[1]["document_name"], "TODO-1")
 
 	def test_unchanged_assignees_are_not_notified(self):
 		assignees = [SimpleNamespace(user="existing@example.test")]
@@ -90,16 +95,61 @@ class TestTodoAssignmentNotifications(FrappeTestCase):
 			get_doc_before_save=lambda: SimpleNamespace(custom_assignees=assignees),
 		)
 
-		with patch.object(frappe, "sendmail") as sendmail:
+		with (
+			patch.object(frappe, "sendmail") as sendmail,
+			patch(
+				"frappe.desk.doctype.notification_log.notification_log.enqueue_create_notification"
+			) as notify,
+		):
 			todo_enhancements._send_assignment_email(doc)
 
 		sendmail.assert_not_called()
+		notify.assert_not_called()
+
+	def test_desk_alert_is_unread_linked_and_does_not_send_an_extra_email(self):
+		from frappe.desk.doctype.notification_log import notification_log
+
+		with self.set_user("Administrator"):
+			user = frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": f"todo-alert-{frappe.generate_hash(length=10)}@example.test",
+					"first_name": "ToDo alert test",
+					"send_welcome_email": 0,
+					"enabled": 1,
+				}
+			).insert(ignore_permissions=True)
+			doc = SimpleNamespace(
+				name="TDO-26001",
+				status="Open",
+				custom_title="Review <proposal>",
+				custom_assignees=[SimpleNamespace(user=user.name)],
+				get_doc_before_save=lambda: None,
+			)
+			hooks = {key: value for key, value in frappe.get_doc_hooks().items() if key != "Notification Log"}
+			with (
+				patch.object(frappe, "sendmail") as sendmail,
+				patch.object(notification_log, "send_notification_email") as extra_email,
+				patch.object(frappe, "get_doc_hooks", return_value=hooks),
+			):
+				todo_enhancements._send_assignment_email(doc)
+			log = frappe.get_doc("Notification Log", {"for_user": user.name, "document_name": doc.name})
+			self.assertEqual(log.document_type, "ToDo")
+			self.assertEqual(log.app, "opero")
+			self.assertEqual(log.read, 0)
+			self.assertEqual(log.from_user, "Administrator")
+			self.assertIn("&lt;proposal&gt;", log.subject)
+			self.assertEqual(log.link, frappe.utils.get_url_to_form("ToDo", doc.name))
+			sendmail.assert_called_once()
+			extra_email.assert_not_called()
 
 
 class TestTodoReportScoping(FrappeTestCase):
 	def assert_report_applies_scope(self, get_data, filters=None):
 		with (
-			patch.object(todo_dashboard, "get_user_scope_condition", return_value=("todo.owner = %s", ["me"])),
+			patch.object(
+				todo_dashboard, "get_user_scope_condition", return_value=("todo.owner = %s", ["me"])
+			),
 			patch.object(frappe.db, "sql", return_value=[]) as sql,
 		):
 			get_data(frappe._dict(filters or {}))
@@ -121,7 +171,9 @@ class TestTodoReportScoping(FrappeTestCase):
 	def test_created_vs_closed_applies_scope(self):
 		with (
 			patch.object(todo_dashboard, "get_entity_condition", return_value=("", [])),
-			patch.object(todo_dashboard, "get_user_scope_condition", return_value=("todo.owner = %s", ["me"])),
+			patch.object(
+				todo_dashboard, "get_user_scope_condition", return_value=("todo.owner = %s", ["me"])
+			),
 			patch.object(frappe.db, "sql", return_value=[]) as sql,
 		):
 			todo_created_vs_closed.execute({"time_window": "Last 30 Days"})
