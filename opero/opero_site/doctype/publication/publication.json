@@ -8,7 +8,6 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
-  "slug",
   "column_break_publish",
   "show_on_website",
   "featured",
@@ -23,6 +22,10 @@
   "service_area",
   "column_break_xgao",
   "views",
+  "section_topics",
+  "topics",
+  "column_break_ilia",
+  "website_link",
   "section_summary",
   "summary",
   "section_media",
@@ -37,10 +40,10 @@
   "video_embed_url",
   "video_title",
   "video_caption",
-  "section_topics",
-  "topics",
   "section_body",
-  "body"
+  "body",
+  "section_website_settings",
+  "slug"
  ],
  "fields": [
   {
@@ -51,12 +54,12 @@
    "reqd": 1
   },
   {
-   "description": "URL id; leave blank to generate from the title. Fixed while the publication is on the website.",
+   "description": "Leave blank to generate from the title. Sets the website address and cannot change while the publication is live.",
    "fieldname": "slug",
    "fieldtype": "Data",
-   "label": "Slug",
-   "unique": 1,
-   "read_only_depends_on": "eval:['To update','Published','To unpublish'].includes(doc.status)"
+   "label": "URL slug",
+   "read_only_depends_on": "eval:['To update','Published','To unpublish'].includes(doc.status)",
+   "unique": 1
   },
   {
    "fieldname": "column_break_publish",
@@ -242,14 +245,31 @@
   {
    "fieldname": "column_break_xgao",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "website_link",
+   "fieldtype": "HTML",
+   "label": "URL",
+   "depends_on": "eval:!!doc.slug && !doc.__islocal"
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:0",
+   "fieldname": "section_website_settings",
+   "fieldtype": "Section Break",
+   "label": "Website settings"
+  },
+  {
+   "fieldname": "column_break_ilia",
+   "fieldtype": "Column Break"
   }
  ],
  "links": [],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-12 21:44:56.862558",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Publication",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -277,9 +297,9 @@
    "write": 1
   },
   {
-   "role": "Blogger",
-   "read": 1,
    "create": 1,
+   "read": 1,
+   "role": "Blogger",
    "write": 1
   }
  ],
