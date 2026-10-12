@@ -26,8 +26,8 @@ class CoverFraming(NamedTuple):
 def compute_cover_framing(image_bytes: bytes) -> CoverFraming:
 	"""How the site should frame a cover in the card tile.
 
-	Crops to the busiest region (`object-position`). A cover too wide to crop
-	without losing much of its content, such as a slide, is shown whole instead.
+	Crops to the busiest region (`object-position`). A cover that cannot be
+	cropped without losing much of its content is shown whole instead.
 	"""
 	edges = _edge_map(image_bytes)
 	width, height = edges.size
@@ -38,8 +38,9 @@ def compute_cover_framing(image_bytes: bytes) -> CoverFraming:
 		offset, kept_share = _best_window(edges, width, round(height * TARGET_ASPECT_RATIO), horizontal=True)
 		fit = COVER if kept_share >= _MIN_KEPT_EDGE_SHARE else CONTAIN
 		return CoverFraming(fit, f"{offset}% center")
-	offset, _ = _best_window(edges, height, round(width / TARGET_ASPECT_RATIO), horizontal=False)
-	return CoverFraming(COVER, f"center {offset}%")
+	offset, kept_share = _best_window(edges, height, round(width / TARGET_ASPECT_RATIO), horizontal=False)
+	fit = COVER if kept_share >= _MIN_KEPT_EDGE_SHARE else CONTAIN
+	return CoverFraming(fit, f"center {offset}%")
 
 
 def _edge_map(image_bytes: bytes) -> Image.Image:
