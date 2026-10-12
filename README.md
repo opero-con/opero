@@ -1,6 +1,6 @@
 # Opero
 
-A Frappe v15 app that enhances the ToDo doctype with multi-assignee support, lifecycle tracking, a Flow Hub kanban-style page, and reporting.
+A Frappe v15 app that enhances the ToDo doctype with multi-assignee support, lifecycle tracking, and reporting.
 
 ---
 
@@ -46,12 +46,6 @@ On the ToDo form, the native **Assigned To** sidebar section is replaced by an *
 
 ---
 
-### Flow Hub
-
-A custom page (`/app/flow-hub`) that presents open and in-progress ToDos in a card layout grouped by status. Supports quick assignee management directly from the card without opening the full form.
-
----
-
 ### Reports
 
 | Report | Description |
@@ -68,7 +62,7 @@ A custom page (`/app/flow-hub`) that presents open and in-progress ToDos in a ca
 
 The **Opero** workspace groups the app's own DocTypes and nests two children in the Desk sidebar:
 
-- **Approvals** shows each project manager their own queues (Timesheets, Cash Advances, Consultant Tasks and Travel Requests whose PM email is the signed-in user), plus Flow Hub and the ToDo reports.
+- **Approvals** shows each project manager their own queues (Timesheets, Cash Advances, Consultant Tasks and Travel Requests whose PM email is the signed-in user), plus New ToDo, My ToDos, and the ToDo reports.
 - **Site Content** manages the public website (see `AGENTS.md`).
 
 ---

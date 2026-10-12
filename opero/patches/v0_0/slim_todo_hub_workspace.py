@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-"""Replace the ToDo Hub workspace's number cards and charts with a single
-Flow Hub page shortcut.  The custom Page already provides a richer,
-single-request view of the same metrics, so the workspace becomes a
-lightweight navigation hub: one prominent link to Flow Hub plus direct
-shortcuts to each report.
-"""
+"""Use ToDo shortcuts and reports without recreating the retired Flow Hub page."""
 
 import json
 
@@ -24,18 +19,13 @@ def execute():
 
 	doc = frappe.get_doc("Workspace", WORKSPACE_NAME)
 
-	# Drop all number cards and dashboard charts - Flow Hub renders these
+	# Keep navigation focused on the ToDo form and reports
 	doc.set("number_cards", [])
 	doc.set("charts", [])
 
 	doc.set(
 		"shortcuts",
 		[
-			{
-				"type": "Page",
-				"link_to": "flow-hub",
-				"label": "Flow Hub",
-			},
 			{
 				"type": "DocType",
 				"link_to": "ToDo",
@@ -105,11 +95,6 @@ def execute():
 
 def _workspace_content():
 	return [
-		{
-			"id": "todo-hub-s0",
-			"type": "shortcut",
-			"data": {"shortcut_name": "Flow Hub", "col": 4},
-		},
 		{
 			"id": "todo-hub-s1",
 			"type": "shortcut",

@@ -164,3 +164,4 @@ opero.patches.v0_4.use_blogger_for_publication_publisher
 opero.patches.v0_4.remove_website_publication_publisher_role
 opero.patches.v0_4.rename_publication_publisher_profile
 opero.patches.v0_4.reload_approvals_workspace_for_leave_applications
+opero.patches.v0_4.remove_flow_hub
