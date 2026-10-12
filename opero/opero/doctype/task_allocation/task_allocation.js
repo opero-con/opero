@@ -106,7 +106,11 @@ function capacity_table(doc, capacity) {
 				),
 		  ])}</p>`
 		: "";
-	return `${note}<div class="table-responsive"><table class="table table-bordered small" style="table-layout: fixed">
+	const capacity_note =
+		capacity.available === null && capacity.capacity_issue
+			? `<p class="text-danger">${capacity_issue_message(doc, capacity.capacity_issue)}</p>`
+			: "";
+	return `${note}${capacity_note}<div class="table-responsive"><table class="table table-bordered small" style="table-layout: fixed">
 		<thead><tr>
 			<th style="width: 35%">${esc(__("Task"))}</th>
 			${["Budget / Capacity", "Allocations", "Remaining"]
@@ -128,4 +132,36 @@ function capacity_table(doc, capacity) {
 			<td class="text-right${remaining < 0 ? " text-danger" : ""}">${balance}</td></tr>`;
 			})
 			.join("")}</tbody></table></div>`;
+}
+
+function capacity_issue_message(doc, issue) {
+	const esc = frappe.utils.escape_html;
+	const link = (doctype, name, label) =>
+		frappe.utils.get_form_link(doctype, name, true, esc(label || name));
+	const person = link("Employee", doc.employee, doc.personnel_name || doc.employee);
+	const month = esc(`${doc.month} ${doc.year}`);
+	switch (issue.reason) {
+		case "holiday_list_out_of_range":
+			return __(
+				"{0}'s Holiday List {1} does not cover {2}. Assign a calendar covering this month.",
+				[person, link("Holiday List", issue.holiday_list), month]
+			);
+		case "holiday_list_missing":
+			return __("No Holiday List for {0}. Assign a calendar covering {1}.", [person, month]);
+		case "standard_hours_missing":
+			return __("Set Standard Working Hours in {0} to calculate {1}'s capacity.", [
+				link("HR Settings", "HR Settings"),
+				person,
+			]);
+		case "part_time":
+			return __(
+				"Monthly capacity is not calculated for {0}: Employment Type is Part-time.",
+				[person]
+			);
+		default:
+			return __("Check {0}'s employment dates and status for {1} to calculate capacity.", [
+				person,
+				month,
+			]);
+	}
 }

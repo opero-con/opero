@@ -398,6 +398,35 @@ class TestTaskAllocation(FrappeTestCase):
 		self.assertEqual(doc.docstatus, 1)
 		self.assertIn("5h over", " ".join(message["message"] for message in frappe.get_message_log()))
 
+	def test_capacity_issue_reports_missing_standard_hours(self):
+		with patch.object(frappe.db, "get_single_value", return_value=0):
+			self.assertEqual(
+				task_allocation.get_capacity_issue(self.employee, date(2026, 2, 1)),
+				{"reason": "standard_hours_missing"},
+			)
+
+	def test_capacity_issue_distinguishes_employee_and_calendar_setup(self):
+		person = frappe._dict(name=self.employee, employment_type="Part-time")
+		report = frappe._dict(employees=[person], calendars={})
+		with (
+			patch.object(frappe.db, "get_single_value", return_value=7),
+			patch.object(task_allocation, "WeeklyHours", return_value=report),
+		):
+			self.assertEqual(
+				task_allocation.get_capacity_issue(self.employee, date(2026, 2, 1)),
+				{"reason": "part_time"},
+			)
+			person.employment_type = "Full-time"
+			self.assertEqual(
+				task_allocation.get_capacity_issue(self.employee, date(2026, 2, 1)),
+				{"reason": "holiday_list_missing"},
+			)
+			report.employees = []
+			self.assertEqual(
+				task_allocation.get_capacity_issue(self.employee, date(2026, 2, 1)),
+				{"reason": "employee_unavailable"},
+			)
+
 	def test_available_hours_follow_holidays_and_attendance(self):
 		standard_hours = frappe.db.get_single_value("HR Settings", "standard_working_hours")
 		frappe.db.set_single_value("HR Settings", "standard_working_hours", 7)
@@ -425,6 +454,10 @@ class TestTaskAllocation(FrappeTestCase):
 			)
 		self.assertEqual(task_allocation.get_available_hours(self.employee, date(2026, 2, 1)), 17.5 * 7)
 		self.assertIsNone(task_allocation.get_available_hours(self.employee, date(2027, 2, 1)))
+		self.assertEqual(
+			task_allocation.get_capacity_issue(self.employee, date(2027, 2, 1)),
+			{"reason": "holiday_list_out_of_range", "holiday_list": holidays},
+		)
 
 
 COPY_TASKS = {

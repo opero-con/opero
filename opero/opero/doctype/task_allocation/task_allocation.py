@@ -2,6 +2,7 @@ import re
 from datetime import date
 
 import frappe
+from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_months, escape_html, flt, get_first_day, get_last_day, get_link_to_form
@@ -242,6 +243,30 @@ def get_capacity(employee, month_start, exclude=None):
 		"available": get_available_hours(employee, month_start),
 		"allocated": get_allocated_hours(**filters),
 	}
+
+
+def get_capacity_issue(employee, month_start):
+	"""Explain an unavailable monthly capacity using the same working-time rules."""
+	if not flt(frappe.db.get_single_value("HR Settings", "standard_working_hours")):
+		return {"reason": "standard_hours_missing"}
+	report = WeeklyHours(
+		frappe._dict(employee=employee, from_date=month_start, to_date=get_last_day(month_start))
+	)
+	person = next((row for row in report.employees if row.name == employee), None)
+	if not person:
+		return {"reason": "employee_unavailable"}
+	if person.employment_type == "Part-time":
+		return {"reason": "part_time"}
+	calendar = report.calendars.get(employee)
+	if not calendar:
+		return {"reason": "holiday_list_missing"}
+	days = [day for day in report.get_days_in_range() if report.is_employed(person, day)]
+	if any(not calendar.from_date <= day <= calendar.to_date for day in days):
+		return {
+			"reason": "holiday_list_out_of_range",
+			"holiday_list": get_holiday_list_for_employee(employee, raise_exception=False),
+		}
+	return {"reason": "employee_unavailable"}
 
 
 def get_same_task_allocations(task, employee, month_start, exclude=None):

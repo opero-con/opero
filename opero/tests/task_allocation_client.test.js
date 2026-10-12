@@ -223,3 +223,34 @@ test("a pending response cannot restore the preview after submission", async () 
 	assert.equal(form.visible(), false);
 	assert.equal(form.frm.allocation_capacity, null);
 });
+
+test("unavailable capacity explains the expired calendar with personnel and calendar links", async () => {
+	const form = loadForm({
+		...capacity,
+		available: null,
+		capacity_issue: {
+			reason: "holiday_list_out_of_range",
+			holiday_list: "2024 Holiday Lists",
+		},
+	});
+	form.frm.doc.personnel_name = "Olivia Kyule";
+	form.frm.doc.month = "Dec";
+	await form.events.employee(form.frm);
+	assert.match(form.html(), /Olivia Kyule<\/a>'s Holiday List/);
+	assert.match(form.html(), /2024 Holiday Lists<\/a> does not cover Dec 2026/);
+	assert.match(form.html(), /Assign a calendar covering this month/);
+	assert.equal((form.html().match(/>—<\/td>/g) || []).length, 2);
+});
+
+test("missing calendars and standard hours explain where to correct the configuration", async () => {
+	for (const [reason, expected] of [
+		["holiday_list_missing", /No Holiday List for .*Assign a calendar covering Oct 2026/s],
+		["standard_hours_missing", /Set Standard Working Hours in .*HR Settings.*capacity/s],
+		["part_time", /Employment Type is Part-time/],
+		["employee_unavailable", /employment dates and status for Oct 2026/],
+	]) {
+		const form = loadForm({ ...capacity, available: null, capacity_issue: { reason } });
+		await form.events.employee(form.frm);
+		assert.match(form.html(), expected);
+	}
+});
