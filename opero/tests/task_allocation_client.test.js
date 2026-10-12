@@ -116,8 +116,8 @@ test("budget and monthly totals have separate rows with this allocation included
 	await form.events.employee(form.frm);
 	const rows = form.html().match(/<tr><td>.*?<\/tr>/gs);
 	assert.equal(rows.length, 2);
-	assert.match(rows[0], /Sanitation market assessment.*42\.7h.*42\.7h.*47\.6h.*4\.9h over/s);
-	assert.match(rows[1], /All - Oct 2026.*203h.*170\.7h.*175\.6h.*27\.4h/s);
+	assert.match(rows[0], /Sanitation market assessment.*42\.7h.*42\.7h.*4\.9h over/s);
+	assert.match(rows[1], /All - Oct 2026.*203h.*170\.7h.*27\.4h/s);
 	assert.match(form.html(), />Task<\/th>/);
 	assert.match(form.html(), />Allocations<\/th>/);
 	assert.doesNotMatch(form.html(), /Other allocations/);
@@ -128,7 +128,8 @@ test("budget and monthly totals have separate rows with this allocation included
 	);
 	assert.equal(form.title(), "Allocations - Person");
 	assert.doesNotMatch(form.html(), /This allocation<\/th>/);
-	assert.equal((rows[0].match(/<td/g) || []).length, 5);
+	assert.doesNotMatch(form.html(), />Total<\/th>/);
+	assert.equal((rows[0].match(/<td/g) || []).length, 4);
 	assert.doesNotMatch(form.html(), /This task/);
 	assert.doesNotMatch(rows[1], /text-danger/);
 });
@@ -140,8 +141,8 @@ test("editing hours updates the existing table without another request", async (
 	form.events.hours(form.frm);
 	assert.equal(form.sections(), 1);
 	assert.equal(form.calls(), 1);
-	assert.match(form.html(), /43\.7h/);
-	assert.match(form.html(), /171\.7h/);
+	assert.match(form.html(), /1h over/);
+	assert.match(form.html(), /31\.3h/);
 });
 
 test("personnel names update the existing heading without another capacity request", async () => {
