@@ -46,6 +46,9 @@ On the ToDo form, the native **Assigned To** sidebar section is replaced by an *
 
 ---
 
+New ToDos use IDs such as `TDO-26001`: the two-digit year followed by a
+minimum three-digit counter that restarts each year. Existing IDs stay unchanged.
+
 ### Reports
 
 | Report | Description |
