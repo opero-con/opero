@@ -173,16 +173,28 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(payload["about"]["paragraphs"], ["Opero is a Kenyan WASH firm."])
 		self.assertEqual(payload["ourWork"]["expertise"][0]["title"], "Market research")
 		self.assertEqual(payload["impacts"][0], {"value": "6", "label": "WASH technologies designed"})
-		self.assertEqual(payload["ourWork"], {"homepageSummary": "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research.", "pageIntroduction": "To solve WASH challenges, we bring together core expertise in:", "expertise": [{"title": "Market research", "description": "Local market realities."}], "image": "/media/homepage/our-work.jpg", "imageAlt": "Opero WASH work in practice", "pageConclusion": "Our work is grounded in real operating conditions."})
+		self.assertEqual(
+			payload["ourWork"],
+			{
+				"homepageSummary": "To solve WASH challenges, we bring together core expertise in technical expertise, enterprise development and market research.",
+				"pageIntroduction": "To solve WASH challenges, we bring together core expertise in:",
+				"expertise": [{"title": "Market research", "description": "Local market realities."}],
+				"image": "/media/homepage/our-work.jpg",
+				"imageAlt": "Opero WASH work in practice",
+				"pageConclusion": "Our work is grounded in real operating conditions.",
+			},
+		)
 
 	def test_partner_frontmatter_is_independent_from_homepage(self):
-		doc = frappe.get_doc({
-			"doctype": "Partner",
-			"partner_name": "Practica Foundation",
-			"url": "https://www.practica.org",
-			"show_on_website": 1,
-			"sort_order": 20,
-		}).insert(ignore_permissions=True)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Partner",
+				"partner_name": "Practica Foundation",
+				"url": "https://www.practica.org",
+				"show_on_website": 1,
+				"sort_order": 20,
+			}
+		).insert(ignore_permissions=True)
 		self.assertEqual(
 			doc.to_site_frontmatter(),
 			{"name": "Practica Foundation", "url": "https://www.practica.org", "order": 20, "active": True},
@@ -207,7 +219,11 @@ class TestOperoSiteContent(FrappeTestCase):
 		)
 		doc.append(
 			"hero_images",
-			{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg", "note": "", "image_focus": "Center"},
+			{
+				"image": "/media/homepage/fecal-sludge-treatment-tower.jpg",
+				"note": "",
+				"image_focus": "Center",
+			},
 		)
 		doc.save(ignore_permissions=True)
 		hero = doc.to_site_frontmatter()
@@ -218,7 +234,11 @@ class TestOperoSiteContent(FrappeTestCase):
 		self.assertEqual(
 			hero["carousel"],
 			[
-				{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya", "imageFocus": "left"},
+				{
+					"image": "/media/homepage/pupu-pump-team.jpg",
+					"note": "Kisumu · Kenya",
+					"imageFocus": "left",
+				},
 				{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg"},
 			],
 		)
@@ -244,7 +264,7 @@ class TestOperoSiteContent(FrappeTestCase):
 		)
 		doc.insert(ignore_permissions=True)
 		self.assertEqual(doc.slug, "january-2025-update")
-		self.assertEqual(doc.name, "january-2025-update")
+		self.assertRegex(doc.name, r"^PUB-\d{5}$")
 		self.assertEqual(doc.year, 2025)
 		self.assertTrue(frappe.db.exists("Publication Topic", "Company update"))
 		self.assertTrue(frappe.db.exists("Publication Topic", "Projects"))
