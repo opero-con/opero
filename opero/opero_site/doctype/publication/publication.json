@@ -30,7 +30,6 @@
   "summary",
   "section_media",
   "cover",
-  "cover_alt",
   "cover_position",
   "cover_fit",
   "file_url",
@@ -43,7 +42,8 @@
   "section_body",
   "body",
   "section_website_settings",
-  "slug"
+  "slug",
+  "cover_alt"
  ],
  "fields": [
   {
@@ -160,9 +160,11 @@
    "label": "Cover image"
   },
   {
+   "depends_on": "eval:!!doc.cover",
+   "description": "Optional. Describe any information in the cover that the title and text do not explain, for people who cannot see it. Leave blank for decoration.",
    "fieldname": "cover_alt",
    "fieldtype": "Data",
-   "label": "Cover alt text"
+   "label": "Describe the cover image"
   },
   {
    "description": "Crop focus computed from the cover image. Not edited by hand.",
