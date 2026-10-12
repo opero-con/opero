@@ -1,13 +1,18 @@
 """Opero groups Approvals and Site Content in the Desk sidebar."""
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from opero import boot, workspace_sidebar
-from opero.patches.v0_4 import hide_frappe_website_workspace, nest_opero_workspaces
+from opero.patches.v0_4 import (
+	hide_frappe_website_workspace,
+	nest_opero_workspaces,
+	reload_approvals_workspace_for_leave_applications,
+)
 
 
 class TestOperoWorkspaces(FrappeTestCase):
@@ -122,3 +127,45 @@ class TestOperoWorkspaces(FrappeTestCase):
 	def _sidebar_for(self, roles):
 		with self.set_user(self._user(roles)):
 			return [page.name for page in workspace_sidebar.get_workspace_sidebar_items()["pages"]]
+
+	def test_leave_shortcut_sync_replaces_an_equal_or_newer_saved_workspace(self):
+		definition = json.loads(
+			Path(
+				frappe.get_app_path("opero", "opero", "workspace", "approvals", "approvals.json")
+			).read_text()
+		)
+		with self.set_user("Administrator"):
+			for timestamp in (definition["modified"], "2099-01-01 00:00:00"):
+				with self.subTest(modified=timestamp):
+					frappe.db.savepoint("approvals_workspace_sync")
+					try:
+						doc = frappe.get_doc("Workspace", "Approvals")
+						blocks = [
+							block
+							for block in json.loads(doc.content)
+							if block["data"].get("shortcut_name") != "Leave Applications"
+						]
+						frappe.db.delete(
+							"Workspace Shortcut", {"parent": "Approvals", "label": "Leave Applications"}
+						)
+						frappe.db.set_value(
+							"Workspace",
+							"Approvals",
+							{"content": json.dumps(blocks), "modified": timestamp},
+							update_modified=False,
+						)
+						reload_approvals_workspace_for_leave_applications.execute()
+						reload_approvals_workspace_for_leave_applications.execute()
+						synced = frappe.get_doc("Workspace", "Approvals")
+						self.assertEqual(
+							[row.label for row in synced.shortcuts].count("Leave Applications"), 1
+						)
+						self.assertTrue(
+							any(
+								block["data"].get("shortcut_name") == "Leave Applications"
+								for block in json.loads(synced.content)
+							)
+						)
+					finally:
+						frappe.db.rollback(save_point="approvals_workspace_sync")
+						frappe.clear_cache(doctype="Workspace")
