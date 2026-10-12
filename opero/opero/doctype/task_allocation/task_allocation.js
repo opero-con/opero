@@ -109,7 +109,7 @@ function capacity_table(doc, capacity) {
 	return `${note}<div class="table-responsive"><table class="table table-bordered small" style="table-layout: fixed">
 		<thead><tr>
 			<th style="width: 35%">${esc(__("Task"))}</th>
-			${["Budget / Capacity", "Allocations", "Total", "Remaining"]
+			${["Budget / Capacity", "Allocations", "Remaining"]
 				.map((label) => `<th class="text-right">${esc(__(label))}</th>`)
 				.join("")}
 		</tr></thead><tbody>${rows
@@ -125,7 +125,6 @@ function capacity_table(doc, capacity) {
 				return `<tr><td>${esc(row.scope)}</td>
 			<td class="text-right">${row.limit === null ? "—" : `${flt(row.limit, 2)}h`}</td>
 			<td class="text-right">${flt(row.other, 2)}h</td>
-			<td class="text-right">${total}h</td>
 			<td class="text-right${remaining < 0 ? " text-danger" : ""}">${balance}</td></tr>`;
 			})
 			.join("")}</tbody></table></div>`;
