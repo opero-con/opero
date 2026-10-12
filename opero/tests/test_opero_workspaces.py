@@ -12,6 +12,7 @@ from opero.patches.v0_4 import (
 	hide_frappe_website_workspace,
 	nest_opero_workspaces,
 	reload_approvals_workspace_for_leave_applications,
+	remove_flow_hub,
 )
 
 
@@ -57,7 +58,9 @@ class TestOperoWorkspaces(FrappeTestCase):
 	def test_approvals_keeps_the_todo_hub_reports(self):
 		doc = frappe.get_doc("Workspace", "Approvals")
 		shortcuts = {row.label: row.link_to for row in doc.shortcuts}
-		self.assertEqual(shortcuts["Flow Hub"], "flow-hub")
+		self.assertNotIn("Flow Hub", shortcuts)
+		self.assertFalse(frappe.db.exists("Page", "flow-hub"))
+		self.assertFalse(frappe.db.exists("Page", "opero-flow-hub"))
 		self.assertEqual(shortcuts["My ToDos"], "ToDo Explorer")
 		reports = [row.link_to for row in doc.links if row.link_type == "Report"]
 		self.assertEqual(
@@ -169,3 +172,90 @@ class TestOperoWorkspaces(FrappeTestCase):
 					finally:
 						frappe.db.rollback(save_point="approvals_workspace_sync")
 						frappe.clear_cache(doctype="Workspace")
+
+	def test_flow_hub_retirement_cleans_custom_links_without_deleting_todos(self):
+		with self.set_user("Administrator"):
+			frappe.db.savepoint("flow_hub_retirement")
+			try:
+				for name in ("flow-hub", "opero-flow-hub"):
+					if not frappe.db.exists("Page", name):
+						page = frappe.get_doc(
+							{
+								"doctype": "Page",
+								"page_name": name,
+								"title": "Retirement test",
+								"module": "Opero",
+								"standard": "No",
+							}
+						)
+						page.flags.ignore_validate = True
+						page.flags.do_not_update_json = True
+						page.insert(ignore_permissions=True)
+				workspace = frappe.get_doc(
+					{
+						"doctype": "Workspace",
+						"title": "Flow retirement test",
+						"label": "Flow retirement test",
+						"public": 0,
+						"content": json.dumps(
+							[
+								{"type": "shortcut", "data": {"shortcut_name": "Old hub", "col": 4}},
+								{"type": "shortcut", "data": {"shortcut_name": "ToDos", "col": 4}},
+							]
+						),
+						"shortcuts": [
+							{"type": "Page", "label": "Old hub", "link_to": "flow-hub"},
+							{"type": "DocType", "label": "ToDos", "link_to": "ToDo"},
+						],
+						"links": [
+							{
+								"type": "Link",
+								"label": "Old hub page",
+								"link_type": "Page",
+								"link_to": "opero-flow-hub",
+							}
+						],
+					}
+				).insert(ignore_permissions=True)
+				before = frappe.db.count("ToDo")
+				remove_flow_hub.execute()
+				remove_flow_hub.execute()
+				self.assertEqual(frappe.db.count("ToDo"), before)
+				workspace.reload()
+				self.assertEqual([row.label for row in workspace.shortcuts], ["ToDos"])
+				self.assertEqual(
+					[block["data"]["shortcut_name"] for block in json.loads(workspace.content)], ["ToDos"]
+				)
+				self.assertFalse(workspace.links)
+				self.assertFalse(frappe.db.exists("Page", "flow-hub"))
+				self.assertFalse(frappe.db.exists("Page", "opero-flow-hub"))
+				self.assertEqual(frappe.get_doc("Workspace", "Approvals").parent_page, "Opero")
+			finally:
+				frappe.db.rollback(save_point="flow_hub_retirement")
+				frappe.clear_cache()
+
+	def test_legacy_workspace_setup_does_not_recreate_flow_hub(self):
+		from opero.patches.v0_0 import slim_todo_hub_workspace
+
+		with self.set_user("Administrator"):
+			workspace = frappe.get_doc(
+				{
+					"doctype": "Workspace",
+					"title": "ToDo migration test",
+					"label": "ToDo migration test",
+					"public": 0,
+					"content": "[]",
+				}
+			).insert(ignore_permissions=True)
+			with patch.object(slim_todo_hub_workspace, "WORKSPACE_NAME", workspace.name):
+				slim_todo_hub_workspace.execute()
+			workspace.reload()
+			self.assertEqual([row.label for row in workspace.shortcuts], ["New ToDo", "My ToDos"])
+			self.assertEqual(
+				[
+					block["data"]["shortcut_name"]
+					for block in json.loads(workspace.content)
+					if block["type"] == "shortcut"
+				],
+				["New ToDo", "My ToDos"],
+			)

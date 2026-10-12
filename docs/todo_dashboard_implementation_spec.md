@@ -1,5 +1,7 @@
 # ToDo Dashboard Implementation Spec (Opero)
 
+> Historical plan: the custom dashboard page is retired. Standard ToDo views and the ToDo reports provide the current workflow.
+
 ## 1. Objective
 Build a production-ready ToDo dashboard for Opero that gives users an immediate action view (what needs attention now) and a performance view (how work is moving over time), aligned with current ToDo customizations in this app.
 
