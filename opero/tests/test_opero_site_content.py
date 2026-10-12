@@ -612,10 +612,17 @@ class TestCoverFraming(FrappeTestCase):
 			draw.line([(x, 0), (x, 160)], fill=0, width=2)
 		self.assertEqual(compute_cover_framing(_png_bytes(canvas)).fit, "contain")
 
-	def test_never_letterboxes_a_tall_cover(self):
+	def test_letterboxes_a_tall_cover_whose_content_spans_the_height(self):
 		canvas = Image.new("L", (200, 400), 255)
 		draw = ImageDraw.Draw(canvas)
 		for y in range(0, 400, 8):
+			draw.line([(0, y), (200, y)], fill=0, width=2)
+		self.assertEqual(compute_cover_framing(_png_bytes(canvas)).fit, "contain")
+
+	def test_crops_a_tall_cover_when_its_content_fits_inside_the_card(self):
+		canvas = Image.new("L", (200, 400), 255)
+		draw = ImageDraw.Draw(canvas)
+		for y in range(160, 240, 8):
 			draw.line([(0, y), (200, y)], fill=0, width=2)
 		self.assertEqual(compute_cover_framing(_png_bytes(canvas)).fit, "cover")
 
