@@ -16,6 +16,8 @@ def get_capacity(employee, month, year, task=None, name=None):
 	frappe.has_permission("Task Allocation", "read", throw=True)
 	month_start = task_allocation.get_month_start(month, year)
 	result = {**task_allocation.get_capacity(employee, month_start, exclude=name), "same_task": []}
+	if result["available"] is None:
+		result["capacity_issue"] = task_allocation.get_capacity_issue(employee, month_start)
 	if task:
 		exclude = {"name": ("!=", name)} if name else {}
 		result.update(
