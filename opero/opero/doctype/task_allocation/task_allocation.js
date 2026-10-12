@@ -6,33 +6,56 @@ frappe.ui.form.on("Task Allocation", {
 		if (!frm.doc.month) frm.set_value("month", months[today.getMonth()]);
 		if (!frm.doc.year) frm.set_value("year", String(today.getFullYear()));
 	},
-	refresh: show_ribbon,
-	task: show_ribbon,
-	employee: show_ribbon,
-	month: show_ribbon,
-	year: show_ribbon,
-	hours: show_ribbon,
+	refresh(frm) {
+		frm.allocation_capacity = null;
+		show_allocation_summary(frm);
+	},
+	task: show_allocation_summary,
+	employee: show_allocation_summary,
+	month: show_allocation_summary,
+	year: show_allocation_summary,
+	personnel_name(frm) {
+		if (frm.doc.docstatus === 0 && frm.allocation_capacity) {
+			set_allocation_summary(frm, capacity_table(frm.doc, frm.allocation_capacity));
+		}
+	},
+	hours(frm) {
+		if (frm.doc.docstatus === 0 && frm.allocation_capacity) {
+			set_allocation_summary(frm, capacity_table(frm.doc, frm.allocation_capacity));
+		} else {
+			show_allocation_summary(frm);
+		}
+	},
 });
 
-function set_ribbon(frm, lines, color) {
-	let ribbon = frm.layout.wrapper.find(".opero-allocation-ribbon");
-	if (!ribbon.length) {
-		ribbon = $('<div class="opero-allocation-ribbon form-message"></div>').prependTo(
-			frm.layout.wrapper
+function set_allocation_summary(frm, html) {
+	const title = __("Allocations - {0}", [frm.doc.personnel_name || frm.doc.employee || ""]);
+	let content = frm.dashboard.parent.find(".opero-allocation-summary-content");
+	if (!content.length && html) {
+		const body = frm.dashboard.add_section(
+			'<div class="opero-allocation-summary-content"></div>',
+			`<span class="opero-allocation-heading">${frappe.utils.escape_html(title)}</span>`,
+			"custom opero-allocation-summary"
 		);
+		content = body.find(".opero-allocation-summary-content");
 	}
-	ribbon.removeClass("green orange blue red").addClass(color).html(lines.join("<br>"));
-	ribbon.toggle(lines.length > 0);
+	if (!content.length) return;
+	content.html(html);
+	const section = content.closest(".form-dashboard-section");
+	section.find(".opero-allocation-heading").text(title);
+	section.toggle(!!html);
+	if (html) frm.dashboard.show();
 }
 
-function show_ribbon(frm) {
+function show_allocation_summary(frm) {
 	const { task, employee, month, year, docstatus } = frm.doc;
-	const request = (frm.allocation_ribbon_request = (frm.allocation_ribbon_request || 0) + 1);
-	if (!employee || !month || !/^\d{4}$/.test(year || "") || docstatus === 2) {
-		set_ribbon(frm, [], "blue");
+	const request = (frm.allocation_summary_request = (frm.allocation_summary_request || 0) + 1);
+	frm.allocation_capacity = null;
+	if (!employee || !month || !/^\d{4}$/.test(year || "") || docstatus !== 0) {
+		set_allocation_summary(frm, "");
 		return;
 	}
-	frappe
+	return frappe
 		.xcall("opero.api.task_allocation.get_capacity", {
 			employee,
 			month,
@@ -41,70 +64,69 @@ function show_ribbon(frm) {
 			name: frm.is_new() ? null : frm.doc.name,
 		})
 		.then((capacity) => {
-			if (request !== frm.allocation_ribbon_request) return;
-			if (task && !capacity.budget) {
-				const esc = frappe.utils.escape_html;
-				const link = frappe.utils.get_form_link(
-					"Task",
-					task,
-					true,
-					esc(capacity.task_subject || task)
-				);
-				const message = __("No Hours Budget for {0} on task {1}.", [
-					frappe.bold(esc(frm.doc.personnel_name || employee)),
-					link,
-				]);
-				set_ribbon(frm, [message], "red");
-				return;
-			}
-			const { lines, color } = describe_capacity(frm.doc.hours || 0, capacity);
-			set_ribbon(frm, lines, color);
+			if (request !== frm.allocation_summary_request) return;
+			frm.allocation_capacity = capacity;
+			set_allocation_summary(frm, capacity_table(frm.doc, capacity));
+		})
+		.catch(() => {
+			if (request !== frm.allocation_summary_request) return;
+			set_allocation_summary(
+				frm,
+				__("Could not load allocation totals. Refresh to try again.")
+			);
 		});
 }
 
-function describe_capacity(hours, capacity) {
-	const lines = [];
-	const warnings = [];
-	if (capacity.budget) {
-		const committed = flt(capacity.task_allocated + hours, 2);
-		const left = flt(capacity.budget.hours - committed, 2);
-		if (left < 0) {
-			warnings.push(
-				__("Budget: {0}h overrun ({1}h of {2}h).", [
-					-left,
-					committed,
-					capacity.budget.hours,
-				])
-			);
-		} else {
-			lines.push(__("Budget: {0}h left of {1}h.", [left, capacity.budget.hours]));
-		}
+function capacity_table(doc, capacity) {
+	const esc = frappe.utils.escape_html;
+	const hours = flt(doc.hours || 0, 2);
+	const month = `${doc.month} ${doc.year}`;
+	const rows = [];
+	if (doc.task) {
+		rows.push({
+			scope: capacity.task_subject || doc.task,
+			limit: capacity.budget ? capacity.budget.hours : null,
+			other: capacity.task_allocated,
+		});
 	}
-	if (capacity.same_task.length) {
-		const earlier = flt(
-			capacity.same_task.reduce((sum, row) => sum + row.hours, 0),
-			2
-		);
-		warnings.push(
-			__("Already {0}h on this task this month; {1}h with this.", [
-				earlier,
-				flt(earlier + hours, 2),
-			])
-		);
-	}
-	const total = flt(capacity.allocated + hours, 2);
-	if (capacity.available === null) {
-		lines.push(__("Month: {0}h allocated, availability unknown.", [total]));
-	} else {
-		const free = flt(capacity.available - total, 2);
-		if (free < 0) {
-			warnings.push(
-				__("Month: {0}h over capacity ({1}h of {2}h).", [-free, total, capacity.available])
-			);
-		} else {
-			lines.push(__("Month: {0}h free of {1}h.", [free, capacity.available]));
-		}
-	}
-	const color = warnings.length ? "orange" : capacity.available === null ? "blue" : "green";
-	return { lines: [...warnings, ...lines], color };
+	rows.push({
+		scope: __("All - {0}", [month]),
+		limit: capacity.available,
+		other: capacity.allocated,
+	});
+	const missing_budget = doc.task && !capacity.budget;
+	const note = missing_budget
+		? `<p class="text-danger">${__("No Hours Budget for {0} on task {1}.", [
+				esc(doc.personnel_name || doc.employee),
+				frappe.utils.get_form_link(
+					"Task",
+					doc.task,
+					true,
+					esc(capacity.task_subject || doc.task)
+				),
+		  ])}</p>`
+		: "";
+	return `${note}<div class="table-responsive"><table class="table table-bordered small" style="table-layout: fixed">
+		<thead><tr>
+			<th style="width: 35%">${esc(__("Task"))}</th>
+			${["Budget / Capacity", "Allocations", "Total", "Remaining"]
+				.map((label) => `<th class="text-right">${esc(__(label))}</th>`)
+				.join("")}
+		</tr></thead><tbody>${rows
+			.map((row) => {
+				const total = flt(row.other + hours, 2);
+				const remaining = row.limit === null ? null : flt(row.limit - total, 2);
+				const balance =
+					remaining === null
+						? "—"
+						: remaining < 0
+						? esc(__("{0}h over", [-remaining]))
+						: `${remaining}h`;
+				return `<tr><td>${esc(row.scope)}</td>
+			<td class="text-right">${row.limit === null ? "—" : `${flt(row.limit, 2)}h`}</td>
+			<td class="text-right">${flt(row.other, 2)}h</td>
+			<td class="text-right">${total}h</td>
+			<td class="text-right${remaining < 0 ? " text-danger" : ""}">${balance}</td></tr>`;
+			})
+			.join("")}</tbody></table></div>`;
 }
