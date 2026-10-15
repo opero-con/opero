@@ -103,6 +103,119 @@ test("the summary keeps one spare line below the text", () => {
 	assert.equal(input.style.height, `${5 * LINE + PADDING}px`);
 });
 
+function pdfField() {
+	const nodes = [];
+	return {
+		nodes,
+		find(selector) {
+			const className = selector.slice(1);
+			const matches = nodes.filter((node) => node.className === className && !node.removed);
+			return {
+				remove() {
+					for (const node of matches) node.removed = true;
+				},
+			};
+		},
+		append(node) {
+			nodes.push(node);
+			return this;
+		},
+	};
+}
+
+function loadRename(doc) {
+	const handlers = {};
+	const wrapper = pdfField();
+	const calls = [];
+	const prompts = [];
+	const messages = [];
+	vm.runInNewContext(
+		fs.readFileSync(
+			path.join(__dirname, "../opero_site/doctype/publication/publication.js"),
+			"utf8"
+		),
+		{
+			frappe: {
+				ui: { form: { on: (_, value) => Object.assign(handlers, value) } },
+				prompt: (...args) => prompts.push(args),
+				call: (args) => calls.push(args),
+				msgprint: (message) => messages.push(message),
+			},
+			$: (tag, attributes = {}) => ({
+				tag,
+				className: attributes.class,
+				text: attributes.text,
+				children: [],
+				events: {},
+				append(child) {
+					this.children.push(child);
+					return this;
+				},
+				on(event, handler) {
+					this.events[event] = handler;
+					return this;
+				},
+			}),
+			__: (value) => value,
+		}
+	);
+	const frm = {
+		doc,
+		is_dirty: () => false,
+		reload_doc() {},
+		get_field: (name) => (name === "file_url" ? { $wrapper: wrapper } : null),
+	};
+	handlers.refresh(frm);
+	const row = wrapper.nodes.find((node) => node.className === "pdf-rename" && !node.removed);
+	return { frm, row, button: row && row.children[0], prompts, calls, messages };
+}
+
+test("rename is offered for a PDF uploaded on the publication", () => {
+	const loaded = loadRename({
+		name: "PUB-00002",
+		file_url: "/private/files/ugly%20name.pdf",
+	});
+	assert.equal(loaded.button.text, "Rename");
+	loaded.button.events.click();
+	const [field, submit, title, primary] = loaded.prompts[0];
+	assert.equal(title, "Rename PDF");
+	assert.equal(primary, "Rename");
+	assert.equal(field.default, "ugly name.pdf");
+	assert.equal(field.description, "The public page uses this name after the next deploy.");
+	let reloaded = false;
+	loaded.frm.reload_doc = () => {
+		reloaded = true;
+	};
+	submit({ filename: "Annual report.pdf" });
+	assert.equal(
+		loaded.calls[0].method,
+		"opero.opero_site.doctype.publication.publication.rename_publication_pdf"
+	);
+	assert.equal(loaded.calls[0].args.name, "PUB-00002");
+	assert.equal(loaded.calls[0].args.filename, "Annual report.pdf");
+	loaded.calls[0].callback();
+	assert.equal(reloaded, true);
+});
+
+test("rename waits until the publication is saved", () => {
+	for (const doc of [
+		{ name: "PUB-00002", file_url: "https://example.com/report.pdf" },
+		{ name: "PUB-00002", file_url: "/downloads/report.pdf" },
+		{ name: "PUB-00002", file_url: "/private/files/report.pdf", __islocal: 1 },
+		{ name: "PUB-00002", file_url: "" },
+	]) {
+		assert.equal(loadRename(doc).row, undefined);
+	}
+	const loaded = loadRename({
+		name: "PUB-00002",
+		file_url: "/files/report.pdf",
+	});
+	loaded.frm.is_dirty = () => true;
+	loaded.button.events.click();
+	assert.deepEqual(loaded.messages, ["Save the publication before renaming its PDF."]);
+	assert.equal(loaded.prompts.length, 0);
+});
+
 test("refresh binds the input listener once", () => {
 	const { events, frm, listeners } = loadForm(1);
 	events.refresh(frm);

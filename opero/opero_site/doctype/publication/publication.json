@@ -185,7 +185,7 @@
    "read_only": 1
   },
   {
-   "description": "Upload a PDF, or paste a web link if the file already lives elsewhere.",
+   "description": "Upload a PDF, or paste a web link if the file already lives elsewhere. Rename changes the name of a PDF uploaded here.",
    "fieldname": "file_url",
    "fieldtype": "Attach",
    "label": "PDF"
@@ -267,7 +267,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-16 00:20:00.000000",
+ "modified": "2026-10-16 01:10:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Publication",
