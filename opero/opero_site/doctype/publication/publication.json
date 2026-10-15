@@ -239,7 +239,7 @@
    "fieldtype": "Section Break"
   },
   {
-   "description": "Use headings for sections, lists for bullets, and a link on its own line for a button on the public page.",
+   "description": "Headings, bold, italic, lists, and links are shown on the public page. A link on its own line becomes a button. Pasted colour and underline are removed.",
    "fieldname": "body",
    "fieldtype": "Text Editor",
    "label": "Body"
@@ -267,7 +267,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-12 21:44:56.862558",
+ "modified": "2026-10-16 00:20:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Publication",

@@ -6,6 +6,7 @@ frappe.ui.form.on("Privacy policy", {
 		}
 		field.df.get_toolbar_options = () => [
 			[{ header: [2, 3, false] }],
+			["bold", "italic"],
 			["link"],
 			[{ list: "bullet" }, { list: "ordered" }],
 		];
