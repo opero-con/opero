@@ -1,6 +1,7 @@
 """Opero Site content DocTypes: slug, URL, and opero-content frontmatter contract."""
 
 import io
+import os
 from unittest.mock import patch
 
 import frappe
@@ -824,3 +825,161 @@ class TestPublicationBodyHtml(FrappeTestCase):
 				}
 			],
 		)
+
+
+def _pdf_bytes(label: str) -> bytes:
+	from pypdf import PdfWriter
+
+	buffer = io.BytesIO()
+	writer = PdfWriter()
+	writer.add_blank_page(width=72, height=72)
+	writer.add_metadata({"/Title": label})
+	writer.write(buffer)
+	return buffer.getvalue()
+
+
+def _pdf_publication(file_name, *, private=True, file_url=None):
+	from frappe.utils.file_manager import save_file
+
+	token = frappe.generate_hash(length=6)
+	doc = frappe.get_doc(
+		{
+			"doctype": "Publication",
+			"title": f"Rename {token}",
+			"published_on": "2025-02-01",
+			"publication_type": "Digest",
+			"summary": "Attached from Desk.",
+		}
+	).insert(ignore_permissions=True)
+	if file_url is not None:
+		doc.file_url = file_url
+		doc.save(ignore_permissions=True)
+		return doc, b""
+	content = _pdf_bytes(file_name)
+	file_doc = save_file(
+		file_name,
+		content,
+		"Publication",
+		doc.name,
+		is_private=1 if private else 0,
+		df="file_url",
+	)
+	doc.file_url = file_doc.file_url
+	doc.save(ignore_permissions=True)
+	return doc, content
+
+
+def _file_row(file_url, publication, field="file_url"):
+	row = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": os.path.basename(file_url),
+			"file_url": file_url,
+			"is_private": 1 if file_url.startswith("/private/") else 0,
+			"attached_to_doctype": "Publication",
+			"attached_to_name": publication,
+			"attached_to_field": field,
+			"folder": "Home/Attachments",
+		}
+	)
+	# Point at the file already on disk. A normal insert would write a second copy.
+	row.flags.copy_from_existing_file = True
+	return row.insert(ignore_permissions=True)
+
+
+class TestPublicationPdfRename(FrappeTestCase):
+	def test_rename_moves_the_uploaded_pdf_and_queues_an_update(self):
+		from frappe.utils import get_files_path
+
+		from opero.opero_site.doctype.publication.publication import rename_publication_pdf
+
+		token = frappe.generate_hash(length=6)
+		new_name = f"Annual report {token}.pdf"
+		doc, content = _pdf_publication(f"ugly-{token}.pdf")
+		doc.db_set("status", "Published")
+		doc.db_set("show_on_website", 1)
+		old_url = doc.file_url
+		old_name = os.path.basename(old_url)
+		_file_row(old_url, doc.name)
+		new_url = rename_publication_pdf(doc.name, f"Annual report {token}")
+		doc.reload()
+		self.assertEqual(new_url, f"/private/files/{new_name}")
+		self.assertEqual(doc.file_url, new_url)
+		self.assertEqual(doc.status, "To update")
+		self.assertEqual(doc.show_on_website, 1)
+		with open(get_files_path(new_name, is_private=1), "rb") as handle:
+			self.assertEqual(handle.read(), content)
+		self.assertFalse(os.path.exists(get_files_path(old_name, is_private=1)))
+		self.assertCountEqual(
+			frappe.get_all("File", filters={"file_url": new_url}, pluck="file_name"),
+			[new_name, new_name],
+		)
+		self.assertFalse(frappe.db.exists("File", {"file_url": old_url}))
+
+	def test_rename_keeps_a_public_pdf_public(self):
+		from opero.opero_site.doctype.publication.publication import rename_publication_pdf
+
+		token = frappe.generate_hash(length=6)
+		doc, _content = _pdf_publication(f"public-{token}.pdf", private=False)
+		new_url = rename_publication_pdf(doc.name, f"Public report {token}.pdf")
+		self.assertEqual(new_url, f"/files/Public report {token}.pdf")
+		doc.reload()
+		self.assertEqual(doc.file_url, new_url)
+
+	def test_rename_rejects_a_name_that_is_not_a_new_pdf(self):
+		from frappe.utils import get_files_path
+
+		from opero.opero_site.doctype.publication.publication import rename_publication_pdf
+
+		token = frappe.generate_hash(length=6)
+		doc, _content = _pdf_publication(f"kept-{token}.pdf")
+		other, _other_content = _pdf_publication(f"taken-{token}.pdf")
+		old_name = os.path.basename(doc.file_url)
+		taken_url = other.file_url
+		cases = (
+			(old_name, "already named"),
+			(os.path.basename(other.file_url), "already on the site"),
+			("notes.txt", "end in .pdf"),
+			("../secret.pdf", "path"),
+			("a" * 137 + ".pdf", "141 characters"),
+		)
+		for filename, message in cases:
+			with self.subTest(filename=filename):
+				with self.assertRaisesRegex(ValidationError, message):
+					rename_publication_pdf(doc.name, filename)
+		self.assertTrue(os.path.exists(get_files_path(old_name, is_private=1)))
+		doc.reload()
+		self.assertEqual(doc.file_url, f"/private/files/{old_name}")
+		other.reload()
+		self.assertEqual(other.file_url, taken_url)
+
+	def test_rename_rejects_a_link_or_a_shared_file(self):
+		from frappe.utils import get_files_path
+
+		from opero.opero_site.doctype.publication.publication import rename_publication_pdf
+
+		token = frappe.generate_hash(length=6)
+		linked = _pdf_publication("", file_url="https://example.com/report.pdf")[0]
+		with self.assertRaisesRegex(ValidationError, "where the file is hosted"):
+			rename_publication_pdf(linked.name, "Report.pdf")
+		downloaded = _pdf_publication("", file_url="/downloads/report.pdf")[0]
+		with self.assertRaisesRegex(ValidationError, "where the file is hosted"):
+			rename_publication_pdf(downloaded.name, "Report.pdf")
+		missing = _pdf_publication("", file_url=f"/private/files/missing-{token}.pdf")[0]
+		with self.assertRaisesRegex(ValidationError, "not on the site"):
+			rename_publication_pdf(missing.name, "Report.pdf")
+
+		doc, _content = _pdf_publication(f"shared-{token}.pdf")
+		old_name = os.path.basename(doc.file_url)
+		other, _other_content = _pdf_publication(f"other-{token}.pdf")
+		_file_row(doc.file_url, other.name)
+		with self.assertRaisesRegex(ValidationError, "also attached"):
+			rename_publication_pdf(doc.name, f"Shared report {token}.pdf")
+		self.assertTrue(os.path.exists(get_files_path(old_name, is_private=1)))
+		doc.reload()
+		self.assertEqual(doc.file_url, f"/private/files/{old_name}")
+
+		cover = _pdf_publication(f"cover-{token}.pdf")[0]
+		_file_row(cover.file_url, cover.name, field="cover")
+		with self.assertRaisesRegex(ValidationError, "Cover image"):
+			rename_publication_pdf(cover.name, f"Cover report {token}.pdf")
