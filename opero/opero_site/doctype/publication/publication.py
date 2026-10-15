@@ -7,7 +7,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, getdate
 
-from opero.opero_site.body_html import body_sections_to_html, html_to_body_sections
+from opero.opero_site.body_html import body_sections_to_html, html_to_body_sections, normalize_body_html
 from opero.opero_site.cover_focal_point import CONTAIN, compute_cover_framing
 from opero.opero_site.media import desk_file_url, read_desk_file
 from opero.opero_site.publish_status import LIVE, apply_publish_status, get_publish_status
@@ -45,7 +45,7 @@ class Publication(Document):
 		if self.published_on:
 			self.year = getdate(self.published_on).year
 		self.move_long_summary_to_body()
-		html_to_body_sections(self.body)
+		self.body = normalize_body_html(self.body)
 		self._set_cover_framing()
 
 	def set_slug(self):

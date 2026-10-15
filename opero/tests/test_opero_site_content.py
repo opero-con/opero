@@ -680,12 +680,90 @@ class TestPublicationBodyHtml(FrappeTestCase):
 			],
 		)
 
-	def test_html_inline_link_stays_in_paragraph_text(self):
+	def test_html_inline_link_keeps_its_url(self):
 		html = '<p>See the <a href="/pupu-pump.html">PuPu Pump</a> page.</p>'
 		self.assertEqual(
 			html_to_body_sections(html),
-			[{"paragraphs": ["See the PuPu Pump page."]}],
+			[
+				{
+					"type": "paragraph",
+					"spans": [
+						{"text": "See the "},
+						{"text": "PuPu Pump", "href": "/pupu-pump.html"},
+						{"text": " page."},
+					],
+				}
+			],
 		)
+
+	def test_html_list_between_paragraphs_keeps_its_place(self):
+		html = "<p>It estimates that:</p><ul><li>32% mechanized</li></ul><p>The findings follow.</p>"
+		self.assertEqual(
+			html_to_body_sections(html),
+			[
+				{"type": "paragraph", "text": "It estimates that:"},
+				{"type": "list", "style": "bullet", "items": ["32% mechanized"]},
+				{"type": "paragraph", "text": "The findings follow."},
+			],
+		)
+
+	def test_html_keeps_marks_and_drops_pasted_styles(self):
+		html = (
+			'<div class="ql-editor read-mode">'
+			"<p>This paper, <strong>The Role of Emptying</strong>, looks at toilets.</p>"
+			"<p>It estimates that:</p>"
+			"<ol>"
+			'<li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>32% mechanized</li>'
+			'<li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>50% manual</li>'
+			"</ol>"
+			"<p><strong>Read the full paper</strong> for the findings.</p>"
+			'<p>Authors at <strong><u><a href="http://www.triangle-environmental.com">Triangle</a></u></strong>.</p>'
+			"<h3>Notes</h3>"
+			'<ol><li data-list="ordered">First</li><li data-list="ordered"><em>Second</em></li></ol>'
+			"</div>"
+		)
+		sections = html_to_body_sections(html)
+		self.assertEqual(
+			sections,
+			[
+				{
+					"type": "paragraph",
+					"spans": [
+						{"text": "This paper, "},
+						{"text": "The Role of Emptying", "bold": True},
+						{"text": ", looks at toilets."},
+					],
+				},
+				{"type": "paragraph", "text": "It estimates that:"},
+				{"type": "list", "style": "bullet", "items": ["32% mechanized", "50% manual"]},
+				{
+					"type": "paragraph",
+					"spans": [
+						{"text": "Read the full paper", "bold": True},
+						{"text": " for the findings."},
+					],
+				},
+				{
+					"type": "paragraph",
+					"spans": [
+						{"text": "Authors at "},
+						{
+							"text": "Triangle",
+							"bold": True,
+							"href": "http://www.triangle-environmental.com",
+						},
+						{"text": "."},
+					],
+				},
+				{"type": "heading", "level": 3, "text": "Notes"},
+				{
+					"type": "list",
+					"style": "number",
+					"items": ["First", [{"text": "Second", "italic": True}]],
+				},
+			],
+		)
+		self.assertEqual(normalize_body_html(html), body_sections_to_html(sections))
 
 	def test_html_rejects_invalid_link_url(self):
 		with self.assertRaises(ValidationError):
