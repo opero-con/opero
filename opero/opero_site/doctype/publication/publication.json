@@ -93,17 +93,19 @@
    "fieldtype": "Section Break"
   },
   {
+   "depends_on": "eval:doc.publication_type!='Product'",
    "fieldname": "published_on",
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Published on",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.publication_type!='Product'"
   },
   {
    "fieldname": "column_break_year",
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval:doc.publication_type!='Product'",
    "fieldname": "year",
    "fieldtype": "Int",
    "label": "Year",
@@ -191,7 +193,8 @@
    "label": "PDF"
   },
   {
-   "description": "Internal page this card should open instead of a publication article, such as /pupu-pump.html.",
+   "depends_on": "eval:doc.publication_type=='Product'",
+   "description": "Product page this card should open, such as /gulper.html.",
    "fieldname": "page_url",
    "fieldtype": "Data",
    "label": "Page URL",
@@ -267,7 +270,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-16 01:10:00.000000",
+ "modified": "2026-10-16 12:25:00.000000",
  "modified_by": "Administrator",
  "module": "Opero Site",
  "name": "Publication",

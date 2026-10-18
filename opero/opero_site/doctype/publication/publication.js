@@ -15,6 +15,13 @@ frappe.ui.form.on("Publication", {
 	file_url(frm) {
 		show_pdf_rename(frm);
 	},
+	publication_type(frm) {
+		if (frm.doc.publication_type !== "Product") {
+			return;
+		}
+		frm.set_value("published_on", "");
+		frm.set_value("year", "");
+	},
 });
 
 // Rename the PDF already stored on the publication. Sidebar attachments are separate files.

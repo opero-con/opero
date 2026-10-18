@@ -89,6 +89,18 @@ test("URL is labeled and shown only after a saved publication has a slug", () =>
 	}
 });
 
+test("choosing Product clears the date", () => {
+	const { events, frm } = loadForm(1);
+	const values = [];
+	frm.doc = { publication_type: "Product", published_on: "2026-10-15", year: 2026 };
+	frm.set_value = (field, value) => values.push([field, value]);
+	events.publication_type(frm);
+	assert.deepEqual(values, [
+		["published_on", ""],
+		["year", ""],
+	]);
+});
+
 test("an empty summary shows two lines", () => {
 	const { events, frm, input } = loadForm(1);
 	events.refresh(frm);

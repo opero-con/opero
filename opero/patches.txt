@@ -166,3 +166,4 @@ opero.patches.v0_4.rename_publication_publisher_profile
 opero.patches.v0_4.reload_approvals_workspace_for_leave_applications
 opero.patches.v0_4.remove_flow_hub
 opero.patches.v0_4.set_todo_naming_series
+opero.patches.v0_4.add_product_publication_type

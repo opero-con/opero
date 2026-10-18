@@ -127,7 +127,7 @@ OVERVIEW_PAGE_MD = """---
 slug: pupu-pump
 title: PuPu Pump
 publishedAt: 2026-07-10
-type: Overview
+type: Product
 serviceArea: WASH innovation
 topics:
   - PuPu Pump
@@ -449,11 +449,13 @@ active: true
 		self.assertEqual(doc.publication_type, "Overview")
 		self.assertEqual(doc.to_site_frontmatter()["type"], "Overview")
 
-	def test_load_maps_overview_page_url(self):
+	def test_load_maps_product_page_url(self):
 		load_files({"content/publications/pupu-pump.md": OVERVIEW_PAGE_MD})
 		doc = frappe.get_doc("Publication", {"slug": "pupu-pump"})
-		self.assertEqual(doc.publication_type, "Overview")
+		self.assertEqual(doc.publication_type, "Product")
 		self.assertEqual(doc.page_url, "/pupu-pump.html")
+		self.assertFalse(doc.published_on)
+		self.assertNotIn("publishedAt", doc.to_site_frontmatter())
 		self.assertEqual(doc.to_site_frontmatter()["pageUrl"], "/pupu-pump.html")
 
 	def test_load_keeps_extra_local_employees(self):
