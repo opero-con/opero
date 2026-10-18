@@ -90,15 +90,24 @@ def same_managed_content(path: str, existing: str, planned: str) -> bool:
 	return canonical_frontmatter(path, old) == canonical_frontmatter(path, new)
 
 
-def preserve_unmanaged_frontmatter(existing: str, planned: str) -> str:
-	"""Keep GitHub-only keys (homepage `team`, extra publication fields) on publish."""
+def preserve_unmanaged_frontmatter(existing: str, planned: str, *, path: str = "") -> str:
+	"""Keep GitHub-only keys (homepage `team`, extra publication fields) on publish.
+
+	A managed field the desk left blank is absent from `planned`. Drop that key
+	instead of copying the previous value back.
+	"""
 	try:
 		old, old_body = split_markdown(existing)
 		new, new_body = split_markdown(planned)
 	except ValueError:
 		return planned
+	cleared = set()
+	if path:
+		cleared = set(canonical_frontmatter(path, old)) - set(canonical_frontmatter(path, new))
 	merged = {}
 	for key, value in old.items():
+		if key in cleared:
+			continue
 		if key == "partners" and "hero" in new and "partners" not in new:
 			continue
 		if key in new:

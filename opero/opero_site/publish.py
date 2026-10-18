@@ -462,7 +462,7 @@ def planned_content_changes(
 	for path, content in planned:
 		current = existing.get(path)
 		if current:
-			content = preserve_unmanaged_frontmatter(current, content)
+			content = preserve_unmanaged_frontmatter(current, content, path=path)
 		merged.append((path, content))
 	files = changed_files(existing, merged)
 	deletes = deleted_managed_files(
