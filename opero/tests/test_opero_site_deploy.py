@@ -279,6 +279,41 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertEqual(data["team"][0]["name"], "Ignored Homepage Team")
 		self.assertNotIn("partners", data)
 
+	def test_preserve_unmanaged_drops_a_cleared_page_url(self):
+		existing = to_markdown(
+			{
+				"slug": "pit-emptying",
+				"title": "Pit emptying",
+				"publishedAt": "2026-10-15",
+				"type": "Case study",
+				"summary": "Summary.",
+				"topics": ["Pit emptying"],
+				"featured": False,
+				"fileUrl": "/media/publications/paper.pdf",
+				"pageUrl": "/media/publications/paper.pdf",
+				"editorNote": "Kept",
+			}
+		)
+		planned = to_markdown(
+			{
+				"slug": "pit-emptying",
+				"title": "Pit emptying",
+				"publishedAt": "2026-10-15",
+				"type": "Case study",
+				"summary": "Summary.",
+				"topics": ["Pit emptying"],
+				"featured": False,
+				"fileUrl": "/media/publications/paper.pdf",
+			}
+		)
+		merged = preserve_unmanaged_frontmatter(
+			existing, planned, path="content/publications/pit-emptying.md"
+		)
+		data = parse_frontmatter(merged)
+		self.assertNotIn("pageUrl", data)
+		self.assertEqual(data["fileUrl"], "/media/publications/paper.pdf")
+		self.assertEqual(data["editorNote"], "Kept")
+
 	def test_collect_includes_team_and_settings_paths(self):
 		settings = frappe.get_single("Site Settings")
 		settings.update(
