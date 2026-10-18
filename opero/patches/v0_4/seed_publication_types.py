@@ -6,7 +6,8 @@ DEFAULT_TYPES = {
 	"Case study": "A long write-up of a technology or programme, as an article, a PDF, or both.",
 	"Digest": "An issue of the PuPu Pump Digest.",
 	"Newsletter": "A company update.",
-	"Overview": "A product page (PuPu Pump, Gulper, PitVaq) or the Opero Project Portfolio PDF.",
+	"Overview": "A shareable overview, such as the Opero Project Portfolio PDF.",
+	"Product": "A product page, such as PuPu Pump, Gulper, or PitVaq. The card opens that page.",
 	"Project": "A short record of delivered work that is not already a case study.",
 }
 

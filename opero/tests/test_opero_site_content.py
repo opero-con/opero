@@ -414,13 +414,15 @@ class TestOperoSiteContent(FrappeTestCase):
 			self.assertEqual(doc.file_url, file_url)
 			self.assertEqual(doc.to_site_frontmatter()["fileUrl"], file_url)
 
-	def test_publication_overview_page_url_opens_technology_page(self):
+	def test_publication_product_page_url_opens_technology_page(self):
+		if not frappe.db.exists("Publication Type", "Product"):
+			frappe.get_doc({"doctype": "Publication Type", "title": "Product"}).insert(ignore_permissions=True)
 		doc = frappe.get_doc(
 			{
 				"doctype": "Publication",
 				"title": "PuPu Pump",
 				"published_on": "2026-07-10",
-				"publication_type": "Overview",
+				"publication_type": "Product",
 				"service_area": "WASH innovation",
 				"summary": "A portable push-pull sanitation pump for pit-latrine emptying.",
 				"page_url": "/pupu-pump.html",
@@ -430,6 +432,9 @@ class TestOperoSiteContent(FrappeTestCase):
 		doc.insert(ignore_permissions=True)
 		self.assertEqual(doc.slug, "pupu-pump")
 		self.assertEqual(doc.page_url, "/pupu-pump.html")
+		self.assertFalse(doc.published_on)
+		self.assertFalse(doc.year)
+		self.assertNotIn("publishedAt", doc.to_site_frontmatter())
 		self.assertEqual(
 			doc.to_site_frontmatter()["pageUrl"],
 			"/pupu-pump.html",

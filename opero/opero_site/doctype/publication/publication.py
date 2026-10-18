@@ -15,6 +15,7 @@ from opero.opero_site.cover_focal_point import CONTAIN, compute_cover_framing
 from opero.opero_site.media import desk_file_url, read_desk_file
 from opero.opero_site.publish_status import LIVE, apply_publish_status, get_publish_status
 from opero.opero_site.utils import (
+	PRODUCT_PUBLICATION_TYPE,
 	normalize_publication_type,
 	optional_url,
 	slugify,
@@ -40,13 +41,17 @@ class Publication(Document):
 		self.title = cstr(self.title).strip()
 		self.set_slug()
 		self.file_url = optional_url(self.file_url, "File URL")
-		self.page_url = optional_url(self.page_url, "Page URL")
+		if cstr(self.publication_type).strip() == PRODUCT_PUBLICATION_TYPE:
+			self.page_url = optional_url(self.page_url, "Page URL")
+			self.published_on = None
+			self.year = None
+		else:
+			self.page_url = ""
+			self.year = getdate(self.published_on).year if self.published_on else None
 		self.external_url = optional_url(self.external_url, "External URL")
 		self.video_embed_url = optional_url(self.video_embed_url, "Embed URL")
 		if self.video_embed_url and not cstr(self.video_title).strip():
 			frappe.throw(_("Accessible title is required when an embed URL is set."))
-		if self.published_on:
-			self.year = getdate(self.published_on).year
 		self.move_long_summary_to_body()
 		self.body = normalize_body_html(self.body)
 		self._set_cover_framing()
@@ -113,12 +118,13 @@ class Publication(Document):
 		payload = {
 			"slug": self.slug,
 			"title": cstr(self.title).strip(),
-			"publishedAt": getdate(self.published_on).isoformat() if self.published_on else "",
 			"type": cstr(self.publication_type).strip(),
 			"summary": cstr(self.summary).strip(),
 			"topics": [cstr(row.topic).strip() for row in (self.topics or []) if row.topic],
 			"featured": bool(cint(self.featured)),
 		}
+		if self.published_on:
+			payload["publishedAt"] = getdate(self.published_on).isoformat()
 		if self.year:
 			payload["year"] = cint(self.year)
 		if self.service_area:
