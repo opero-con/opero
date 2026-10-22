@@ -188,6 +188,10 @@ def _canonical_sections(rows) -> list[dict]:
 	for row in rows or []:
 		if not isinstance(row, dict):
 			continue
+		if row.get("type"):
+			# Ordered blocks carry inline formatting and links as well as text.
+			out.append(dict(row))
+			continue
 		section = {}
 		heading = _text(row.get("heading"))
 		if heading:
