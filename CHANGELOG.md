@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.4 — 2026-10-22
+
+### Added
+
+- Publication-only website access through the standard Blogger role
+- Product publication type and in-place PDF renaming
+- Draft task allocation capacity preview
+- Configurable Timesheet start time in HR Settings
+- Yearly sequential ToDo identifiers
+
+### Changed
+
+- Publications preserve rich text formatting and links on the public site, with a simpler editor and optional cover descriptions
+- Standard ToDo views replace Flow Hub
+- Timesheets require allocation-backed projects
+
+### Fixed
+
+- Publication deploys detect ordered body text, formatting, links, and list changes, and remove fields cleared in the editor
+- Portrait publication covers retain their content
+- Task allocation previews explain unavailable capacity and use simpler columns
+- Newly added ToDo assignees receive Desk notifications
+- Leave applications appear in approval queues and their shortcut stays synced on app updates
+- Timesheet hours stay within the work date; lists show useful columns and allocation alerts show task subjects
+- Publication tests use sequential record IDs
+
 ## 0.3.3 — 2026-10-03
 
 ### Added
