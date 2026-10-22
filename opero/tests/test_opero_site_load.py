@@ -150,6 +150,23 @@ linkedin: https://www.linkedin.com/in/anita-onyango
 
 
 class TestOperoSiteLoad(FrappeTestCase):
+	def test_ordered_body_formatting_changes_are_not_ignored(self):
+		path = "content/publications/formatting.md"
+		old = {"body": [{"type": "paragraph", "spans": [{"text": "Authors", "bold": True}]}]}
+		new = {"body": [{"type": "paragraph", "spans": [{"text": "Authors"}]}]}
+		self.assertNotEqual(canonical_frontmatter(path, old), canonical_frontmatter(path, new))
+		old["body"][0]["spans"][0]["href"] = "https://before.example"
+		new["body"][0]["spans"][0].update(bold=True, href="https://after.example")
+		self.assertNotEqual(canonical_frontmatter(path, old), canonical_frontmatter(path, new))
+
+	def test_ordered_body_text_and_list_changes_are_not_ignored(self):
+		path = "content/publications/formatting.md"
+		for before, after in [
+			({"type": "paragraph", "text": "Before"}, {"type": "paragraph", "text": "After"}),
+			({"type": "list", "style": "bullet", "items": ["Before"]}, {"type": "list", "style": "bullet", "items": ["After"]}),
+		]:
+			self.assertNotEqual(canonical_frontmatter(path, {"body": [before]}), canonical_frontmatter(path, {"body": [after]}))
+
 	def test_import_adopts_portrait_without_overwriting_profile_image(self):
 		import base64
 		for existing_image in ("", "/files/existing-profile.jpg"):
