@@ -127,13 +127,10 @@ function setDeployRibbon(frm, status = frm.doc[publishStatusField(frm.doctype)])
 	if (!QUEUED_STATUSES.includes(status)) {
 		return;
 	}
-	const link = frappe.model.can_read("Deploy Center")
-		? frappe.utils.get_form_link("Deploy Center", "Deploy Center", true, __("Deploy Center"))
-		: "";
 	const text =
 		status === "To unpublish"
-			? __("Will be removed from the website when deployed. {0}", [link])
-			: __("Will be published when deployed. {0}", [link]);
+			? __("Will be removed from the website when deployed.")
+			: __("Deploy to publish this on the website.");
 	frm.layout.show_message(`<span>${text}</span>`, STATUS_COLORS[status], true);
 }
 

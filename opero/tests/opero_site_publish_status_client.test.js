@@ -77,8 +77,9 @@ test("every homepage section displays the shared Home Page deploy ribbon", async
 		await handlers.get(doctype).refresh(frm);
 
 		assert.equal(messages.length, 2);
-		assert.match(messages[1][0], /Will be published when deployed/);
+		assert.match(messages[1][0], /Deploy to publish this on the website/);
 		assert.equal(messages[1][1], "blue");
+		assert.doesNotMatch(messages[1][0], /Deploy Center|<a\b/);
 	}
 	assert.deepEqual(
 		singleValueCalls,
@@ -89,13 +90,33 @@ test("every homepage section displays the shared Home Page deploy ribbon", async
 test("every site DocType displays its own pending ribbon", async () => {
 	const { handlers } = loadPublishStatus("Published");
 	const doctypes = [
-		["Publication", { status: "To publish" }, /Will be published/, "blue"],
-		["Employee", { website_status: "To update" }, /Will be published/, "blue"],
-		["Enterprise", { website_status: "To publish" }, /Will be published/, "blue"],
+		["Publication", { status: "To publish" }, /Deploy to publish this on the website/, "blue"],
+		[
+			"Employee",
+			{ website_status: "To update" },
+			/Deploy to publish this on the website/,
+			"blue",
+		],
+		[
+			"Enterprise",
+			{ website_status: "To publish" },
+			/Deploy to publish this on the website/,
+			"blue",
+		],
 		["Partner", { website_status: "To unpublish" }, /Will be removed/, "orange"],
-		["Home Page", { status: "To update" }, /Will be published/, "blue"],
-		["Privacy policy", { status: "To update" }, /Will be published/, "blue"],
-		["Site Settings", { status: "To update" }, /Will be published/, "blue"],
+		["Home Page", { status: "To update" }, /Deploy to publish this on the website/, "blue"],
+		[
+			"Privacy policy",
+			{ status: "To update" },
+			/Deploy to publish this on the website/,
+			"blue",
+		],
+		[
+			"Site Settings",
+			{ status: "To update" },
+			/Deploy to publish this on the website/,
+			"blue",
+		],
 	];
 
 	for (const [doctype, doc, text, color] of doctypes) {
