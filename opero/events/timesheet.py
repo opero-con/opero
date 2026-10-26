@@ -73,9 +73,6 @@ def generate_daily_times(doc, _method=None):
 	if len(dates) != 1:
 		frappe.throw("All entries must use the same work date. Use a separate timesheet for another day.")
 	day = get_datetime(next(iter(dates)))
-	limit = float(frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0)
-	if not isfinite(limit) or limit <= 0:
-		frappe.throw("Set a positive Standard Working Hours value in HR Settings.")
 	for row in rows:
 		hours = float(row.hours or 0)
 		if not isfinite(hours) or hours <= 0:
@@ -94,21 +91,6 @@ def generate_daily_times(doc, _method=None):
 		{"employee": doc.employee, "name": doc.name or "", "start": day, "end": end},
 		as_dict=True,
 	)
-	used = sum(
-		(
-			max(
-				min(get_datetime(r.to_time), end) - max(get_datetime(r.from_time), day), timedelta()
-			).total_seconds()
-			/ 3600
-		)
-		for r in occupied
-	)
-	requested = sum(float(row.hours) for row in rows)
-	if used + requested > limit + 0.000001:
-		frappe.throw(
-			f"{day.date()}: {used + requested:g}h total exceeds the {limit:g}h daily limit.",
-			title="Daily limit exceeded",
-		)
 	intervals = [(get_datetime(r.from_time), get_datetime(r.to_time)) for r in occupied]
 	start_time = frappe.db.get_single_value("HR Settings", "custom_work_day_starts_at")
 	if start_time is None or start_time == "":

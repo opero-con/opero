@@ -21,7 +21,7 @@ class TestDailyTimes(TestCase):
 		self.frappe = self.frappe_patch.start()
 		self.addCleanup(self.frappe_patch.stop)
 		self.db = self.frappe.db
-		self.limit = 8
+		self.limit = 7
 		self.start_time = "08:00:00"
 		self.db.get_single_value.side_effect = lambda dt, field: (
 			self.limit if field == "standard_working_hours" else self.start_time
@@ -46,23 +46,31 @@ class TestDailyTimes(TestCase):
 		self.assertEqual(self.doc.time_logs[0].from_time, datetime(2026, 9, 30, 11))
 		self.assertEqual(self.doc.time_logs[0].to_time, datetime(2026, 9, 30, 13, 30))
 
-	def test_daily_total_across_other_timesheets(self):
+	def test_daily_total_can_exceed_standard_hours_across_timesheets(self):
 		self.db.sql.return_value = [
 			frappe._dict(from_time="2026-09-30 08:00:00", to_time="2026-09-30 14:00:00", hours=6)
 		]
-		with self.assertRaisesRegex(ValueError, "daily limit"):
-			generate_daily_times(self.doc)
+		generate_daily_times(self.doc)
+		self.assertEqual(self.doc.time_logs[0].from_time, datetime(2026, 9, 30, 14))
+		self.assertEqual(self.doc.time_logs[0].to_time, datetime(2026, 9, 30, 16, 30))
 
-	def test_multiple_rows_share_daily_limit(self):
-		self.doc.time_logs.append(frappe._dict(idx=2, from_time="2026-09-30 22:00:00", hours=6))
-		with self.assertRaisesRegex(ValueError, "daily limit"):
-			generate_daily_times(self.doc)
+	def test_multiple_rows_can_exceed_standard_working_hours(self):
+		self.doc.time_logs.append(frappe._dict(idx=2, from_time="2026-09-30 22:00:00", hours=7))
+		generate_daily_times(self.doc)
+		self.assertEqual(self.doc.time_logs[1].from_time, datetime(2026, 9, 30, 10, 30))
+		self.assertEqual(self.doc.time_logs[1].to_time, datetime(2026, 9, 30, 17, 30))
+
+	def test_nine_and_a_half_hours_can_be_submitted(self):
+		self.doc.docstatus = 1
+		self.doc.get_doc_before_save.return_value = frappe._dict(docstatus=0)
+		self.doc.time_logs[0].hours = 9.5
+		generate_daily_times(self.doc)
+		self.assertEqual(self.doc.time_logs[0].to_time, datetime(2026, 9, 30, 17, 30))
 
 	def test_does_not_spill_when_day_is_full(self):
 		self.db.sql.return_value = [
 			frappe._dict(from_time="2026-09-30 09:00:00", to_time="2026-09-30 23:00:00", hours=14)
 		]
-		self.limit = 24
 		with self.assertRaisesRegex(ValueError, "cannot fit"):
 			generate_daily_times(self.doc)
 
@@ -71,10 +79,13 @@ class TestDailyTimes(TestCase):
 		with self.assertRaisesRegex(ValueError, "same work date"):
 			generate_daily_times(self.doc)
 
-	def test_missing_hr_limit_blocks(self):
-		self.limit = 0
-		with self.assertRaisesRegex(ValueError, "HR Settings"):
-			generate_daily_times(self.doc)
+	def test_standard_working_hours_is_not_required(self):
+		for value in (None, 0, -1, float("nan")):
+			with self.subTest(standard_hours=value):
+				self.limit = value
+				self.db.get_single_value.reset_mock()
+				generate_daily_times(self.doc)
+				self.db.get_single_value.assert_called_once_with("HR Settings", "custom_work_day_starts_at")
 
 	def test_approved_record_unchanged(self):
 		self.doc.get_doc_before_save.return_value = frappe._dict(docstatus=1)
@@ -110,7 +121,6 @@ class TestDailyTimes(TestCase):
 		self.db.sql.assert_not_called()
 
 	def test_exact_midnight_is_allowed(self):
-		self.limit = 16
 		self.doc.time_logs[0].hours = 16
 		generate_daily_times(self.doc)
 		self.assertEqual(self.doc.time_logs[0].to_time, datetime(2026, 10, 1))

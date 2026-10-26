@@ -1,6 +1,6 @@
 # Retrospective timesheet dates and daily hours
 
-- **Status:** Accepted
+- **Status:** Accepted; daily cap superseded by [ADR-0013](0013-timesheet-hours-reference.md)
 - Supersedes the midnight splitting policy in ADR-0001.
 
 Timesheets record a work date and duration rather than attendance clock times. From Time remains a datetime field; its date is the input and its clock time is generated. Before ERPNext validation, Opero places entries in free intervals from 08:00, preserving entries in other active timesheets. All entries in one timesheet must share a work date. A permission-checked server preview generates From Time and To Time when the work date, Hours, or employee changes in the form. Incomplete entries are skipped in the preview and validated on save. The same scheduler runs on save, including imports and API saves, so concurrent edits cannot bypass reservations.
