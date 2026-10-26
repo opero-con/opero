@@ -1,6 +1,6 @@
 # Generated timesheet start in HR Settings
 
-- **Status:** Accepted
+- **Status:** Accepted; daily cap superseded by [ADR-0013](0013-timesheet-hours-reference.md)
 - Updates ADR-0010's fixed 08:00 start policy.
 
 HR Settings owns Timesheet starts at, next to Standard Working Hours. It defaults

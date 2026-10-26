@@ -9,6 +9,12 @@ from opero.events.timesheet import generate_daily_times
 
 class TestTimesheetSchedule(FrappeTestCase):
 	def test_seven_hour_row_survives_erpnext_hour_calculation(self):
+		self.check_schedule_hours(7, "2026-10-09 15:30:00")
+
+	def test_nine_and_a_half_hours_survive_preview_and_erpnext_calculation(self):
+		self.check_schedule_hours(9.5, "2026-10-09 18:00:00")
+
+	def check_schedule_hours(self, hours, expected_end):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Timesheet",
@@ -18,8 +24,8 @@ class TestTimesheetSchedule(FrappeTestCase):
 						"task": "SCHEDULE-TASK",
 						"description": "Delivery",
 						"from_time": "2026-10-09 08:30:00",
-						"hours": 7,
-						"billing_hours": 7,
+						"hours": hours,
+						"billing_hours": hours,
 						"is_billable": 1,
 					}
 				],
@@ -37,24 +43,24 @@ class TestTimesheetSchedule(FrappeTestCase):
 			get_doc = frappe.get_doc
 			with patch(
 				"opero.api.timesheet.frappe.get_doc",
-				side_effect=lambda *args, **kwargs: MagicMock()
-				if args[0] == "Employee"
-				else get_doc(*args, **kwargs),
+				side_effect=lambda *args, **kwargs: (
+					MagicMock() if args[0] == "Employee" else get_doc(*args, **kwargs)
+				),
 			):
 				preview = preview_daily_times(
 					"SCHEDULE-TEST",
-					[{"name": "preview-row", "from_time": "2026-10-09 08:30:00", "hours": 7}],
+					[{"name": "preview-row", "from_time": "2026-10-09 08:30:00", "hours": hours}],
 				)
 			self.assertEqual(preview[0]["name"], "preview-row")
 			self.assertEqual(len(preview), 1)
-			self.assertEqual(preview[0]["to_time"], "2026-10-09 15:30:00")
+			self.assertEqual(preview[0]["to_time"], expected_end)
 		doc.calculate_hours()
-		self.assertEqual([row.hours for row in doc.time_logs], [7])
-		self.assertEqual(sum(row.billing_hours for row in doc.time_logs), 7)
+		self.assertEqual([row.hours for row in doc.time_logs], [hours])
+		self.assertEqual(sum(row.billing_hours for row in doc.time_logs), hours)
 		self.assertTrue(all(row.task == "SCHEDULE-TASK" for row in doc.time_logs))
 		self.assertTrue(all(row.description == "Delivery" for row in doc.time_logs))
 		self.assertEqual([row.idx for row in doc.time_logs], [1])
-		self.assertEqual(str(doc.time_logs[-1].to_time), "2026-10-09 15:30:00")
+		self.assertEqual(str(doc.time_logs[-1].to_time), expected_end)
 
 	def test_start_is_next_to_standard_working_hours(self):
 		meta = frappe.get_meta("HR Settings")

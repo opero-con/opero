@@ -20,3 +20,7 @@ that the commit message already explains.
 | [0007](0007-per-record-deploy.md) | Deploy one record at a time | Accepted |
 | [0008](0008-deploy-center-selection.md) | Deploy Center deploys only the selected changes | Accepted |
 | [0009](0009-publication-ids.md) | Publication IDs are independent of slugs | Accepted |
+| [0010](0010-timesheet-daily-times.md) | Retrospective timesheet dates and daily hours | Accepted; daily cap superseded by ADR-0013 |
+| [0011](0011-timesheet-project-allocation.md) | Timesheet project allocation | Accepted |
+| [0012](0012-timesheet-schedule.md) | Generated timesheet start in HR Settings | Accepted; daily cap superseded by ADR-0013 |
+| [0013](0013-timesheet-hours-reference.md) | Standard Working Hours is a reference, not a Timesheet daily cap | Accepted |
