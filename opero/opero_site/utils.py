@@ -44,16 +44,17 @@ def slugify(text: str) -> str:
 	return value.strip("-")
 
 
-def optional_url(value: str, label: str) -> str:
+def optional_url(value: str, label: str, *, invalid_message: str = "") -> str:
 	url = cstr(value).strip()
 	if not url:
 		return ""
 	if _PUBLIC_URL.match(url) or (url.startswith("/") and not url.startswith("//")):
 		return url
 	frappe.throw(
-		_("{0} must be a full http(s) URL, a site path such as /downloads/file.pdf, or left blank.").format(
-			label
-		)
+		invalid_message
+		or _(
+			"{0} must be a full http(s) URL, a site path such as /downloads/file.pdf, or left blank."
+		).format(label)
 	)
 
 
