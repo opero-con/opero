@@ -32,6 +32,7 @@
   "cover",
   "cover_position",
   "cover_fit",
+  "publication_source",
   "file_url",
   "page_url",
   "external_url",
@@ -154,12 +155,13 @@
   {
    "fieldname": "section_media",
    "fieldtype": "Section Break",
-   "label": "Media"
+   "label": "Cover and publication"
   },
   {
    "fieldname": "cover",
    "fieldtype": "Attach Image",
-   "label": "Cover image"
+   "label": "Cover image",
+   "description": "Optional. Upload a cover image; use Clear to remove it or upload a replacement."
   },
   {
    "depends_on": "eval:!!doc.cover",
@@ -187,7 +189,7 @@
    "read_only": 1
   },
   {
-   "description": "Upload a PDF, or paste a web link if the file already lives elsewhere. Rename changes the name of a PDF uploaded here.",
+   "description": "Upload your PDF here. Its file name and View PDF link appear after upload. Private uploads are copied to the public website when you deploy.",
    "fieldname": "file_url",
    "fieldtype": "Attach",
    "label": "PDF"
@@ -203,8 +205,9 @@
   {
    "fieldname": "external_url",
    "fieldtype": "Data",
-   "label": "External URL",
-   "options": "URL"
+   "label": "Webpage address",
+   "options": "URL",
+   "description": "Paste the full webpage address, starting with https://."
   },
   {
    "fieldname": "section_video",
@@ -267,6 +270,11 @@
   {
    "fieldname": "column_break_ilia",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "publication_source",
+   "fieldtype": "HTML",
+   "label": "Publication format"
   }
  ],
  "links": [],
