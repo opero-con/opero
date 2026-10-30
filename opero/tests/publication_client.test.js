@@ -237,3 +237,67 @@ test("refresh binds the input listener once", () => {
 		["input"]
 	);
 });
+
+test("publication format reveals the chosen fields and preserves existing destinations", () => {
+	let render;
+	function element() {
+		return {
+			value: "",
+			empty() {
+				return this;
+			},
+			append() {
+				return this;
+			},
+			val(value) {
+				if (value === undefined) return this.value;
+				this.value = value;
+				return this;
+			},
+			on(_, fn) {
+				this.change = fn;
+				return this;
+			},
+		};
+	}
+	let select;
+	const context = {
+		frappe: { ui: { form: { on() {} } } },
+		__: (value) => value,
+		$: (tag) => {
+			const node = element();
+			if (tag === "<select>") select = node;
+			return node;
+		},
+	};
+	vm.createContext(context);
+	vm.runInContext(
+		fs.readFileSync(
+			path.join(__dirname, "../opero_site/doctype/publication/publication.js"),
+			"utf8"
+		),
+		context
+	);
+	render = context.show_publication_source;
+	const visible = {};
+	const frm = {
+		doc: {},
+		get_field: () => ({ $wrapper: element() }),
+		toggle_display: (field, value) => (visible[field] = value),
+	};
+	render(frm);
+	assert.equal(select.val(), "pdf");
+	assert.equal(visible.file_url, true);
+	assert.equal(visible.external_url, false);
+	select.val("webpage").change();
+	assert.equal(visible.file_url, false);
+	assert.equal(visible.external_url, true);
+	frm.doc.file_url = "/private/files/report.pdf";
+	select.change();
+	assert.equal(visible.file_url, true);
+	assert.equal(frm.doc.file_url, "/private/files/report.pdf");
+	frm.doc.external_url = "https://example.com";
+	render(frm);
+	assert.equal(select.val(), "both");
+	assert.equal(visible.external_url, true);
+});

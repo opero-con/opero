@@ -1,5 +1,6 @@
 frappe.ui.form.on("Publication", {
 	refresh(frm) {
+		show_publication_source(frm);
 		show_pdf_rename(frm);
 		show_website_link(frm);
 		const field = frm.get_field("summary");
@@ -34,8 +35,20 @@ function show_pdf_rename(frm) {
 		return;
 	}
 	field.$wrapper.find(".pdf-rename").remove();
+	field.$wrapper.find(".pdf-preview").remove();
 	const url = frm.doc.file_url || "";
 	const on_desk = url.startsWith("/files/") || url.startsWith("/private/files/");
+	if (on_desk) {
+		field.$wrapper.append(
+			$("<a>", {
+				class: "pdf-preview btn btn-xs btn-default",
+				href: url,
+				text: __("View PDF"),
+				target: "_blank",
+				rel: "noopener noreferrer",
+			})
+		);
+	}
 	if (!on_desk || frm.doc.__islocal) {
 		return;
 	}
@@ -124,4 +137,39 @@ function fit_summary(frm) {
 	input.style.height = "auto";
 	const line_height = parseFloat(getComputedStyle(input).lineHeight);
 	input.style.height = `${input.scrollHeight + line_height}px`;
+}
+
+// This choice only reveals fields. Switching never deletes an existing PDF or link.
+function show_publication_source(frm) {
+	const field = frm.get_field("publication_source");
+	if (!field || !frm.doc) return;
+	field.$wrapper.empty();
+	const mode =
+		frm.doc.file_url && frm.doc.external_url
+			? "both"
+			: frm.doc.external_url
+			? "webpage"
+			: "pdf";
+	const select = $("<select>", {
+		class: "form-control",
+		"aria-label": __("Publication format"),
+	});
+	for (const [value, label] of [
+		["pdf", "Upload a PDF"],
+		["webpage", "Link to a webpage"],
+		["both", "PDF and webpage"],
+	]) {
+		select.append($("<option>", { value, text: __(label) }));
+	}
+	const display = () => {
+		const choice = select.val();
+		// Keep populated fields visible so an existing destination is never hidden.
+		frm.toggle_display("file_url", choice !== "webpage" || !!frm.doc.file_url);
+		frm.toggle_display("external_url", choice !== "pdf" || !!frm.doc.external_url);
+	};
+	select.val(mode).on("change", display);
+	field.$wrapper
+		.append($("<label>", { class: "control-label", text: __("Publication format") }))
+		.append(select);
+	display();
 }

@@ -7,6 +7,7 @@ frappe.ui.form.on("Publication", {
 		const pdf = frm.get_field("file_url");
 		if (pdf) {
 			pdf.df.options = {
+				allow_web_link: false,
 				restrictions: {
 					allowed_file_types: [".pdf", "application/pdf"],
 				},
