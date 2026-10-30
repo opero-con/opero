@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from html import escape, unescape
 
 from bs4 import BeautifulSoup, NavigableString, Tag
@@ -313,7 +314,7 @@ def _link_blocks(tag: Tag) -> list[dict]:
 	href = cstr(tag.get("href")).strip()
 	if not label or not href:
 		return []
-	return [{"type": "link", "label": label, "href": optional_url(href, _("Link URL"))}]
+	return [{"type": "link", "label": label, "href": _body_link_url(href, label)}]
 
 
 def _blocks_from_list(tag: Tag) -> list[dict]:
@@ -411,7 +412,7 @@ def _span(text: str, bold: bool, italic: bool, href: str) -> dict:
 	if italic:
 		span["italic"] = True
 	if href:
-		span["href"] = optional_url(href, _("Link URL"))
+		span["href"] = _body_link_url(href, text)
 	return span
 
 
@@ -459,3 +460,16 @@ def _is_quill_chrome(tag: Tag) -> bool:
 	if isinstance(classes, str):
 		classes = classes.split()
 	return "ql-ui" in classes
+
+
+def _body_link_url(href: str, text: str) -> str:
+	# Quill accepts addresses without a scheme; complete explicit www addresses.
+	if re.fullmatch(r"www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:[/\?#][^\s]*)?", href):
+		href = "https://" + href
+	return optional_url(
+		href,
+		_("Body link"),
+		invalid_message=_(
+			"“{0}” has an invalid link. Edit this link in Body: use an address starting with https://, or remove the link."
+		).format(escape(text.strip()[:100])),
+	)
