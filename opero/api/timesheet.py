@@ -10,7 +10,7 @@ def get_total_spent_hours(employee, project):
 	rows = frappe.get_list(
 		"Timesheet",
 		filters={"employee": employee, "parent_project": project, "docstatus": 1},
-		fields=["sum(total_hours) as hours"],
+		fields=[{"SUM": "total_hours", "as": "hours"}],
 		limit_page_length=1,
 	)
 	return float(rows[0].hours or 0) if rows else 0

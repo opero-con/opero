@@ -87,12 +87,8 @@ class TestOperoWorkspaces(FrappeTestCase):
 		delete_doc.assert_not_called()
 
 	def test_hidden_workspaces_show_only_to_system_and_workspace_managers(self):
-		self.assertEqual(
-			frappe.get_hooks("override_whitelisted_methods")[
-				"frappe.desk.desktop.get_workspace_sidebar_items"
-			],
-			["opero.workspace_sidebar.get_workspace_sidebar_items"],
-		)
+		self.assertIn("opero.workspace_sidebar.apply_workspace_filter", frappe.get_hooks("before_request"))
+		workspace_sidebar.apply_workspace_filter()
 		hide_frappe_website_workspace.execute()
 		self.assertEqual(frappe.db.get_value("Workspace", "Website", "is_hidden"), 1)
 		self.assertIn("Website", self._sidebar_for(["System Manager", "Workspace Manager"]))
@@ -104,15 +100,17 @@ class TestOperoWorkspaces(FrappeTestCase):
 
 	def test_boot_drops_hidden_workspaces_from_search_and_breadcrumbs(self):
 		bootinfo = frappe._dict(
-			allowed_workspaces=[
-				frappe._dict(name="Website", public=1, is_hidden=1),
-				frappe._dict(name="Site Content", public=1, is_hidden=0),
-				frappe._dict(name="Mine", public=0, is_hidden=1, for_user="someone@example.com"),
-			]
+			workspaces={
+				"pages": [
+					frappe._dict(name="Website", public=1, is_hidden=1),
+					frappe._dict(name="Site Content", public=1, is_hidden=0),
+					frappe._dict(name="Mine", public=0, is_hidden=1, for_user="someone@example.com"),
+				]
+			}
 		)
 		with self.set_user(self._user(["Workspace Manager"])):
 			boot.boot_session(bootinfo)
-		self.assertEqual([page.name for page in bootinfo.allowed_workspaces], ["Site Content", "Mine"])
+		self.assertEqual([page.name for page in bootinfo.workspaces["pages"]], ["Site Content", "Mine"])
 
 	def _user(self, roles):
 		return (
@@ -129,7 +127,10 @@ class TestOperoWorkspaces(FrappeTestCase):
 
 	def _sidebar_for(self, roles):
 		with self.set_user(self._user(roles)):
-			return [page.name for page in workspace_sidebar.get_workspace_sidebar_items()["pages"]]
+			from frappe.desk import desktop
+
+			frappe.local.request_cache.clear()
+			return [page.name for page in desktop.get_workspaces()["pages"]]
 
 	def test_leave_shortcut_sync_replaces_an_equal_or_newer_saved_workspace(self):
 		definition = json.loads(

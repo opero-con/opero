@@ -35,7 +35,7 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["newsletter"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -229,7 +229,8 @@ override_whitelisted_methods = {
 	"frappe.email.doctype.email_group.email_group.add_subscribers": "opero.mailing.overrides.add_subscribers",
 	"frappe.email.doctype.newsletter.newsletter.subscribe": "opero.mailing.confirmation.subscribe",
 	"frappe.email.doctype.newsletter.newsletter.confirm_subscription": "opero.mailing.confirmation.legacy_confirmation",
-	"frappe.desk.desktop.get_workspace_sidebar_items": "opero.workspace_sidebar.get_workspace_sidebar_items",
+	"newsletter.newsletter.doctype.newsletter.newsletter.subscribe": "opero.mailing.confirmation.subscribe",
+	"newsletter.newsletter.doctype.newsletter.newsletter.confirm_subscription": "opero.mailing.confirmation.legacy_confirmation",
 }
 
 doc_events = {
@@ -393,7 +394,7 @@ scheduler_events = {
 
 # Request Events
 # ----------------
-# before_request = ["opero.utils.before_request"]
+before_request = ["opero.workspace_sidebar.apply_workspace_filter"]
 # after_request = ["opero.utils.after_request"]
 
 # Job Events
