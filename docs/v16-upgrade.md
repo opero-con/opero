@@ -71,3 +71,27 @@ JavaScript test, whole-repository lint and formatting, and native v16 boot/name
 patch checks. Production backups and Payments were not part of the synthetic
 custom-app rehearsal. No application server or scheduler workers were started,
 so application restart was skipped. Production was not changed.
+
+## Desk navigation
+
+The v16 branch ships an Opero app entry, two standard Sidebars and an app Dock.
+The Opero sidebar opens the existing Opero workspace, followed by Approvals and
+the Time, Requests, Budgets, Partners & Contracts and Setup links. Site Content
+opens the existing Site Content workspace and its content-management links.
+Native Frappe permissions filter each user's available destinations; these files
+do not grant roles or access to records. Site and user navigation arrangements
+remain in Frappe's customization layers.
+
+Navigation documents are authored on a local v16 developer site and exported by
+Frappe, rather than maintained as runtime hooks. A normal migration imports them.
+The app entry opens `/desk/opero`; `/desk/site-content` opens Site Content directly.
+The Desktop Icon export also supplies the Opero entry for sites using the icon grid.
+No migration or production navigation change is executed by preparing these files.
+
+Navigation validation on the isolated v16 site: native migration/import and
+real boot-payload checks passed. The workspace suite ran 16 tests: 12 passed,
+two failed and two errored, matching the failures in the pre-change full-suite
+log (missing module on two fixtures, missing Travel Request approval field, and
+a stale Blogger-role expectation). The apps-screen hook passes Ruff lint and
+format checks. No JS/CSS changed, so asset build is not required. No app server
+or workers run on the isolated site, so process restart is not applicable.

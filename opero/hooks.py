@@ -37,16 +37,7 @@ app_license = "mit"
 
 required_apps = ["newsletter"]
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "opero",
-# 		"logo": "/assets/opero/logo.png",
-# 		"title": "Opero Custom Development",
-# 		"route": "/opero",
-# 		"has_permission": "opero.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [{"name": "opero", "title": "Opero", "route": "/desk/opero"}]
 
 # Includes in <head>
 # ------------------
