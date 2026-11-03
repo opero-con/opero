@@ -1,0 +1,31 @@
+{
+ "app": "opero",
+ "creation": "2026-11-04 04:35:23.291462",
+ "docstatus": 0,
+ "doctype": "Dock",
+ "idx": 0,
+ "items": [
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "organization",
+   "link_to": "Opero",
+   "link_type": "Sidebar",
+   "title": "Opero"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "website",
+   "link_to": "Opero Site",
+   "link_type": "Sidebar",
+   "title": "Site Content"
+  }
+ ],
+ "modified": "2026-11-04 04:35:23.291462",
+ "modified_by": "Administrator",
+ "name": "opero",
+ "owner": "Administrator",
+ "standard": 1,
+ "user": ""
+}
