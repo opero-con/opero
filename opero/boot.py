@@ -13,4 +13,5 @@ def boot_session(bootinfo):
 	Sending it at boot keeps that check off the per-form request path.
 	"""
 	bootinfo.opero_home_company = entity.get_home_company()
-	bootinfo.allowed_workspaces = filter_hidden_workspaces(bootinfo.allowed_workspaces or [])
+	if bootinfo.get("workspaces"):
+		bootinfo.workspaces["pages"] = filter_hidden_workspaces(bootinfo.workspaces["pages"])

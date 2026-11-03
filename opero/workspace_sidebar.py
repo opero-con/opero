@@ -1,20 +1,31 @@
-"""Narrow hidden workspaces to Workspace Managers who are also System Managers.
+"""Keep hidden workspaces out of staff navigation on Frappe v16.
 
-Frappe shows hidden workspaces to every Workspace Manager, and most Opero staff
-hold that role, so hiding Frappe's Website workspace alone would not reach them.
+Most Opero staff are Workspace Managers. Only System Managers should also see
+hidden public workspaces. Apply this before Frappe builds navigation from its
+request-cached workspace list; filtering boot alone leaves sidebar links behind.
 """
 
 from __future__ import annotations
+
+from functools import wraps
 
 import frappe
 from frappe.desk import desktop
 
 
-@frappe.whitelist()
-def get_workspace_sidebar_items():
-	sidebar = desktop.get_workspace_sidebar_items()
-	sidebar["pages"] = filter_hidden_workspaces(sidebar["pages"])
-	return sidebar
+def apply_workspace_filter():
+	"""Wrap the native workspace provider once per process, retaining its cache."""
+	original = desktop.get_workspaces
+	if getattr(original, "_opero_workspace_filter", False):
+		return
+
+	@wraps(original)
+	def get_workspaces(*args, **kwargs):
+		result = original(*args, **kwargs)
+		return {**result, "pages": filter_hidden_workspaces(result["pages"])}
+
+	get_workspaces._opero_workspace_filter = True
+	desktop.get_workspaces = get_workspaces
 
 
 def filter_hidden_workspaces(pages):

@@ -147,7 +147,7 @@ def update_project_allocated_hours(project):
 def get_allocated_hours(**filters):
 	"""Sum of submitted allocation hours matching the filters."""
 	rows = frappe.get_all(
-		"Task Allocation", filters={**filters, "docstatus": 1}, fields=["sum(hours) as hours"]
+		"Task Allocation", filters={**filters, "docstatus": 1}, fields=[{"SUM": "hours", "as": "hours"}]
 	)
 	return flt(rows[0].hours) if rows else 0
 
@@ -179,7 +179,7 @@ def get_budget_usage(task):
 	rows = frappe.get_all(
 		"Task Allocation",
 		filters={"task": task, "docstatus": 1},
-		fields=["employee", "personnel_name", "sum(hours) as hours"],
+		fields=["employee", "personnel_name", {"SUM": "hours", "as": "hours"}],
 		group_by="employee, personnel_name",
 	)
 	return {row.employee: row for row in rows}
@@ -304,7 +304,7 @@ def get_distribution(task, employee):
 	planned = frappe.get_all(
 		"Task Allocation",
 		filters={"task": task, "employee": employee, "docstatus": ("<", 2)},
-		fields=["sum(hours) as hours"],
+		fields=[{"SUM": "hours", "as": "hours"}],
 	)
 	remaining = budget.hours - flt(planned[0].hours if planned else 0)
 	if remaining <= HOURS_TOLERANCE:
@@ -359,7 +359,12 @@ def get_allocation_grid(task):
 	allocations = frappe.get_all(
 		"Task Allocation",
 		filters={"task": task, "docstatus": 1},
-		fields=["employee", "personnel_name as employee_name", "month_start", "sum(hours) as hours"],
+		fields=[
+			"employee",
+			"personnel_name as employee_name",
+			"month_start",
+			{"SUM": "hours", "as": "hours"},
+		],
 		group_by="employee, personnel_name, month_start",
 		order_by="personnel_name, month_start",
 	)

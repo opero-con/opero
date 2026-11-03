@@ -4,7 +4,6 @@ import json
 
 import frappe
 
-
 WORKSPACE_NAME = "ToDo Hub"
 LEGACY_WORKSPACE_NAME = "ToDo Command Center"
 REPORT_ACTION_QUEUE = "ToDo Explorer"
@@ -523,7 +522,7 @@ def _get_next_workspace_sequence() -> float:
 	rows = frappe.get_all(
 		"Workspace",
 		filters={"public": 1},
-		fields=["max(sequence_id) as max_sequence"],
+		fields=[{"MAX": "sequence_id", "as": "max_sequence"}],
 	)
 	max_sequence = (rows[0].max_sequence if rows and rows[0].max_sequence is not None else 0) or 0
 	return float(max_sequence) + 1

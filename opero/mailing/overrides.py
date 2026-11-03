@@ -4,8 +4,8 @@ import frappe
 from frappe import _
 from frappe.email.doctype.email_group.email_group import EmailGroup
 from frappe.email.doctype.email_group_member.email_group_member import EmailGroupMember
-from frappe.email.doctype.newsletter.newsletter import Newsletter
 from frappe.utils import validate_email_address
+from newsletter.newsletter.doctype.newsletter.newsletter import Newsletter
 
 from opero.mailing.membership import (
 	MEMBER,

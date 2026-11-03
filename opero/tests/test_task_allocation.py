@@ -434,6 +434,14 @@ class TestTaskAllocation(FrappeTestCase):
 		holidays = self._record(
 			"Holiday List", holiday_list_name="Allocation test", from_date="2026-01-01", to_date="2026-12-31"
 		)
+		self._record(
+			"Holiday List Assignment",
+			applicable_for="Employee",
+			assigned_to=self.employee,
+			holiday_list=holidays,
+			from_date="2026-01-01",
+			docstatus=1,
+		)
 		weekends = [date(2026, 2, day) for day in (1, 7, 8, 14, 15, 21, 22, 28)]
 		for day in [*weekends, date(2026, 2, 10)]:
 			self._record(

@@ -231,6 +231,16 @@ class TestMailingLists(FrappeTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			export_rows()
 
+	def test_v16_newsletter_unsubscribe_removes_recipient(self):
+		from newsletter.newsletter.doctype.newsletter.newsletter import confirmed_unsubscribe
+
+		self.contact(self.email, [self.a.name])
+		confirmed_unsubscribe(self.email, self.a.name)
+		self.assertEqual(m.status(self.member()), "Unsubscribed")
+		newsletter = frappe.new_doc("Newsletter")
+		newsletter.append("email_group", {"email_group": self.a.name})
+		self.assertNotIn(self.email, newsletter.get_recipients())
+
 	def test_new_members_are_eligible(self):
 		doc = frappe.get_doc(
 			{
@@ -243,7 +253,7 @@ class TestMailingLists(FrappeTestCase):
 		self.assertFalse(cint(doc.unsubscribed))
 
 	def test_contact_editor_can_select_and_assign_but_cannot_create_lists(self):
-		from frappe.client import validate_link
+		from frappe.client import validate_link_and_fetch
 
 		user = frappe.get_doc(
 			{
@@ -255,7 +265,8 @@ class TestMailingLists(FrappeTestCase):
 			}
 		).insert()
 		frappe.set_user(user.name)
-		self.assertEqual(validate_link("Email Group", self.a.name).name, self.a.name)
+		with patch("frappe.local.request", frappe._dict(method="POST"), create=True):
+			self.assertEqual(validate_link_and_fetch("Email Group", self.a.name)["name"], self.a.name)
 		self.contact(self.email, [self.a.name])
 		self.assertEqual(m.status(self.member()), "Confirmed")
 		with self.assertRaises(frappe.PermissionError):
@@ -293,9 +304,7 @@ class TestMailingLists(FrappeTestCase):
 		frappe.rename_doc("Email Group", self.a.name, self.b.name, merge=True)
 		self.assertFalse(frappe.db.exists("Email Group", self.a.name))
 		for email in (shared, only_a, only_b):
-			self.assertTrue(
-				frappe.db.exists(m.MEMBER, {"email_group": self.b.name, "email": email}), email
-			)
+			self.assertTrue(frappe.db.exists(m.MEMBER, {"email_group": self.b.name, "email": email}), email)
 		self.assertEqual(m.status(self.member(self.b.name, shared)), "Confirmed")
 		self.assertEqual([r.mailing_list for r in both.reload().get(m.FIELD)], [self.b.name])
 		self.assertEqual(

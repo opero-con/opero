@@ -26,12 +26,12 @@ class TestTimesheetBalances(FrappeTestCase):
 		self.assertEqual(field.default, "TS.YY.WW.##")
 		self.assertEqual(field.options, "TS.YY.WW.##")
 
-
 	def test_time_log_grid_has_three_ordered_columns(self):
 		meta = frappe.get_meta("Timesheet Detail")
 		visible = [field for field in meta.fields if field.in_list_view]
 		self.assertEqual([field.fieldname for field in visible], ["task", "from_time", "hours"])
 		self.assertEqual([field.columns for field in visible], [5, 4, 1])
+
 	def test_task_name_is_available_to_report_view(self):
 		field = frappe.get_meta("Timesheet Detail").get_field("custom_project_task")
 		self.assertEqual(field.fetch_from, "task.subject")
@@ -194,7 +194,7 @@ class TestTimesheetBalances(FrappeTestCase):
 			self.assertEqual(get_total_spent_hours(self.employee, self.project), 6)
 			self.assertTrue(
 				any(
-					call.kwargs.get("fields") == ["sum(total_hours) as hours"]
+					call.kwargs.get("fields") == [{"SUM": "total_hours", "as": "hours"}]
 					for call in query.call_args_list
 				)
 			)
@@ -220,13 +220,13 @@ class TestTimesheetBalances(FrappeTestCase):
 		)
 		timesheet._validate_allocated_hours(doc)
 
-
 	def test_live_balance_preview_accepts_row_level_projects(self):
 		from opero.api.timesheet import get_allocation_balances
 
 		doc = self._draft([2])
 		balance = get_allocation_balances(employee=self.employee, time_logs=doc.time_logs)[0]
 		self.assertEqual(balance["task"], self.task)
+
 	def test_submission_blocked_after_cutoff_day(self):
 		doc = self._draft([2], date="2026-01-15")
 		with patch.object(frappe, "get_roles", return_value=["Projects User"]):
@@ -238,17 +238,20 @@ class TestTimesheetBalances(FrappeTestCase):
 
 	def test_submission_cutoff_bypassed_for_projects_manager(self):
 		doc = self._draft([2], date="2026-01-15")
-		with patch.object(timesheet, "nowdate", return_value="2026-02-04"), patch.object(
-			frappe, "get_roles", return_value=["Projects Manager"]
+		with (
+			patch.object(timesheet, "nowdate", return_value="2026-02-04"),
+			patch.object(frappe, "get_roles", return_value=["Projects Manager"]),
 		):
 			timesheet._validate_submission_cutoff(doc)
 
 
 class TestTimesheetZoho(FrappeTestCase):
 	def test_submission_only_queues_after_commit(self):
-		with patch.object(zoho_books, "_get_settings", return_value=frappe._dict(enabled=1)), patch.object(
-			frappe.db, "set_value"
-		), patch.object(frappe, "enqueue") as enqueue:
+		with (
+			patch.object(zoho_books, "_get_settings", return_value=frappe._dict(enabled=1)),
+			patch.object(frappe.db, "set_value"),
+			patch.object(frappe, "enqueue") as enqueue,
+		):
 			zoho_books.sync_timesheet_to_zoho(frappe._dict(name="test"))
 			self.assertTrue(enqueue.call_args.kwargs["enqueue_after_commit"])
 			self.assertEqual(enqueue.call_args.kwargs["timesheet_name"], "test")
@@ -260,15 +263,22 @@ class TestTimesheetZoho(FrappeTestCase):
 			note="",
 			time_logs=[frappe._dict(name="mapped", idx=1), frappe._dict(name="failed", idx=2)],
 		)
-		with patch.object(
-			zoho_books, "_get_settings", return_value=frappe._dict(enabled=1, organization_id="org")
-		), patch.object(zoho_books, "_validate_settings"), patch.object(
-			zoho_books, "_get_or_refresh_token"
-		), patch.object(
-			zoho_books, "_get_mapping", side_effect=lambda kind, name: "remote" if name != "failed" else None
-		), patch.object(
-			zoho_books, "_create_time_entry", side_effect=zoho_books.ZohoBooksException("offline")
-		) as create, patch.object(frappe.db, "commit"):
+		with (
+			patch.object(
+				zoho_books, "_get_settings", return_value=frappe._dict(enabled=1, organization_id="org")
+			),
+			patch.object(zoho_books, "_validate_settings"),
+			patch.object(zoho_books, "_get_or_refresh_token"),
+			patch.object(
+				zoho_books,
+				"_get_mapping",
+				side_effect=lambda kind, name: "remote" if name != "failed" else None,
+			),
+			patch.object(
+				zoho_books, "_create_time_entry", side_effect=zoho_books.ZohoBooksException("offline")
+			) as create,
+			patch.object(frappe.db, "commit"),
+		):
 			with self.assertRaises(zoho_books.ZohoBooksException):
 				zoho_books._sync_timesheet_entries(doc)
 			self.assertEqual(create.call_count, 1)
@@ -281,13 +291,19 @@ class TestTimesheetZoho(FrappeTestCase):
 			note="",
 			time_logs=[frappe._dict(name="unknown", idx=1, custom_zoho_sync_uncertain=1)],
 		)
-		with patch.object(
-			zoho_books, "_get_settings", return_value=frappe._dict(enabled=1, organization_id="org")
-		), patch.object(zoho_books, "_validate_settings"), patch.object(
-			zoho_books, "_get_or_refresh_token"
-		), patch.object(
-			zoho_books, "_get_mapping", side_effect=lambda kind, name: "user" if kind == "Employee" else None
-		), patch.object(zoho_books, "_create_time_entry") as create:
+		with (
+			patch.object(
+				zoho_books, "_get_settings", return_value=frappe._dict(enabled=1, organization_id="org")
+			),
+			patch.object(zoho_books, "_validate_settings"),
+			patch.object(zoho_books, "_get_or_refresh_token"),
+			patch.object(
+				zoho_books,
+				"_get_mapping",
+				side_effect=lambda kind, name: "user" if kind == "Employee" else None,
+			),
+			patch.object(zoho_books, "_create_time_entry") as create,
+		):
 			with self.assertRaises(zoho_books.ZohoBooksException):
 				zoho_books._sync_timesheet_entries(doc)
 			create.assert_not_called()
@@ -295,11 +311,13 @@ class TestTimesheetZoho(FrappeTestCase):
 	def test_queued_job_uses_current_cancelled_status(self):
 		doc = frappe._dict(name="test", docstatus=2)
 		cache = MagicMock()
-		with patch.object(frappe, "cache", return_value=cache), patch.object(
-			frappe, "get_doc", return_value=doc
-		), patch.object(frappe.db, "set_value") as status, patch.object(
-			zoho_books, "_delete_timesheet_entries"
-		) as delete, patch.object(zoho_books, "_sync_timesheet_entries") as sync:
+		with (
+			patch.object(frappe, "cache", return_value=cache),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe.db, "set_value") as status,
+			patch.object(zoho_books, "_delete_timesheet_entries") as delete,
+			patch.object(zoho_books, "_sync_timesheet_entries") as sync,
+		):
 			zoho_books.run_timesheet_sync("test")
 			delete.assert_called_once_with(doc)
 			sync.assert_not_called()
@@ -310,14 +328,16 @@ class TestTimesheetZoho(FrappeTestCase):
 			name="entry", from_time="2026-01-01 09:00:00", to_time="2026-01-01 10:00:00", is_billable=1
 		)
 		events = []
-		with patch.object(zoho_books, "_get_project_id", return_value="project"), patch.object(
-			zoho_books, "_get_task_id", return_value="task"
-		), patch.object(
-			frappe.db, "set_value", side_effect=lambda *args, **kwargs: events.append(("marker", args[3]))
-		), patch.object(
-			frappe.db, "commit", side_effect=lambda: events.append(("commit", None))
-		), patch.object(
-			zoho_books, "_make_api_request", side_effect=lambda *args: events.append(("http", None)) or {}
+		with (
+			patch.object(zoho_books, "_get_project_id", return_value="project"),
+			patch.object(zoho_books, "_get_task_id", return_value="task"),
+			patch.object(
+				frappe.db, "set_value", side_effect=lambda *args, **kwargs: events.append(("marker", args[3]))
+			),
+			patch.object(frappe.db, "commit", side_effect=lambda: events.append(("commit", None))),
+			patch.object(
+				zoho_books, "_make_api_request", side_effect=lambda *args: events.append(("http", None)) or {}
+			),
 		):
 			with self.assertRaises(zoho_books.ZohoBooksException):
 				zoho_books._create_time_entry(row, "user", "token", "org")
@@ -325,12 +345,16 @@ class TestTimesheetZoho(FrappeTestCase):
 
 	def test_failed_job_exposes_retryable_status(self):
 		doc = frappe._dict(name="test", docstatus=1, time_logs=[frappe._dict(name="mapped")])
-		with patch.object(frappe, "cache", return_value=MagicMock()), patch.object(
-			frappe, "get_doc", return_value=doc
-		), patch.object(frappe.db, "rollback"), patch.object(frappe.db, "set_value") as status, patch.object(
-			frappe, "log_error"
-		), patch.object(zoho_books, "_get_mapping", return_value="remote"), patch.object(
-			zoho_books, "_sync_timesheet_entries", side_effect=zoho_books.ZohoBooksException("offline")
+		with (
+			patch.object(frappe, "cache", return_value=MagicMock()),
+			patch.object(frappe, "get_doc", return_value=doc),
+			patch.object(frappe.db, "rollback"),
+			patch.object(frappe.db, "set_value") as status,
+			patch.object(frappe, "log_error"),
+			patch.object(zoho_books, "_get_mapping", return_value="remote"),
+			patch.object(
+				zoho_books, "_sync_timesheet_entries", side_effect=zoho_books.ZohoBooksException("offline")
+			),
 		):
 			zoho_books.run_timesheet_sync("test")
 			self.assertEqual(status.call_args.args[2]["custom_zoho_sync_status"], "Partial")
@@ -340,11 +364,13 @@ class TestTimesheetZoho(FrappeTestCase):
 		for remote_id, absent in (("remote", False), (None, True)):
 			doc = MagicMock(docstatus=1, custom_zoho_sync_status="Failed")
 			doc.time_logs = [frappe._dict(name="entry", idx=1, custom_zoho_sync_uncertain=1)]
-			with patch.object(frappe, "get_doc", side_effect=[MagicMock(), doc]), patch.object(
-				frappe, "cache", return_value=MagicMock()
-			), patch.object(frappe.db, "set_value") as marker, patch.object(
-				frappe.db, "commit"
-			), patch.object(zoho_books, "_set_mapping") as mapping:
+			with (
+				patch.object(frappe, "get_doc", side_effect=[MagicMock(), doc]),
+				patch.object(frappe, "cache", return_value=MagicMock()),
+				patch.object(frappe.db, "set_value") as marker,
+				patch.object(frappe.db, "commit"),
+				patch.object(zoho_books, "_set_mapping") as mapping,
+			):
 				zoho_books.reconcile_timesheet_entry("test", 1, remote_id, absent)
 				self.assertEqual(marker.call_args.args[3], 0)
 				if remote_id:
@@ -355,9 +381,10 @@ class TestTimesheetZoho(FrappeTestCase):
 	def test_reconciliation_requires_accounting_settings_write_permission(self):
 		settings = MagicMock()
 		settings.check_permission.side_effect = frappe.PermissionError("denied")
-		with patch.object(frappe, "get_doc", return_value=settings), patch.object(
-			frappe.db, "set_value"
-		) as marker:
+		with (
+			patch.object(frappe, "get_doc", return_value=settings),
+			patch.object(frappe.db, "set_value") as marker,
+		):
 			with self.assertRaises(frappe.PermissionError):
 				zoho_books.reconcile_timesheet_entry("test", 1, confirmed_absent=True)
 			marker.assert_not_called()

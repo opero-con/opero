@@ -15,7 +15,7 @@ from opero.mailing.membership import ensure_member, internal
 @rate_limit(limit=10, seconds=3600)
 def subscribe(email, email_group=None):
 	"""Preserve Frappe's public signup endpoint; members are active immediately."""
-	from frappe.email.doctype.newsletter.newsletter import get_default_email_group
+	from newsletter.newsletter.doctype.newsletter.newsletter import get_default_email_group
 
 	group = email_group or get_default_email_group()
 	if not frappe.db.exists("Email Group", group):

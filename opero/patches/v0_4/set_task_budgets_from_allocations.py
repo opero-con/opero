@@ -28,7 +28,7 @@ def execute():
 	pairs = frappe.get_all(
 		"Task Allocation",
 		filters={"docstatus": 1},
-		fields=["task", "employee", "sum(hours) as hours"],
+		fields=["task", "employee", {"SUM": "hours", "as": "hours"}],
 		group_by="task, employee",
 	)
 	for pair in pairs:

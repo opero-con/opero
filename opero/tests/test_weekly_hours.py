@@ -61,9 +61,19 @@ class TestWeeklyHours(FrappeTestCase):
 			"holiday_list": self.holiday_list,
 			**values,
 		}
-		return self._record(
+		employee = self._record(
 			"Employee", employee_name=employee_name, first_name=employee_name, company=self.company, **values
 		)
+		if values.get("holiday_list"):
+			self._record(
+				"Holiday List Assignment",
+				applicable_for="Employee",
+				assigned_to=employee,
+				holiday_list=values["holiday_list"],
+				from_date=frappe.db.get_value("Holiday List", values["holiday_list"], "from_date"),
+				docstatus=1,
+			)
+		return employee
 
 	def _sheet(self, employee, status, day, hours, workflow_state=None):
 		name = self._record(
