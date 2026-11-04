@@ -1,6 +1,6 @@
 # Opero
 
-A Frappe v15 app that enhances the ToDo doctype with multi-assignee support, lifecycle tracking, and reporting.
+A Frappe v16 app that enhances the ToDo doctype with multi-assignee support, lifecycle tracking, and reporting.
 
 ---
 
@@ -83,8 +83,13 @@ bench migrate
 
 ## Requirements
 
-- Frappe v15
-- Python 3.10+
+- Frappe >=16.54.0,<17.0.0, ERPNext v16 and HRMS v16
+- Python 3.14+
+- The standalone Frappe Newsletter app, installed before Opero
+- Node 24+ for asset builds
+
+`main` targets v16. Existing v15 installations must use `maintenance/v15`.
+See [the v16 transition guide](docs/v16-upgrade.md) for prerequisites and validation status.
 
 ---
 

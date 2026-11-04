@@ -2,7 +2,9 @@
 
 ## Git Workflow
 
-This repo uses **GitHub Flow**. `main` is the only permanent branch and is always deployable.
+This repo uses **GitHub Flow**. `main` is the integration branch and targets Frappe v16.
+`maintenance/v15` preserves the former v15 revision for existing v15 installations;
+do not install v16 `main` on a v15 bench. New development targets `main`.
 
 ### Starting work
 
