@@ -25,3 +25,5 @@ that the commit message already explains.
 | [0012](0012-timesheet-schedule.md) | Generated timesheet start in HR Settings | Accepted; daily cap superseded by ADR-0013 |
 | [0013](0013-timesheet-hours-reference.md) | Standard Working Hours is a reference, not a Timesheet daily cap | Accepted |
 | [0014](0014-asset-capitalization-naming.md) | Asset Capitalization identifiers use the initial posting month | Accepted |
+| [0016](0016-frappe-v16.md) | Frappe v16 and standalone Newsletter | Requirements retained; branch policy superseded by ADR-0017 |
+| [0017](0017-v16-main.md) | Make v16 the main development line | Accepted; applied on consolidation merge |

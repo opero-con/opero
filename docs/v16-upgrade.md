@@ -1,6 +1,6 @@
-# Opero Frappe v16 preparation
+# Opero Frappe v16 transition
 
-This compatibility branch targets Frappe `>=16.54.0,<17.0.0` and Python 3.14+.
+`main` targets Frappe `>=16.54.0,<17.0.0` and Python 3.14+.
 Use Node 24+ for assets. It is not an update to install on the v15 bench.
 
 ## Frappe Cloud target apps
@@ -46,9 +46,18 @@ before the separately authorized production upgrade.
 
 ## Branch delivery and validation status
 
-Keep `fix/v16-compatibility` separate from v15 `main`. Configure the v16 FC
-bench to use this branch; do not merge this port into the branch serving v15.
-This is a compatibility preparation branch, not production upgrade clearance.
+The consolidation PR promotes `fix/v16-compatibility` into `main`, as recorded
+in [ADR-0017](adr/0017-v16-main.md). `maintenance/v15` preserves the previous
+`main` revision (`dd11332`) for v15 installations. New development targets v16
+`main`; v15 benches must remain on their v15 source.
+
+Merging the consolidation PR does not change Frappe Cloud's configured source
+branch. Keep the current v16 source until the separately approved source switch
+and deployment have been verified. Retire `fix/v16-compatibility` only after that
+verification. Keep `maintenance/v15`; no version bump or release is included.
+
+The following results are historical evidence from the compatibility work, not
+a fresh full-suite pass or deployment clearance.
 
 Validated on 3 November 2026 with Frappe 16.54.0, ERPNext 16.53.0,
 HRMS 16.52.0, Python 3.14, Node 24 and the standalone Newsletter app:

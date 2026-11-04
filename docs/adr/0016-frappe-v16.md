@@ -1,6 +1,6 @@
 # 0016: Target Frappe v16 and the standalone Newsletter app
 
-Status: accepted for the v16 compatibility branch; deployment pending validation.
+Status: v16 requirements retained; branch separation superseded by [ADR-0017](0017-v16-main.md).
 
 Opero's v15 mailing controller imports and workspace endpoint do not exist on
 Frappe v16. This branch targets v16 only, with Python 3.14 and an explicit

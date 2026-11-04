@@ -30,7 +30,15 @@ Bench-wide operational rules still come from
 
 ## Git Workflow
 
-This repo uses **GitHub Flow** — `main` is the only permanent branch.
+This repo uses **GitHub Flow** — `main` is the primary integration branch and targets Frappe v16.
+`maintenance/v15` preserves the former v15 revision for legacy v15 installations.
+
+New development and validation target v16. Do not install or migrate v16 `main`
+on a v15 bench; keep a checkout serving v15 on `maintenance/v15`. When syncing
+main after a merge, use a v16 worktree rather than changing the app checkout of a
+running v15 bench. Keep `fix/v16-compatibility` until the separately approved
+production source switch is verified; consolidation merge alone does not
+permit deleting that live-source branch.
 
 **For every piece of work:**
 
