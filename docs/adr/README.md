@@ -24,3 +24,4 @@ that the commit message already explains.
 | [0011](0011-timesheet-project-allocation.md) | Timesheet project allocation | Accepted |
 | [0012](0012-timesheet-schedule.md) | Generated timesheet start in HR Settings | Accepted; daily cap superseded by ADR-0013 |
 | [0013](0013-timesheet-hours-reference.md) | Standard Working Hours is a reference, not a Timesheet daily cap | Accepted |
+| [0014](0014-asset-capitalization-naming.md) | Asset Capitalization identifiers use the initial posting month | Accepted |

@@ -225,6 +225,9 @@ override_whitelisted_methods = {
 }
 
 doc_events = {
+	"Asset Capitalization": {
+		"autoname": "opero.events.asset_capitalization.autoname",
+	},
 	"Contact": {
 		"validate": "opero.mailing.membership.contact_validate",
 		"on_update": "opero.mailing.membership.contact_updated",
