@@ -170,3 +170,4 @@ opero.patches.v0_4.add_product_publication_type
 
 opero.patches.v0_4.reset_timesheet_saved_grid_columns
 opero.patches.v0_4.set_asset_capitalization_naming_series
+opero.patches.v0_4.repair_tax_finance_book_links
