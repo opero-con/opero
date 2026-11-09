@@ -49,6 +49,10 @@ On the ToDo form, the native **Assigned To** sidebar section is replaced by an *
 New ToDos use IDs such as `TDO-26001`: the two-digit year followed by a
 minimum three-digit counter that restarts each year. Existing IDs stay unchanged.
 
+### Tax Rule Names
+
+New Tax Rules use `TRL-S-MMYY` for sales and `TRL-P-MMYY` for purchases, based on From Date. A missing From Date produces `TRL-S-UNDATED` or `TRL-P-UNDATED`. Additional rules with the same type and month receive suffixes starting at `-02`, shared across companies. Existing names stay unchanged, including when dates are edited; renaming an existing rule is a separate action.
+
 ### Reports
 
 | Report | Description |
