@@ -225,6 +225,9 @@ override_whitelisted_methods = {
 }
 
 doc_events = {
+	"Tax Rule": {
+		"autoname": "opero.events.tax_rule.autoname",
+	},
 	"Asset Capitalization": {
 		"autoname": "opero.events.asset_capitalization.autoname",
 	},
