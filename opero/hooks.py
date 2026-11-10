@@ -139,7 +139,7 @@ extend_bootinfo = "opero.boot.boot_session"
 # ------------
 
 # before_install = "opero.install.before_install"
-# after_install = "opero.install.after_install"
+after_install = "opero.install.after_install"
 
 # Uninstallation
 # ------------

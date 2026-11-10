@@ -79,6 +79,14 @@ class TestV16Compatibility(unittest.TestCase):
 		self.assertEqual(payload.workspaces["pages"], [])
 		self.assertEqual(payload.opero_home_company, "Opero")
 
+	def test_fresh_install_creates_company_display_name(self):
+		from opero import install
+
+		self.assertEqual(hooks.after_install, "opero.install.after_install")
+		with patch.object(install.add_company_display_name, "execute") as execute:
+			install.after_install()
+		execute.assert_called_once_with()
+
 	def test_all_app_modules_import(self):
 		from pathlib import Path
 
