@@ -72,12 +72,13 @@ class TestV16Compatibility(unittest.TestCase):
 	def test_v16_boot_filters_native_workspaces(self):
 		payload = frappe._dict(workspaces={"pages": [frappe._dict(name="Website", public=1, is_hidden=1)]})
 		with (
-			patch.object(boot.entity, "get_home_company", return_value="Opero"),
+			patch.object(boot.entity, "get_session_company", return_value="Opero"),
+			patch.object(boot.entity, "describe_company", side_effect=lambda company: {"company": company}),
 			patch.object(frappe, "get_roles", return_value=["Workspace Manager"]),
 		):
 			boot.boot_session(payload)
 		self.assertEqual(payload.workspaces["pages"], [])
-		self.assertEqual(payload.opero_home_company, "Opero")
+		self.assertEqual(payload.opero_session_entity, {"company": "Opero"})
 
 	def test_fresh_install_creates_company_display_name(self):
 		from opero import install

@@ -143,6 +143,16 @@ def get_home_company(user: str | None = None) -> str | None:
 	return company or frappe.defaults.get_user_default("company", user)
 
 
+def get_session_company(user: str | None = None) -> str | None:
+	"""The entity a user is working in now: their Session Defaults company, else their home company.
+
+	Read from the user's own defaults only, so a site-wide default company is not
+	mistaken for a choice the user made.
+	"""
+	user = user or frappe.session.user
+	return frappe.defaults.get_defaults_for(user).get("company") or get_home_company(user)
+
+
 @frappe.whitelist()
 def get_project_entity(project: str) -> dict:
 	"""Entity behind a project, for the form to describe before the save."""

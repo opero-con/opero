@@ -104,18 +104,18 @@ opero.entity.follow_project = async function (frm, scope) {
 	opero.entity.flag_cross_entity(frm, scope);
 };
 
-// A headline only when the document belongs to an entity other than the user's
-// own. That is the surprising case; saying so on every document would make it
-// furniture nobody reads.
+// A headline only when the document belongs to an entity other than the one the
+// session is in. That is the surprising case; saying so on every document would
+// make it furniture nobody reads.
 opero.entity.flag_cross_entity = async function (frm, scope) {
 	const company = frm.doc[scope.company];
-	const home = frappe.boot.opero_home_company;
+	const session = frappe.boot.opero_session_entity || {};
 
 	// Cleared first: a headline set for one document would otherwise survive
 	// into the next one rendered by the same form.
 	frm.dashboard.clear_headline();
 
-	if (!company || !home || company === home) return;
+	if (!company || !session.company || company === session.company) return;
 
 	const entity = await opero.entity.describe(company);
 	const label = (entity && entity.label) || company;
@@ -124,8 +124,10 @@ opero.entity.flag_cross_entity = async function (frm, scope) {
 	if (frm.doc[scope.company] !== company) return;
 
 	frm.dashboard.set_headline(
-		__("Cross-entity: this belongs to {0}, which carries the cost — not your own entity.", [
+		__("{0} belongs to <b>{1}</b> while your session is in <b>{2}</b>", [
+			__(frm.doctype),
 			frappe.utils.escape_html(label),
+			frappe.utils.escape_html(session.label || session.company),
 		]),
 		"orange"
 	);

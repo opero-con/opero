@@ -258,3 +258,35 @@ class TestEntityScoping(FrappeTestCase):
 		lock = entity.get_project_lock(project)
 		self.assertTrue(lock["locked"])
 		self.assertEqual(lock["count"], sum(entity.count_project_documents(project).values()))
+
+	# -- the entity the session is in ------------------------------------------
+
+	def _session_user(self) -> str:
+		"""A user employed by entity A with no Session Defaults company."""
+		user = "_test_entity_session@example.com"
+		if not frappe.db.exists("User", user):
+			frappe.get_doc(
+				{"doctype": "User", "email": user, "first_name": "_Test Session", "send_welcome_email": 0}
+			).insert(ignore_permissions=True)
+		frappe.db.set_value("Employee", self.manager, "user_id", user)
+		frappe.defaults.clear_user_default("company", user)
+		self.addCleanup(frappe.defaults.clear_user_default, "company", user)
+		return user
+
+	def test_session_company_follows_session_defaults_then_employee(self):
+		"""Multi-entity users are compared against the entity they chose, not their employer."""
+		user = self._session_user()
+		self.assertEqual(entity.get_session_company(user), self.entity_a)
+
+		frappe.defaults.set_user_default("company", self.entity_b, user)
+		self.assertEqual(entity.get_session_company(user), self.entity_b)
+
+	def test_site_default_company_is_not_a_session_choice(self):
+		"""A site-wide default must not hide the employee's entity."""
+		user = self._session_user()
+		original = frappe.db.get_default("company")
+		if original:
+			self.addCleanup(frappe.defaults.set_global_default, "company", original)
+		frappe.defaults.set_global_default("company", self.entity_b)
+
+		self.assertEqual(entity.get_session_company(user), self.entity_a)
