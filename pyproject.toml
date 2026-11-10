@@ -19,6 +19,7 @@ build-backend = "flit_core.buildapi"
 # Use a bounded NPM-style range — see https://docs.frappe.io/cloud/custom-apps/app-versioning/versioning
 [tool.bench.frappe-dependencies]
 frappe = ">=16.54.0,<17.0.0"
+newsletter = ">=0.0.1"
 
 # These dependencies are only installed when developer mode is enabled
 [tool.bench.dev-dependencies]
