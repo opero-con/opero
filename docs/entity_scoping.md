@@ -96,10 +96,12 @@ it reads identically either side of it. So instead:
 
 * **A toast when the entity actually changes**, naming the new entity and its
   currency. Fires only on the move, so it is never noise.
-* **A headline only when the document belongs to an entity other than your
-  own** — cross-entity work, the genuinely surprising case. Your own entity
-  comes from your Employee record, published once at boot
-  (`opero/boot.py`) rather than fetched per form.
+* **A headline only when the document belongs to an entity other than the one
+  your session is in** — for example "Timesheet belongs to **B** while your
+  session is in **A**". The session entity is the Company in your Session
+  Defaults, falling back to your Employee record when none is set, so people
+  with access to several entities are compared against the one they chose. It
+  is published once at boot (`opero/boot.py`) rather than fetched per form.
 
 ### Documents may not span entities
 
