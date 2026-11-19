@@ -1,12 +1,15 @@
 """Employee website-team slug, status, and frontmatter contract."""
 
+import frappe
 from frappe.exceptions import ValidationError
 from frappe.tests.utils import FrappeTestCase
 
-import frappe
-
 from opero.opero_site.utils import slugify
-from opero.tests.website_employee import clear_website_test_employees, make_website_employee
+from opero.tests.website_employee import (
+	TEST_EMAIL_PREFIX,
+	clear_website_test_employees,
+	make_website_employee,
+)
 
 
 class TestEmployeeWebsiteTeam(FrappeTestCase):
@@ -65,6 +68,10 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 				self.assertEqual(doc.naming_series, f"{prefix}.###")
 				self.assertRegex(doc.name, f"^{prefix}[0-9]{{3,}}$")
 
+	def test_personnel_type_keeps_another_company_series(self):
+		doc = make_website_employee("Other Company Staff", custom_personnel_type="Staff", naming_series="OCS_EMP_.###")
+		self.assertRegex(doc.name, "^OCS_EMP_[0-9]{3,}$")
+
 	def test_changing_existing_personnel_type_does_not_rename(self):
 		doc = make_website_employee("Existing Staff", custom_personnel_type="Staff")
 		name, series = doc.name, doc.naming_series
@@ -77,6 +84,25 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 	def test_slug_is_generated_from_employee_name(self):
 		doc = make_website_employee("Nicola Greene")
 		self.assertEqual(doc.slug, "nicola-greene")
+
+	def test_employee_off_the_website_has_no_slug(self):
+		doc = make_website_employee("Never Published", show_on_website=0)
+		self.assertFalse(doc.slug)
+
+	def test_unpublished_employee_keeps_slug(self):
+		doc = make_website_employee("Taken Down")
+		doc.show_on_website = 0
+		doc.save(ignore_permissions=True)
+		self.assertEqual(doc.slug, "taken-down")
+
+	def test_same_person_can_be_employee_in_another_company(self):
+		make_website_employee("Nicola Greene")
+		other_company = {"company_email": f"{TEST_EMAIL_PREFIX}nicola-greene-ocs@example.com"}
+		second = make_website_employee("Nicola Greene", show_on_website=0, **other_company)
+		self.assertFalse(second.slug)
+		second.show_on_website = 1
+		with self.assertRaisesRegex(ValidationError, "already on the website"):
+			second.save(ignore_permissions=True)
 
 	def test_employee_hr_status_is_not_publish_status(self):
 		doc = make_website_employee("New Draft", show_on_website=0)
