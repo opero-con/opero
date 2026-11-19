@@ -32,6 +32,17 @@ git commit -m "feat: short description of what changed"
 
 Keep commits focused. One logical change per commit.
 
+### Checks
+
+CI runs ruff lint and format checks on every pull request, and both must pass before merging. Run them locally first, with the ruff version pinned in `.pre-commit-config.yaml`:
+
+```bash
+uv run --with ruff==0.8.1 ruff check .
+uv run --with ruff==0.8.1 ruff format --check .
+```
+
+Or install the hooks once with `pre-commit install`, and they run on every commit.
+
 ### Opening a PR
 
 ```bash
