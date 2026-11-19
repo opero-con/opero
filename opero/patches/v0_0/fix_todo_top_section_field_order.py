@@ -2,7 +2,6 @@ import json
 
 import frappe
 
-
 REMOVED_FIELDS = {"custom_additional_assignees"}
 TOP_SECTION_CHAIN = [
 	"custom_title",

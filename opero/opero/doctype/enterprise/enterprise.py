@@ -12,7 +12,7 @@ from opero.opero_site.utils import optional_url, slugify
 
 def make_enterprise_name():
 	"""E + five random digits, like Contact/Supplier opaque IDs with a readable title."""
-	for _ in range(50):
+	for _attempt in range(50):
 		name = f"E{randbelow(100000):05d}"
 		if not frappe.db.exists("Enterprise", name):
 			return name

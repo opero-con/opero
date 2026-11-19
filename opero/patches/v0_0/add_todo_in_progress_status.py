@@ -1,6 +1,5 @@
 import frappe
 
-
 STATUS_OPTIONS = "Open\nIn Progress\nClosed\nCancelled"
 
 

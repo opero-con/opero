@@ -2,7 +2,6 @@ import json
 
 import frappe
 
-
 ANCHOR_FIELD = "description_and_status"
 OBSOLETE_FIELDS = {"custom_additional_assignees"}
 MANAGED_FIELD_ORDER_SEGMENT = [

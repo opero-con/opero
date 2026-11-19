@@ -4,7 +4,6 @@ import re
 
 import frappe
 
-
 USER_TOKEN_SPLIT = re.compile(r"[\n,;]+")
 
 

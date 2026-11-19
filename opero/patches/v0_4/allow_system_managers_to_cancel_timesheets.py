@@ -2,7 +2,6 @@
 
 import frappe
 
-
 WORKFLOW = "Timesheet Approval"
 TRANSITION = {
 	"state": "Approved",

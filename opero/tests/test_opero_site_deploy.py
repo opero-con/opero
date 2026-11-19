@@ -1048,7 +1048,7 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 		re-uploading it as a Desk file — that's the normal state for every
 		publication and team member after an ordinary load. A deploy must
 		still recognize that reference as wanted, not orphaned."""
-		doc = frappe.get_doc(
+		frappe.get_doc(
 			{
 				"doctype": "Publication",
 				"title": "Honey Dipper",

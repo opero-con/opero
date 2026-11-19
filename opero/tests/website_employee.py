@@ -5,7 +5,6 @@ import frappe
 
 from opero.opero_site.utils import slugify
 
-
 TEST_EMAIL_PREFIX = "website-test-"
 
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import frappe
 
-
 RENAMES = (
 	("Home Hero", "Hero"),
 	("Home About", "About"),
