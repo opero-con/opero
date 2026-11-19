@@ -16,16 +16,12 @@ DESK_MESSAGES = {
 		'{{ doc.workflow_state or "Pending Approval" }}'
 	),
 	"Travel Request Updated - Review Required": (
-		"{{ doc.employee_name }} · {{ doc.custom_project_name }} · "
-		'{{ doc.workflow_state or "Updated" }}'
+		"{{ doc.employee_name }} · {{ doc.custom_project_name }} · " '{{ doc.workflow_state or "Updated" }}'
 	),
 	"Travel Request Approval - Review Details": (
-		"{{ doc.employee_name }} · {{ doc.custom_project_name }} · "
-		'{{ doc.workflow_state or "Approved" }}'
+		"{{ doc.employee_name }} · {{ doc.custom_project_name }} · " '{{ doc.workflow_state or "Approved" }}'
 	),
-	"System - Timesheet Approval": (
-		"{{ doc.employee_name or doc.owner }} · Timesheet pending approval"
-	),
+	"System - Timesheet Approval": ("{{ doc.employee_name or doc.owner }} · Timesheet pending approval"),
 }
 
 

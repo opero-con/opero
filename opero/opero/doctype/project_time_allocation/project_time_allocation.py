@@ -24,9 +24,7 @@ class ProjectTimeAllocation(Document):
 
 	def _calculate_available_hours(self):
 		"""Ported from FC 'Available Hrs' (was wired to non-existent Time Allocation)."""
-		working_hours = float(
-			frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0
-		)
+		working_hours = float(frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0)
 		employee = self.personnel
 
 		for detail in self.time_allocation_detail or []:

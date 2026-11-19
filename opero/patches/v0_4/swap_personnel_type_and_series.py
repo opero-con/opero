@@ -16,11 +16,18 @@ def execute():
 		return
 	order[type_index], order[series_index] = order[series_index], order[type_index]
 	make_property_setter(
-		"Employee", None, "field_order", json.dumps(order), "Data",
-		for_doctype=True, validate_fields_for_doctype=False,
+		"Employee",
+		None,
+		"field_order",
+		json.dumps(order),
+		"Data",
+		for_doctype=True,
+		validate_fields_for_doctype=False,
 	)
 	frappe.db.set_value(
-		"Custom Field", "Employee-custom_personnel_type", "insert_after",
+		"Custom Field",
+		"Employee-custom_personnel_type",
+		"insert_after",
 		order[series_index - 1] if series_index else "",
 	)
 	frappe.clear_cache(doctype="Employee")

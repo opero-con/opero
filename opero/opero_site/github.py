@@ -64,11 +64,7 @@ def deleted_managed_files(
 	prefixes: tuple[str, ...],
 ) -> list[tuple[str, None]]:
 	planned = set(planned_paths)
-	return [
-		(path, None)
-		for path in remote_paths
-		if path not in planned and path.startswith(prefixes)
-	]
+	return [(path, None) for path in remote_paths if path not in planned and path.startswith(prefixes)]
 
 
 class ContentRepo:
@@ -178,13 +174,11 @@ class ContentRepo:
 		return blobs
 
 	def list_markdown(self, prefix: str, ref: str) -> list[str]:
-		return [
-			path
-			for path in self.tree_blobs(ref)
-			if path.startswith(prefix) and path.endswith(".md")
-		]
+		return [path for path in self.tree_blobs(ref) if path.startswith(prefix) and path.endswith(".md")]
 
-	def commit_files(self, files: list[tuple[str, str | bytes | None]], message: str, on_progress=None) -> dict:
+	def commit_files(
+		self, files: list[tuple[str, str | bytes | None]], message: str, on_progress=None
+	) -> dict:
 		head = self._api("GET", f"/repos/{self.repo}/commits/{self.base_branch}")
 		base_sha = head["sha"]
 		content_by_path = {path: content for path, content in files if content is not None}

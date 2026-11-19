@@ -610,9 +610,7 @@ class TestOperoSitePublish(FrappeTestCase):
 		self.assertIn(path, keep)
 
 	def test_home_page_is_always_written(self):
-		frappe.get_single("Hero").db_set(
-			"hero_title", "Always on the public site", update_modified=False
-		)
+		frappe.get_single("Hero").db_set("hero_title", "Always on the public site", update_modified=False)
 		home = frappe.get_single("Home Page")
 		home.db_set("status", "Draft")
 		home.reload()
@@ -1125,12 +1123,16 @@ class TestOperoSitePublishMedia(FrappeTestCase):
 				"show_on_website": 1,
 			}
 		).insert(ignore_permissions=True)
-		tuned = "---\nslug: tuned-cover\ncover: /media/publications/tuned.png\ncoverPosition: center 40%\n---\n"
+		tuned = (
+			"---\nslug: tuned-cover\ncover: /media/publications/tuned.png\ncoverPosition: center 40%\n---\n"
+		)
 		repo = _FakeContentRepo(existing={"content/publications/tuned-cover.md": tuned})
 
 		planned_content_changes(repo)
 
-		self.assertEqual(frappe.db.get_value("Publication", {"slug": "tuned-cover"}, "cover_position"), "center 40%")
+		self.assertEqual(
+			frappe.db.get_value("Publication", {"slug": "tuned-cover"}, "cover_position"), "center 40%"
+		)
 
 	def test_planned_changes_leave_framing_alone_when_the_cover_is_not_in_the_repo(self):
 		frappe.get_doc(

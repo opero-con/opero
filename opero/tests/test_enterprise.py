@@ -10,10 +10,14 @@ class TestEnterprise(FrappeTestCase):
 		self.assertEqual(meta.image_field, "logo")
 		self.assertEqual(meta.get_field(meta.image_field).fieldtype, "Attach Image")
 		self.assertFalse(meta.has_field("image"))
-		enterprise = frappe.get_doc({
-			"doctype": "Enterprise", "enterprise_name": "Logo Profile Test",
-			"status": "Onboarded", "logo": "/files/enterprise-logo.png",
-		}).insert()
+		enterprise = frappe.get_doc(
+			{
+				"doctype": "Enterprise",
+				"enterprise_name": "Logo Profile Test",
+				"status": "Onboarded",
+				"logo": "/files/enterprise-logo.png",
+			}
+		).insert()
 		enterprise.reload()
 		self.assertEqual(enterprise.get(meta.image_field), enterprise.to_site_frontmatter()["logo"])
 
@@ -102,10 +106,10 @@ class TestEnterprise(FrappeTestCase):
 		)
 
 	def test_enterprise_name_colliding_with_website_slug_is_rejected(self):
-		frappe.get_doc(
-			{"doctype": "Enterprise", "enterprise_name": f"{self.prefix} Acme"}
-		).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Enterprise", "enterprise_name": f"{self.prefix} Acme"}).insert(
+			ignore_permissions=True
+		)
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc(
-				{"doctype": "Enterprise", "enterprise_name": f"{self.prefix}, Acme!"}
-			).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Enterprise", "enterprise_name": f"{self.prefix}, Acme!"}).insert(
+				ignore_permissions=True
+			)

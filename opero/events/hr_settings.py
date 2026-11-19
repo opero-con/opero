@@ -6,9 +6,7 @@ import frappe
 
 
 def on_update_hr_settings(doc, _method=None):
-	standard_working_hours = float(
-		frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0
-	)
+	standard_working_hours = float(frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0)
 	rows = frappe.get_all("Distribution Detail", fields=["name", "parent", "available_days"])
 	for row in rows:
 		available_days = float(row.available_days or 0)

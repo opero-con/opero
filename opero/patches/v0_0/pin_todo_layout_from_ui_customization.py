@@ -61,7 +61,9 @@ def _pin_field_order():
 	existing_fields = _get_existing_fieldnames()
 	managed_fields = [field for field in MANAGED_FIELD_ORDER_SEGMENT if field in existing_fields]
 
-	normalized = [field for field in field_order if field not in OBSOLETE_FIELDS and field not in managed_fields]
+	normalized = [
+		field for field in field_order if field not in OBSOLETE_FIELDS and field not in managed_fields
+	]
 	insert_index = normalized.index(ANCHOR_FIELD) + 1 if ANCHOR_FIELD in normalized else 0
 
 	for offset, field in enumerate(managed_fields):

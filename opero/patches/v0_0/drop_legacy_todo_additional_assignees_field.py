@@ -2,7 +2,9 @@ import frappe
 
 
 def execute():
-	custom_field_name = frappe.db.exists("Custom Field", {"dt": "ToDo", "fieldname": "custom_additional_assignees"})
+	custom_field_name = frappe.db.exists(
+		"Custom Field", {"dt": "ToDo", "fieldname": "custom_additional_assignees"}
+	)
 	if custom_field_name:
 		frappe.delete_doc("Custom Field", custom_field_name, ignore_permissions=True, force=True)
 

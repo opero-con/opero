@@ -62,7 +62,9 @@ def _update_custom_field(
 ) -> None:
 	name = frappe.db.get_value("Custom Field", {"dt": "Travel Request", "fieldname": old_fieldname}, "name")
 	if not name:
-		name = frappe.db.get_value("Custom Field", {"dt": "Travel Request", "fieldname": new_fieldname}, "name")
+		name = frappe.db.get_value(
+			"Custom Field", {"dt": "Travel Request", "fieldname": new_fieldname}, "name"
+		)
 	if not name:
 		return
 

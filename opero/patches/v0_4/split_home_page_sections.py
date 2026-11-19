@@ -5,7 +5,14 @@ from __future__ import annotations
 import frappe
 from frappe.utils import cstr
 
-SECTION_DOCTYPES = ("home_hero", "home_about", "home_pillars", "home_impacts", "home_projects", "home_partners")
+SECTION_DOCTYPES = (
+	"home_hero",
+	"home_about",
+	"home_pillars",
+	"home_impacts",
+	"home_projects",
+	"home_partners",
+)
 SCALAR_FIELDS = {
 	"Home Hero": ("hero_eyebrow", "hero_title", "hero_description"),
 	"Home About": ("about_title", "about_body"),

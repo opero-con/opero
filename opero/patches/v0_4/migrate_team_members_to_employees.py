@@ -3,7 +3,11 @@
 import frappe
 
 FIELDS = (
-	"role", "slug", "sort_order", "show_on_website", "portrait",
+	"role",
+	"slug",
+	"sort_order",
+	"show_on_website",
+	"portrait",
 	"linkedin",
 )
 
@@ -43,9 +47,7 @@ def get_employee_matches():
 		mapped_employee = EMPLOYEE_BY_TEAM_MEMBER.get(row.member_name)
 		if mapped_employee:
 			if not frappe.db.exists("Employee", mapped_employee):
-				issues.append(
-					f"mapped Employee '{mapped_employee}' for '{row.member_name}' does not exist"
-				)
+				issues.append(f"mapped Employee '{mapped_employee}' for '{row.member_name}' does not exist")
 				continue
 			matches.append((row.name, mapped_employee))
 			continue

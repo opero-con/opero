@@ -416,7 +416,9 @@ class TestOperoSiteContent(FrappeTestCase):
 
 	def test_publication_product_page_url_opens_technology_page(self):
 		if not frappe.db.exists("Publication Type", "Product"):
-			frappe.get_doc({"doctype": "Publication Type", "title": "Product"}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Publication Type", "title": "Product"}).insert(
+				ignore_permissions=True
+			)
 		doc = frappe.get_doc(
 			{
 				"doctype": "Publication",

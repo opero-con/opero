@@ -23,9 +23,7 @@ PUBLISH_STATUS_FIELD = {
 
 def publish_status_field(doc_or_doctype) -> str:
 	doctype = (
-		doc_or_doctype
-		if isinstance(doc_or_doctype, str)
-		else cstr(getattr(doc_or_doctype, "doctype", ""))
+		doc_or_doctype if isinstance(doc_or_doctype, str) else cstr(getattr(doc_or_doctype, "doctype", ""))
 	)
 	return PUBLISH_STATUS_FIELD.get(doctype, "status")
 

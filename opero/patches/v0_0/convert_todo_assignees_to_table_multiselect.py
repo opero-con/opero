@@ -77,7 +77,9 @@ def seed_assignee_rows(assignee_map: dict[str, list[str]], has_legacy_additional
 
 
 def _set_assignee_rows(todo_name: str, users: list[str]):
-	frappe.db.delete("ToDo Assignee", {"parenttype": "ToDo", "parentfield": "custom_assignees", "parent": todo_name})
+	frappe.db.delete(
+		"ToDo Assignee", {"parenttype": "ToDo", "parentfield": "custom_assignees", "parent": todo_name}
+	)
 	for idx, user in enumerate(users, start=1):
 		frappe.get_doc(
 			{

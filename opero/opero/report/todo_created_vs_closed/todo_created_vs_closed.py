@@ -36,12 +36,24 @@ def execute(filters=None):
 		from_date, to_date, entity_sql, entity_params, user_scope_sql, user_scope_params
 	)
 	closed_counts = _get_completion_counts(
-		from_date, to_date, "Closed", "custom_closed_on", entity_sql, entity_params,
-		user_scope_sql, user_scope_params,
+		from_date,
+		to_date,
+		"Closed",
+		"custom_closed_on",
+		entity_sql,
+		entity_params,
+		user_scope_sql,
+		user_scope_params,
 	)
 	cancelled_counts = _get_completion_counts(
-		from_date, to_date, "Cancelled", "custom_cancelled_on", entity_sql, entity_params,
-		user_scope_sql, user_scope_params,
+		from_date,
+		to_date,
+		"Cancelled",
+		"custom_cancelled_on",
+		entity_sql,
+		entity_params,
+		user_scope_sql,
+		user_scope_params,
 	)
 	created_bucket = _aggregate_by_bucket(created_counts, granularity)
 	closed_bucket = _aggregate_by_bucket(closed_counts, granularity)
@@ -136,8 +148,14 @@ def _get_created_counts(
 
 
 def _get_completion_counts(
-	from_date, to_date, status, fieldname, entity_sql="", entity_params=None,
-	user_scope_sql="1 = 1", user_scope_params=None,
+	from_date,
+	to_date,
+	status,
+	fieldname,
+	entity_sql="",
+	entity_params=None,
+	user_scope_sql="1 = 1",
+	user_scope_params=None,
 ):
 	date_expr = _date_expr(f"todo.{fieldname}")
 	rows = frappe.db.sql(
@@ -208,11 +226,7 @@ def _get_granularity(filters, day_span: int) -> str:
 
 def _validate_granularity_limits(granularity: str, day_span: int) -> None:
 	if granularity == "day" and day_span > 180:
-		frappe.throw(
-			_(
-				"Daily view supports up to 180 days. Use Auto, Week, or Month for larger ranges."
-			)
-		)
+		frappe.throw(_("Daily view supports up to 180 days. Use Auto, Week, or Month for larger ranges."))
 	if granularity == "week" and day_span > 3650:
 		frappe.throw(_("Weekly view supports up to 10 years. Use Month for larger ranges."))
 

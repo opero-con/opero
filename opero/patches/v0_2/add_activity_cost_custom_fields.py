@@ -28,8 +28,6 @@ def execute():
 			"collapsible": row.get("collapsible") or 0,
 			"module": "Opero",
 		}
-		by_dt.setdefault(row["dt"], []).append(
-			{k: v for k, v in field.items() if v not in (None, "")}
-		)
+		by_dt.setdefault(row["dt"], []).append({k: v for k, v in field.items() if v not in (None, "")})
 
 	create_custom_fields(by_dt, update=True)
