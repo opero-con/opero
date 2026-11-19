@@ -4,7 +4,6 @@ import json
 
 import frappe
 
-
 CHART_NAME = "ToDo Created vs Closed (30d)"
 
 

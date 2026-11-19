@@ -4,12 +4,7 @@ from collections import defaultdict
 
 import frappe
 from frappe import _
-from frappe.utils import add_days
-from frappe.utils import cint
-from frappe.utils import date_diff
-from frappe.utils import flt
-from frappe.utils import getdate
-from frappe.utils import nowdate
+from frappe.utils import add_days, cint, date_diff, flt, getdate, nowdate
 
 from opero import todo_dashboard
 

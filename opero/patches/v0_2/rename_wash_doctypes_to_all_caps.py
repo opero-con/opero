@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import frappe
 
-
 RENAMES = [
 	("WaSH Category", "WASH Category"),
 	("WaSH Competency Category", "WASH Competency Category"),

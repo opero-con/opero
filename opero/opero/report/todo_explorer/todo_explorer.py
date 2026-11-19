@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
-from frappe.utils import date_diff
-from frappe.utils import getdate
-from frappe.utils import nowdate
+from frappe.utils import date_diff, getdate, nowdate
 
 from opero import todo_dashboard
 

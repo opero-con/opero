@@ -11,7 +11,6 @@ from pathlib import Path
 
 import frappe
 
-
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "fc_site_config"
 
 # Load order matters for Workflow dependencies.

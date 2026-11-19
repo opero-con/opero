@@ -6,7 +6,6 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate
 
-
 MONTH_INDEX = {
 	"January": 1,
 	"February": 2,

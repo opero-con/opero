@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import frappe
 
-
 RENAMES = [
 	("Opero Site Body Section", "Body Section"),
 	("Opero Site Topic", "Topic"),

@@ -2,7 +2,6 @@
 
 import frappe
 
-
 FIELD_NAME = "Email Group Member-custom_confirmation_status"
 
 

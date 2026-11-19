@@ -2,7 +2,6 @@
 
 import frappe
 
-
 FIELDS = (
 	"role", "slug", "sort_order", "show_on_website", "portrait",
 	"linkedin",

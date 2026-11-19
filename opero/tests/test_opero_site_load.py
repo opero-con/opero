@@ -208,6 +208,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 
 	def test_reimport_repairs_stale_portrait_attachments(self):
 		import base64
+
 		from opero.opero_site.load import local_portrait_attachment
 
 		for stale_url in ("/team/anita.jpg", "/files/missing-portrait.jpg"):

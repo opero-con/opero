@@ -8,7 +8,6 @@ live Custom Field referencing "ToDo Assignee" and does not delete it.
 
 import frappe
 
-
 CF_NAME = "ToDo-custom_assignees"
 FIELD_DEF = {
     "name": CF_NAME,

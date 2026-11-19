@@ -6,13 +6,12 @@ runs orphan-DocType cleanup (which happens right after model sync), it finds a
 Custom Field referencing "ToDo Allocatee" and does not delete it.
 
 Background: the rename patch (rename_todo_assignee_to_allocatee) runs in
-[post_model_sync] – too late to prevent the orphan deletion.  Creating the
+[post_model_sync] - too late to prevent the orphan deletion.  Creating the
 Custom Field here, before the sync, gives the newly-synced "ToDo Allocatee"
 DocType a live reference it needs to survive the cleanup pass.
 """
 
 import frappe
-
 
 CF_NAME = "ToDo-custom_allocatees"
 FIELD_DEF = {
@@ -65,7 +64,7 @@ def execute():
         return
 
     if existing:
-        # Wrong options – fix in-place.
+        # Wrong options - fix in-place.
         frappe.db.set_value(
             "Custom Field",
             existing.name,
@@ -74,7 +73,7 @@ def execute():
         )
         return
 
-    # No record at all – insert one directly (skip ORM validation because
+    # No record at all - insert one directly (skip ORM validation because
     # "ToDo Allocatee" DocType may not yet exist in tabDocType at this point).
     now = frappe.utils.now()
     frappe.db.sql(

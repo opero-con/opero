@@ -5,7 +5,6 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import get_url
 
-
 ZOHO_OAUTH_CALLBACK_PATH = "/api/method/opero.zoho_books.oauth_callback"
 
 

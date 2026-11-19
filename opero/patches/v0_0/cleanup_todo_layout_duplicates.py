@@ -1,7 +1,8 @@
 import frappe
 
-from opero.patches.v0_0.apply_todo_three_column_meta_layout import execute as apply_todo_three_column_meta_layout
-
+from opero.patches.v0_0.apply_todo_three_column_meta_layout import (
+	execute as apply_todo_three_column_meta_layout,
+)
 
 KEEP_COLUMN_BREAKS = {"custom_column_break_th1rd", "custom_column_break_mskkr"}
 ROW_COLUMN_BREAK_ANCHORS = {"status", "priority", "custom_column_break_th1rd", "custom_column_break_mskkr"}

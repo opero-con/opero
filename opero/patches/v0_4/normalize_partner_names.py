@@ -6,7 +6,6 @@ import frappe
 
 from opero.opero_site.doctype.partner.partner import make_partner_name
 
-
 PARTNER_ID_PATTERN = re.compile(r"^P\d{5}$")
 
 
