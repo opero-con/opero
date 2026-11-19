@@ -249,9 +249,9 @@ def _canonical_home(data: dict) -> dict:
 			"homepageSummary": _text(our_work_in.get("homepageSummary")),
 			"pageIntroduction": _text(our_work_in.get("pageIntroduction")),
 			"expertise": [
-			{"title": _text(row.get("title")), "description": _text(row.get("description"))}
-			for row in (our_work_in.get("expertise") or [])
-			if isinstance(row, dict)
+				{"title": _text(row.get("title")), "description": _text(row.get("description"))}
+				for row in (our_work_in.get("expertise") or [])
+				if isinstance(row, dict)
 			],
 			"image": _text(our_work_in.get("image")),
 			"imageAlt": _text(our_work_in.get("imageAlt")),

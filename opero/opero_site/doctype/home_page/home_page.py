@@ -14,9 +14,7 @@ class HomePage(Document):
 
 	def to_site_frontmatter(self) -> dict:
 		"""YAML for opero-content `content/homepage/home.md`, assembled from the section singles."""
-		hero, about, our_work, impacts = (
-			frappe.get_single(name) for name in HOME_SECTIONS
-		)
+		hero, about, our_work, impacts = (frappe.get_single(name) for name in HOME_SECTIONS)
 		return {
 			"hero": hero.to_site_frontmatter(),
 			"about": about.to_site_frontmatter(),

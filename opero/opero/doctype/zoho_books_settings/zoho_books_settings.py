@@ -19,4 +19,3 @@ class ZohoBooksSettings(Document):
 				frappe.throw("Client Secret is required when Zoho Books integration is enabled")
 			if not self.organization_id:
 				frappe.throw("Organization ID is required when Zoho Books integration is enabled")
-

@@ -107,7 +107,8 @@ body:
 """
 
 COVER_FRAMING_MD = PUBLICATION_MD.replace(
-	"featured: true\n", "featured: true\ncover: /media/publications/slide.png\ncoverPosition: 48% center\ncoverFit: contain\n"
+	"featured: true\n",
+	"featured: true\ncover: /media/publications/slide.png\ncoverPosition: 48% center\ncoverFit: contain\n",
 )
 
 PORTFOLIO_MD = """---
@@ -163,12 +164,19 @@ class TestOperoSiteLoad(FrappeTestCase):
 		path = "content/publications/formatting.md"
 		for before, after in [
 			({"type": "paragraph", "text": "Before"}, {"type": "paragraph", "text": "After"}),
-			({"type": "list", "style": "bullet", "items": ["Before"]}, {"type": "list", "style": "bullet", "items": ["After"]}),
+			(
+				{"type": "list", "style": "bullet", "items": ["Before"]},
+				{"type": "list", "style": "bullet", "items": ["After"]},
+			),
 		]:
-			self.assertNotEqual(canonical_frontmatter(path, {"body": [before]}), canonical_frontmatter(path, {"body": [after]}))
+			self.assertNotEqual(
+				canonical_frontmatter(path, {"body": [before]}),
+				canonical_frontmatter(path, {"body": [after]}),
+			)
 
 	def test_import_adopts_portrait_without_overwriting_profile_image(self):
 		import base64
+
 		for existing_image in ("", "/files/existing-profile.jpg"):
 			with self.subTest(existing_image=existing_image):
 				clear_website_test_employees()
@@ -189,6 +197,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 
 	def test_reimport_adopts_previously_imported_portrait(self):
 		import base64
+
 		doc = make_website_employee("Anita Onyango", show_on_website=0)
 		repo = MagicMock(base_branch="main")
 		repo.get_bytes.return_value = base64.b64decode(
@@ -221,7 +230,14 @@ class TestOperoSiteLoad(FrappeTestCase):
 				)
 				files = {"content/team/anita-onyango.md": TEAM_MD}
 				load_files(files, repo=repo)
-				attachment = frappe.get_doc("File", {"attached_to_doctype": "Employee", "attached_to_name": doc.name, "file_name": "anita.jpg"})
+				attachment = frappe.get_doc(
+					"File",
+					{
+						"attached_to_doctype": "Employee",
+						"attached_to_name": doc.name,
+						"file_name": "anita.jpg",
+					},
+				)
 				attachment.db_set("file_url", stale_url)
 				doc.reload()
 				doc.db_set("portrait", stale_url)
@@ -238,8 +254,11 @@ class TestOperoSiteLoad(FrappeTestCase):
 
 	def test_legacy_portrait_falls_back_to_public_website(self):
 		import base64
+
 		doc = make_website_employee("Aggrey Ochieng", show_on_website=0)
-		text = TEAM_MD.replace("Anita Onyango", "Aggrey Ochieng").replace("/media/team/anita.jpg", "/team/aggrey-ochieng.jpg")
+		text = TEAM_MD.replace("Anita Onyango", "Aggrey Ochieng").replace(
+			"/media/team/anita.jpg", "/team/aggrey-ochieng.jpg"
+		)
 		path = "content/team/aggrey-ochieng.md"
 		load_files({path: text})
 		repo = MagicMock(token="test-token", base_branch="main")
@@ -249,9 +268,14 @@ class TestOperoSiteLoad(FrappeTestCase):
 		response.content = base64.b64decode(
 			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1kAAAAASUVORK5CYII="
 		)
-		with patch("opero.opero_site.load.ContentRepo", return_value=site_repo), patch("opero.opero_site.load.requests.get", return_value=response) as fetch:
+		with (
+			patch("opero.opero_site.load.ContentRepo", return_value=site_repo),
+			patch("opero.opero_site.load.requests.get", return_value=response) as fetch,
+		):
 			self.assertEqual(load_files({path: text}, repo=repo)["team"], 1)
-			fetch.assert_called_once_with("https://opero-services.com/team/aggrey-ochieng.jpg", timeout=30, allow_redirects=False)
+			fetch.assert_called_once_with(
+				"https://opero-services.com/team/aggrey-ochieng.jpg", timeout=30, allow_redirects=False
+			)
 			doc.reload()
 			self.assertTrue(doc.portrait.startswith("/files/"))
 			self.assertEqual(sum(load_files({path: text}, repo=repo).values()), 0)
@@ -259,9 +283,12 @@ class TestOperoSiteLoad(FrappeTestCase):
 
 	def test_legacy_team_portrait_imports_from_site_repository(self):
 		import base64
+
 		doc = make_website_employee("Wycliffe Odongo", show_on_website=0)
 		path = "content/team/wycliffe-odongo.md"
-		text = TEAM_MD.replace("Anita Onyango", "Wycliffe Odongo").replace("/media/team/anita.jpg", "/team/wycliffe-odongo.jpg")
+		text = TEAM_MD.replace("Anita Onyango", "Wycliffe Odongo").replace(
+			"/media/team/anita.jpg", "/team/wycliffe-odongo.jpg"
+		)
 		load_files({path: text})
 		repo = MagicMock(token="test-token", base_branch="main")
 		site_repo = MagicMock(base_branch="main")
@@ -279,6 +306,7 @@ class TestOperoSiteLoad(FrappeTestCase):
 
 	def test_import_repairs_repository_portrait_and_skips_repeat(self):
 		import base64
+
 		doc = make_website_employee("Anita Onyango", show_on_website=0)
 		path = "content/team/anita-onyango.md"
 		load_files({path: TEAM_MD})
@@ -308,8 +336,12 @@ class TestOperoSiteLoad(FrappeTestCase):
 		load_files(files)
 		publication = frappe.get_doc("Publication", {"slug": "january-2025-update"})
 		self.assertEqual(
-			canonical_frontmatter("content/publications/january-2025-update.md", parse_frontmatter(PUBLICATION_MD)),
-			canonical_frontmatter("content/publications/january-2025-update.md", publication.to_site_frontmatter()),
+			canonical_frontmatter(
+				"content/publications/january-2025-update.md", parse_frontmatter(PUBLICATION_MD)
+			),
+			canonical_frontmatter(
+				"content/publications/january-2025-update.md", publication.to_site_frontmatter()
+			),
 		)
 		with patch("frappe.model.document.Document.save", side_effect=AssertionError("unexpected save")):
 			self.assertEqual(sum(load_files(files).values()), 0)
@@ -352,15 +384,17 @@ class TestOperoSiteLoad(FrappeTestCase):
 			parse_frontmatter("no frontmatter here")
 
 	def test_load_creates_standalone_partner(self):
-		counts = load_files({
-			"content/partners/practica-foundation.md": """---
+		counts = load_files(
+			{
+				"content/partners/practica-foundation.md": """---
 name: Practica Foundation
 url: https://www.practica.org
 order: 20
 active: true
 ---
 """
-		})
+			}
+		)
 		self.assertEqual(counts["partners"], 1)
 		doc = frappe.get_last_doc("Partner", filters={"partner_name": "Practica Foundation"})
 		self.assertEqual(doc.website_status, "Published")
@@ -379,7 +413,18 @@ active: true
 				"docs/editor-guide.md": "---\ntitle: ignored\n---\n",
 			}
 		)
-		self.assertEqual(counts, {"settings": 1, "home": 1, "privacy": 1, "publications": 1, "team": 1, "enterprises": 0, "partners": 0})
+		self.assertEqual(
+			counts,
+			{
+				"settings": 1,
+				"home": 1,
+				"privacy": 1,
+				"publications": 1,
+				"team": 1,
+				"enterprises": 0,
+				"partners": 0,
+			},
+		)
 
 		settings = frappe.get_single("Site Settings")
 		self.assertEqual(settings.organization_name, "Opero Services Ltd")
@@ -391,7 +436,12 @@ active: true
 		self.assertEqual(
 			[(row.image, row.note, row.image_alt, row.image_focus) for row in hero.hero_images],
 			[
-				("/media/homepage/opero-wash-hub.jpg", "Kenya · East Africa", "Aerial view of WASH work", "Top"),
+				(
+					"/media/homepage/opero-wash-hub.jpg",
+					"Kenya · East Africa",
+					"Aerial view of WASH work",
+					"Top",
+				),
 				("/media/homepage/pupu-pump-team.jpg", "Kisumu · Kenya", "", "Left"),
 				("/media/homepage/fecal-sludge-treatment-tower.jpg", "", "", "Center"),
 			],
@@ -402,14 +452,16 @@ active: true
 		self.assertEqual(
 			home.to_site_frontmatter()["hero"]["carousel"],
 			[
-				{"image": "/media/homepage/pupu-pump-team.jpg", "note": "Kisumu · Kenya", "imageFocus": "left"},
+				{
+					"image": "/media/homepage/pupu-pump-team.jpg",
+					"note": "Kisumu · Kenya",
+					"imageFocus": "left",
+				},
 				{"image": "/media/homepage/fecal-sludge-treatment-tower.jpg"},
 			],
 		)
 		self.assertEqual(frappe.get_single("About").about_body, "<p>Opero is a Kenyan WASH firm.</p>")
-		self.assertEqual(
-			frappe.get_single("Impact").impacts[0].metric_label, "WASH technologies designed"
-		)
+		self.assertEqual(frappe.get_single("Impact").impacts[0].metric_label, "WASH technologies designed")
 		self.assertEqual(
 			frappe.get_single("Our Work").homepage_summary,
 			"To solve WASH challenges.",
@@ -606,26 +658,35 @@ logo: /media/enterprises/gasia-poa.png
 		self.assertEqual(existing.website_status, "Published")
 		self.assertTrue(existing.show_on_website)
 		self.assertEqual(existing.sort_order, 10)
-		self.assertTrue(
-			existing.logo.startswith("/files/") or existing.logo.startswith("/private/files/")
-		)
+		self.assertTrue(existing.logo.startswith("/files/") or existing.logo.startswith("/private/files/"))
 		self.assertEqual(frappe.db.count("Enterprise", {"enterprise_name": "Gasia Poa"}), 1)
-		files = {"content/enterprises/gasia-poa.md": """---
+		files = {
+			"content/enterprises/gasia-poa.md": """---
 name: Gasia Poa
 order: 10
 active: true
 logo: /media/enterprises/gasia-poa.png
 ---
-"""}
+"""
+		}
 		modified = existing.modified
-		attachment_count = frappe.db.count("File", {"attached_to_doctype": "Enterprise", "attached_to_name": existing.name})
+		attachment_count = frappe.db.count(
+			"File", {"attached_to_doctype": "Enterprise", "attached_to_name": existing.name}
+		)
 		for _ in range(2):
 			self.assertEqual(load_files(files, repo=_Repo())["enterprises"], 0)
 			existing.reload()
 			self.assertEqual(existing.modified, modified)
-			self.assertEqual(frappe.db.count("File", {"attached_to_doctype": "Enterprise", "attached_to_name": existing.name}), attachment_count)
+			self.assertEqual(
+				frappe.db.count(
+					"File", {"attached_to_doctype": "Enterprise", "attached_to_name": existing.name}
+				),
+				attachment_count,
+			)
 		# A real content edit must still import.
-		files["content/enterprises/gasia-poa.md"] = files["content/enterprises/gasia-poa.md"].replace("order: 10", "order: 11")
+		files["content/enterprises/gasia-poa.md"] = files["content/enterprises/gasia-poa.md"].replace(
+			"order: 10", "order: 11"
+		)
 		self.assertEqual(load_files(files, repo=_Repo())["enterprises"], 1)
 		existing.reload()
 		self.assertEqual(existing.sort_order, 11)

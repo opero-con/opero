@@ -18,8 +18,7 @@ def execute():
 	if duplicates:
 		details = "; ".join(f"{email}: {', '.join(names)}" for email, names in duplicates.items())
 		frappe.throw(
-			"Cannot normalize Mailing List Member names because duplicate email addresses exist: "
-			+ details
+			"Cannot normalize Mailing List Member names because duplicate email addresses exist: " + details
 		)
 
 	for row in rows:

@@ -44,9 +44,7 @@ class WorkHoursSummary(Document):
 		if not calendar_year:
 			frappe.throw(f"Unable to resolve calendar year from Fiscal Year {self.year}")
 
-		standard_working_hours = (
-			frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0
-		)
+		standard_working_hours = frappe.db.get_single_value("HR Settings", "standard_working_hours") or 0
 		self.working_hours = standard_working_hours
 
 		for row in self.distribution_detail or []:
@@ -56,9 +54,7 @@ class WorkHoursSummary(Document):
 			if not month_index:
 				continue
 
-			holidays_in_month = self._holidays_for_month(
-				self.holiday_list, calendar_year, month_index
-			)
+			holidays_in_month = self._holidays_for_month(self.holiday_list, calendar_year, month_index)
 			leave_days = self._leave_days(self.personnel, calendar_year, month_index)
 
 			row.holidays = holidays_in_month

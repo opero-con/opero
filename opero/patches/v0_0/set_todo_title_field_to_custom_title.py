@@ -3,7 +3,9 @@ import frappe
 
 def execute():
 	_set_doctype_property("title_field", "custom_title", "Data")
-	_set_doctype_property("search_fields", "custom_title, description, reference_type, reference_name", "Data")
+	_set_doctype_property(
+		"search_fields", "custom_title, description, reference_type, reference_name", "Data"
+	)
 
 
 def _set_doctype_property(property_name: str, value, property_type: str):

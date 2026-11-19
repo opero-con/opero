@@ -14,7 +14,9 @@ from opero.tests.website_employee import (
 
 class TestEmployeeWebsiteTeam(FrappeTestCase):
 	def test_alternative_image_defaults_off_and_can_be_toggled(self):
-		doc = make_website_employee("Image Choice", image="/files/profile.jpg", portrait="/files/alternative.jpg")
+		doc = make_website_employee(
+			"Image Choice", image="/files/profile.jpg", portrait="/files/alternative.jpg"
+		)
 		self.assertFalse(doc.use_alternative_image)
 		self.assertEqual(doc.to_site_frontmatter()["image"], "/files/profile.jpg")
 		doc.use_alternative_image = 1
@@ -28,7 +30,12 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 	def test_alternative_image_migration_preserves_existing_selection(self):
 		from opero.patches.v0_4.use_alternative_personnel_image import execute
 
-		doc = make_website_employee("Existing Alternative", image="/files/profile.jpg", portrait="/files/alternative.jpg", use_alternative_image=1)
+		doc = make_website_employee(
+			"Existing Alternative",
+			image="/files/profile.jpg",
+			portrait="/files/alternative.jpg",
+			use_alternative_image=1,
+		)
 		execute()
 		doc.reload()
 		self.assertTrue(doc.use_alternative_image)
@@ -69,7 +76,9 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 				self.assertRegex(doc.name, f"^{prefix}[0-9]{{3,}}$")
 
 	def test_personnel_type_keeps_another_company_series(self):
-		doc = make_website_employee("Other Company Staff", custom_personnel_type="Staff", naming_series="OCS_EMP_.###")
+		doc = make_website_employee(
+			"Other Company Staff", custom_personnel_type="Staff", naming_series="OCS_EMP_.###"
+		)
 		self.assertRegex(doc.name, "^OCS_EMP_[0-9]{3,}$")
 
 	def test_changing_existing_personnel_type_does_not_rename(self):
@@ -142,7 +151,5 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 		)
 
 	def test_frontmatter_can_use_separate_portrait(self):
-		doc = make_website_employee(
-			"Custom Portrait", use_alternative_image=1, portrait="/files/custom.jpg"
-		)
+		doc = make_website_employee("Custom Portrait", use_alternative_image=1, portrait="/files/custom.jpg")
 		self.assertEqual(doc.to_site_frontmatter()["image"], "/files/custom.jpg")

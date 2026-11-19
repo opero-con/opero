@@ -23,9 +23,7 @@ def execute():
 			filters={"doc_type": name, "field_name": "show_on_website"},
 			pluck="name",
 		):
-			frappe.delete_doc(
-				"Property Setter", property_setter_name, ignore_permissions=True, force=True
-			)
+			frappe.delete_doc("Property Setter", property_setter_name, ignore_permissions=True, force=True)
 		if frappe.db.get_single_value(name, "status") == PUBLISHED:
 			continue
 		frappe.db.set_value(name, name, "status", TO_PUBLISH, update_modified=False)

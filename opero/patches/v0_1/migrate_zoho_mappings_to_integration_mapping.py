@@ -26,16 +26,20 @@ def _upsert(entity_type, local_name, remote_id, remote_name=""):
 		"name",
 	)
 	if existing:
-		frappe.db.set_value("Integration Mapping", existing, {"remote_id": remote_id, "remote_name": remote_name})
+		frappe.db.set_value(
+			"Integration Mapping", existing, {"remote_id": remote_id, "remote_name": remote_name}
+		)
 	else:
-		frappe.get_doc({
-			"doctype": "Integration Mapping",
-			"integration": INTEGRATION,
-			"entity_type": entity_type,
-			"local_name": local_name,
-			"remote_id": remote_id,
-			"remote_name": remote_name,
-		}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Integration Mapping",
+				"integration": INTEGRATION,
+				"entity_type": entity_type,
+				"local_name": local_name,
+				"remote_id": remote_id,
+				"remote_name": remote_name,
+			}
+		).insert(ignore_permissions=True)
 
 
 def _migrate_personnel():

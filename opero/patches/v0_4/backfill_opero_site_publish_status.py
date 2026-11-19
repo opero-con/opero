@@ -27,11 +27,7 @@ def execute():
 		)
 
 	if frappe.db.has_column("Team Member", "status"):
-		hidden = (
-			"show_on_website = 0"
-			if frappe.db.has_column("Team Member", "show_on_website")
-			else "0 = 1"
-		)
+		hidden = "show_on_website = 0" if frappe.db.has_column("Team Member", "show_on_website") else "0 = 1"
 		frappe.db.sql(
 			f"""
 			UPDATE `tabTeam Member`

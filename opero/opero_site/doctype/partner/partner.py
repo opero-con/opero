@@ -49,8 +49,12 @@ class Partner(Document):
 		return payload
 
 	def _check_slug_collision(self, slug: str) -> None:
-		for other_name in frappe.get_all("Partner", filters={"name": ["!=", self.name]}, pluck="partner_name"):
+		for other_name in frappe.get_all(
+			"Partner", filters={"name": ["!=", self.name]}, pluck="partner_name"
+		):
 			if partner_content_slug(other_name) == slug:
 				frappe.throw(
-					_("Another partner's name also maps to the website slug '{0}'. Rename one of them.").format(slug)
+					_(
+						"Another partner's name also maps to the website slug '{0}'. Rename one of them."
+					).format(slug)
 				)

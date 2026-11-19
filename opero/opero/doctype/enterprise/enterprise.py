@@ -62,9 +62,9 @@ class Enterprise(Document):
 		):
 			if enterprise_content_slug(other_name) == slug:
 				frappe.throw(
-					_("Another enterprise's name also maps to the website slug '{0}'. Rename one of them.").format(
-						slug
-					)
+					_(
+						"Another enterprise's name also maps to the website slug '{0}'. Rename one of them."
+					).format(slug)
 				)
 
 	def on_trash(self):

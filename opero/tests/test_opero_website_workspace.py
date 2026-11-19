@@ -126,15 +126,11 @@ class TestOperoWebsiteWorkspace(FrappeTestCase):
 			"Site Settings",
 		]
 		for doctype in doctypes:
-			roles = {
-				row.role for row in frappe.get_meta(doctype).permissions if row.read
-			}
+			roles = {row.role for row in frappe.get_meta(doctype).permissions if row.read}
 			self.assertIn("System Manager", roles, doctype)
 			self.assertIn("Website Manager", roles, doctype)
 
-		personnel_roles = {
-			row.role for row in frappe.get_meta("Employee").permissions if row.read
-		}
+		personnel_roles = {row.role for row in frappe.get_meta("Employee").permissions if row.read}
 		self.assertIn("HR User", personnel_roles)
 		self.assertNotIn("Website Manager", personnel_roles)
 

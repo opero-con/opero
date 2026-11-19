@@ -128,9 +128,7 @@ def prepare_list_merge(source, target):
 		fields=["name", "email", "unsubscribed", "custom_contact"],
 	)
 	for sm in source_members:
-		target_name = frappe.db.get_value(
-			MEMBER, {"email_group": target, "email": email_key(sm.email)}
-		)
+		target_name = frappe.db.get_value(MEMBER, {"email_group": target, "email": email_key(sm.email)})
 		if not target_name:
 			continue
 		_fold_member_into(target_name, sm)

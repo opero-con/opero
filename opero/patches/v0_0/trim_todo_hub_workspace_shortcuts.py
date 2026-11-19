@@ -32,7 +32,8 @@ def execute():
 
 	shortcut_labels = {s.label for s in doc.shortcuts}
 	content = [
-		block for block in content
+		block
+		for block in content
 		if not (
 			block.get("type") == "shortcut"
 			and block.get("data", {}).get("shortcut_name") not in shortcut_labels

@@ -119,7 +119,9 @@ def apply_home_our_work(doc, data: dict):
 	doc.page_introduction = _text(our_work.get("pageIntroduction"))
 	doc.set("expertise", [])
 	for row in our_work.get("expertise") or []:
-		doc.append("expertise", {"title": _text(row.get("title")), "description": _text(row.get("description"))})
+		doc.append(
+			"expertise", {"title": _text(row.get("title")), "description": _text(row.get("description"))}
+		)
 	doc.image = _text(our_work.get("image"))
 	doc.image_alt = _text(our_work.get("imageAlt"))
 	doc.page_conclusion = _text(our_work.get("pageConclusion"))
@@ -202,7 +204,11 @@ def find_employee(slug: str, display_name: str = "") -> str | None:
 		return None
 	by_name = frappe.get_all("Employee", filters={"employee_name": name}, pluck="name")
 	if len(by_name) > 1:
-		frappe.throw(_("Multiple Employees are named '{0}'. Resolve the duplicate before loading website content.").format(name))
+		frappe.throw(
+			_(
+				"Multiple Employees are named '{0}'. Resolve the duplicate before loading website content."
+			).format(name)
+		)
 	return by_name[0] if by_name else None
 
 
@@ -268,8 +274,16 @@ def adopt_imported_portrait(doc) -> bool:
 	"""Fill an empty HR profile image only from a downloaded public portrait."""
 	if _text(doc.image) or not _text(doc.portrait).startswith("/files/"):
 		return False
-	name = frappe.db.get_value("File", {"attached_to_doctype": "Employee",
-		"attached_to_name": doc.name, "file_url": doc.portrait, "is_private": 0}, "name")
+	name = frappe.db.get_value(
+		"File",
+		{
+			"attached_to_doctype": "Employee",
+			"attached_to_name": doc.name,
+			"file_url": doc.portrait,
+			"is_private": 0,
+		},
+		"name",
+	)
 	if not name or not frappe.get_doc("File", name).exists_on_disk():
 		return False
 	doc.image = doc.portrait
@@ -280,8 +294,14 @@ def adopt_imported_portrait(doc) -> bool:
 def local_portrait_attachment(doc, filename: str) -> str | None:
 	"""A File row alone is not proof that a portrait was downloaded."""
 	for name in frappe.get_all(
-		"File", filters={"attached_to_doctype": doc.doctype,
-		"attached_to_name": doc.name, "file_name": filename, "is_private": 0}, pluck="name",
+		"File",
+		filters={
+			"attached_to_doctype": doc.doctype,
+			"attached_to_name": doc.name,
+			"file_name": filename,
+			"is_private": 0,
+		},
+		pluck="name",
 	):
 		attachment = frappe.get_doc("File", name)
 		if _text(attachment.file_url).startswith("/files/") and attachment.exists_on_disk():
@@ -312,14 +332,18 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		doc.set(field, f"/{repo_path}")
 		return previous != _text(doc.get(field))
 
-	existing = local_portrait_attachment(doc, filename) if field == "portrait" else frappe.db.get_value(
-		"File",
-		{
-			"attached_to_doctype": doc.doctype,
-			"attached_to_name": doc.name,
-			"file_name": filename,
-		},
-		"file_url",
+	existing = (
+		local_portrait_attachment(doc, filename)
+		if field == "portrait"
+		else frappe.db.get_value(
+			"File",
+			{
+				"attached_to_doctype": doc.doctype,
+				"attached_to_name": doc.name,
+				"file_name": filename,
+			},
+			"file_url",
+		)
 	)
 	if existing:
 		doc.set(field, existing)
@@ -342,17 +366,28 @@ def attach_content_image(doc, field: str, logo_path: str, repo: ContentRepo | No
 		blob = repo.get_bytes(repo_path, repo.base_branch) if repo else None
 	if not blob:
 		if repo and field == "portrait":
-			frappe.throw(_("Website portrait could not be imported from its repository or website: {0}").format(repo_path))
+			frappe.throw(
+				_("Website portrait could not be imported from its repository or website: {0}").format(
+					repo_path
+				)
+			)
 		doc.set(field, f"/{repo_path}")
 		return previous != _text(doc.get(field))
 
 	if field == "portrait":
 		# Explicitly write the blob before inserting its attachment record: both
 		# hash-deduplication paths can encounter an invalid legacy /team URL.
-		file_doc = frappe.get_doc({"doctype": "File", "file_name": filename,
-			"content": blob, "attached_to_doctype": doc.doctype,
-			"attached_to_name": doc.name, "attached_to_field": field, "is_private": 0,
-		})
+		file_doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": filename,
+				"content": blob,
+				"attached_to_doctype": doc.doctype,
+				"attached_to_name": doc.name,
+				"attached_to_field": field,
+				"is_private": 0,
+			}
+		)
 		file_doc.flags.new_file = True
 		file_doc.save_file(content=blob, ignore_existing_file_check=True)
 		frappe.db.after_rollback.add(file_doc.on_rollback)
@@ -394,8 +429,22 @@ def _content_snapshot(value):
 	"""Compare section values without generated child-row bookkeeping."""
 	if isinstance(value, dict):
 		return {
-			key: _content_snapshot(item) for key, item in value.items()
-			if key not in {"name", "creation", "modified", "modified_by", "owner", "parent", "parenttype", "parentfield", "idx", "__islocal", "__unsaved"}
+			key: _content_snapshot(item)
+			for key, item in value.items()
+			if key
+			not in {
+				"name",
+				"creation",
+				"modified",
+				"modified_by",
+				"owner",
+				"parent",
+				"parenttype",
+				"parentfield",
+				"idx",
+				"__islocal",
+				"__unsaved",
+			}
 		}
 	if isinstance(value, list):
 		return [_content_snapshot(item) for item in value]
@@ -403,7 +452,15 @@ def _content_snapshot(value):
 
 
 def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[str, int]:
-	counts = {"settings": 0, "home": 0, "privacy": 0, "publications": 0, "team": 0, "enterprises": 0, "partners": 0}
+	counts = {
+		"settings": 0,
+		"home": 0,
+		"privacy": 0,
+		"publications": 0,
+		"team": 0,
+		"enterprises": 0,
+		"partners": 0,
+	}
 	previous_syncing = frappe.flags.opero_site_syncing
 	frappe.flags.opero_site_syncing = True
 	try:
@@ -459,14 +516,16 @@ def load_files(files: dict[str, str], repo: ContentRepo | None = None) -> dict[s
 					doc = frappe.get_doc("Employee", name)
 				else:
 					frappe.throw(
-						_("No Employee matches website team member '{0}'. Create the Employee before loading website content.").format(
-							_text(data.get("name")) or slug
-						)
+						_(
+							"No Employee matches website team member '{0}'. Create the Employee before loading website content."
+						).format(_text(data.get("name")) or slug)
 					)
 				if matches_website(doc, path, text):
 					portrait_changed = False
 					if repo and doc.use_alternative_image:
-						portrait_changed = attach_content_image(doc, "portrait", _text(data.get("image")), repo)
+						portrait_changed = attach_content_image(
+							doc, "portrait", _text(data.get("image")), repo
+						)
 					if adopt_imported_portrait(doc) or portrait_changed:
 						doc.save(ignore_permissions=True)
 						counts["team"] += 1
@@ -535,7 +594,9 @@ def load_from_website() -> dict:
 		clear_pending_cache()
 	return {
 		"counts": counts,
-		"message": _("Loaded {0} changed content files from the public site repository. Unchanged content was skipped.").format(total),
+		"message": _(
+			"Loaded {0} changed content files from the public site repository. Unchanged content was skipped."
+		).format(total),
 	}
 
 

@@ -31,8 +31,6 @@ def execute():
 			)
 
 	# Backfill any records saved with the old lowercase value
-	frappe.db.sql(
-		"UPDATE `tabToDo` SET status = 'In Progress' WHERE status = 'In progress'"
-	)
+	frappe.db.sql("UPDATE `tabToDo` SET status = 'In Progress' WHERE status = 'In progress'")
 
 	frappe.clear_cache(doctype="ToDo")
