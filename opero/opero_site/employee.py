@@ -1,4 +1,6 @@
-"""Website team behavior layered onto Frappe's Employee DocType."""
+"""Opero behavior layered onto ERPNext's Employee: website team profile and PPS Number."""
+
+import re
 
 import frappe
 from erpnext.setup.doctype.employee.employee import Employee as FrappeEmployee
@@ -9,6 +11,18 @@ from opero.opero_site.publish_status import apply_publish_status, is_on_site
 from opero.opero_site.utils import optional_url, slugify
 
 PERSONNEL_TYPE_SERIES = {"Staff": "OSL_EMP_.###", "Consultant": "OSL_CON_.###"}
+PPS_NUMBER = re.compile(r"[0-9]{7}[A-W][A-IW]?")
+PPS_CHECK_LETTERS = "WABCDEFGHIJKLMNOPQRSTUV"
+
+
+def is_valid_pps_number(value: str) -> bool:
+	"""Revenue's PPS format: 7 digits, a check letter, and an optional second letter."""
+	if not PPS_NUMBER.fullmatch(value):
+		return False
+	total = sum(weight * int(digit) for weight, digit in zip(range(8, 1, -1), value[:7], strict=True))
+	if len(value) == 9:
+		total += 9 * PPS_CHECK_LETTERS.index(value[8])
+	return PPS_CHECK_LETTERS[total % 23] == value[7]
 
 
 class Employee(FrappeEmployee):
@@ -28,6 +42,12 @@ class Employee(FrappeEmployee):
 		self.linkedin = optional_url(self.linkedin, "LinkedIn URL")
 		apply_publish_status(self)
 		self.sort_order = cint(self.sort_order)
+		self.validate_pps_number()
+
+	def validate_pps_number(self):
+		self.pps_number = re.sub(r"\s", "", cstr(self.get("pps_number"))).upper() or None
+		if self.pps_number and not is_valid_pps_number(self.pps_number):
+			frappe.throw(_("PPS Number {0} is not valid.").format(self.pps_number))
 
 	def set_slug(self):
 		"""Website slug from the employee name; only employees with a website file have one."""
