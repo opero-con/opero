@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.5 — 2026-11-22
+
+### Added
+
+- Frappe v16 support, with Opero desk navigation for v16
+- Guidance for admins uploading publication files
+- Asset Capitalizations named by posting month and Tax Rules named by type and validity month
+- Irish PPS Number on Employee, checked against Revenue's check character
+
+### Changed
+
+- One person can be an Employee in several companies: only employees shown on the website get a website slug, and an ID series chosen for another company is kept, with `OCS_EMP_.###` added
+- Timesheets can run beyond standard working hours
+- The cross-entity headline compares a document's entity with the session company and names both
+- v16 is the main development line; CI runs ruff lint and format checks on every pull request, and the self-PR assignment waits for the other checks
+
+### Fixed
+
+- Publication deploy ribbons are clearer, and body link validation says how to fix a broken link
+- Saved timesheet grid columns are reset
+- Links repaired after a partial finance book rename
+- Fresh installs create the company display name field and the Employee website and PPS Number fields
+- `newsletter` is declared as a bench dependency, so installers that check dependencies accept the app
+
 ## 0.3.4 — 2026-10-22
 
 ### Added
