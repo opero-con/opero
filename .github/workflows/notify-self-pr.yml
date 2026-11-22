@@ -8,11 +8,13 @@ jobs:
   assign-author:
     if: github.event.pull_request.user.login == 'pnwilly'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
+      checks: read
       pull-requests: write
 
     steps:
-      - name: Assign PR author
+      - name: Assign PR author once the other checks finish
         uses: actions/github-script@v9
         with:
           script: |
@@ -20,9 +22,25 @@ jobs:
             const issue_number = context.issue.number;
             const pr = context.payload.pull_request;
             const author = pr.user.login;
+            const wait = (seconds) => new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 
             if (pr.assignees?.some((assignee) => assignee.login === author)) {
               return;
+            }
+
+            // Let the other workflows register their checks, then wait for them.
+            await wait(30);
+            const deadline = Date.now() + 20 * 60 * 1000;
+            for (;;) {
+              const runs = await github.paginate(
+                github.rest.checks.listForRef,
+                { owner, repo, ref: pr.head.sha, per_page: 100 }
+              );
+              const others = runs.filter((run) => run.name !== context.job);
+              if (others.every((run) => run.status === "completed") || Date.now() > deadline) {
+                break;
+              }
+              await wait(20);
             }
 
             await github.rest.issues.addAssignees({
