@@ -8,6 +8,7 @@ from opero.opero_site.utils import slugify
 from opero.tests.website_employee import (
 	TEST_EMAIL_PREFIX,
 	clear_website_test_employees,
+	get_or_make_company,
 	make_website_employee,
 )
 
@@ -80,6 +81,19 @@ class TestEmployeeWebsiteTeam(FrappeTestCase):
 			"Other Company Staff", custom_personnel_type="Staff", naming_series="OCS_EMP_.###"
 		)
 		self.assertRegex(doc.name, "^OCS_EMP_[0-9]{3,}$")
+
+	def test_company_series_overrides_personnel_type(self):
+		company = get_or_make_company("_Test Opero Consultancy", "OCS")
+		for naming_series in ("", "OSL_EMP_.###"):
+			with self.subTest(naming_series=naming_series):
+				doc = make_website_employee(
+					f"Consultancy Staff {naming_series or 'blank'}",
+					company=company,
+					custom_personnel_type="Staff",
+					naming_series=naming_series,
+				)
+				self.assertEqual(doc.naming_series, "OCS_E.##")
+				self.assertRegex(doc.name, "^OCS_E[0-9]{2,}$")
 
 	def test_changing_existing_personnel_type_does_not_rename(self):
 		doc = make_website_employee("Existing Staff", custom_personnel_type="Staff")

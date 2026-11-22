@@ -355,7 +355,7 @@
   "module": "Opero",
   "property": "options",
   "property_type": "Text",
-  "value": "OSL_EMP_.###\nOSL_CON_.###\nOCS_EMP_.###",
+  "value": "OSL_EMP_.###\nOSL_CON_.###\nOCS_E.##",
   "default_value": null,
   "doctype": "Property Setter"
  },
