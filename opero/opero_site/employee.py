@@ -11,6 +11,8 @@ from opero.opero_site.publish_status import apply_publish_status, is_on_site
 from opero.opero_site.utils import optional_url, slugify
 
 PERSONNEL_TYPE_SERIES = {"Staff": "OSL_EMP_.###", "Consultant": "OSL_CON_.###"}
+COMPANY_SERIES = {"OCS": "OCS_E.##"}
+OPERO_SERIES = ("", *PERSONNEL_TYPE_SERIES.values(), *COMPANY_SERIES.values())
 PPS_NUMBER = re.compile(r"[0-9]{7}[A-W][A-IW]?")
 PPS_CHECK_LETTERS = "WABCDEFGHIJKLMNOPQRSTUV"
 
@@ -29,11 +31,17 @@ class Employee(FrappeEmployee):
 	"""Keep Employee's HR behavior and add the public team profile contract."""
 
 	def before_naming(self):
-		series = PERSONNEL_TYPE_SERIES.get(self.get("custom_personnel_type"))
-		if series and cstr(self.naming_series) in ("", *PERSONNEL_TYPE_SERIES.values()):
+		series = self.opero_series
+		if series and cstr(self.naming_series) in OPERO_SERIES:
 			self.naming_series = series
 		self.set_employee_name()
 		self.set_slug()
+
+	@property
+	def opero_series(self):
+		"""ID series for the company, else for the personnel type; None leaves the chosen series."""
+		abbr = frappe.get_cached_value("Company", self.company, "abbr") if self.company else None
+		return COMPANY_SERIES.get(abbr) or PERSONNEL_TYPE_SERIES.get(self.get("custom_personnel_type"))
 
 	def validate(self):
 		FrappeEmployee.validate(self)

@@ -12,6 +12,20 @@ def clear_website_test_employees() -> None:
 	frappe.db.delete("Employee", {"company_email": ["like", f"{TEST_EMAIL_PREFIX}%"]})
 
 
+def get_or_make_company(company_name: str, abbr: str) -> str:
+	existing = frappe.db.get_value("Company", {"abbr": abbr})
+	if existing:
+		return existing
+	company = {
+		"doctype": "Company",
+		"company_name": company_name,
+		"abbr": abbr,
+		"default_currency": "EUR",
+		"country": "Ireland",
+	}
+	return frappe.get_doc(company).insert(ignore_permissions=True).name
+
+
 def make_website_employee(display_name: str, **fields):
 	payload = {
 		"doctype": "Employee",
